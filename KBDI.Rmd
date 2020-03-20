@@ -5,11 +5,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-Some preliminary work here but copy/paste to a GitHub repo.
-
-Original paper: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
-
-Also see hot-days.Rmd in hot-days repo on GitHub.
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
 ## Reproduce values in Figure 1 of Keetch & Byram 1968
 
@@ -104,7 +100,7 @@ Column7 <- c(174, 182, 142, 151, 159, 173, 177, 176, 190, 196, 200, 204, 212, 21
 cor(C7, Column7)
 ```
 
-### Repeat for a month of data from Tallahassee airport.
+## Repeat for a month of data from the Tallahassee airport.
 
 Import the data and first filter for May 2017 only then since May 2017.
 ```{r}
