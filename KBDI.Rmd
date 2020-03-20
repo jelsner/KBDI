@@ -1,0 +1,203 @@
+---
+title: "Keetch-Byram Drought Index"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Some preliminary work here but copy/paste to a GitHub repo.
+
+Original paper: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
+Also see hot-days.Rmd in hot-days repo on GitHub.
+
+## Reproduce values in Figure 1 of Keetch & Byram 1968
+
+Rainfall. Data from Figure 1 of Keetch & Byram 1968.
+```{r}
+Rainfall24 <- c(0, 0, .66, 0, .23, 0, .16, .09, 0, 0, .08, .03, 0, .22, 0, .21, 0, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0, 0, .25, .16)
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:30) {
+  R24 <- Rainfall24[i]
+  PR <- ifelse(i == 1, NA, Rainfall24[i-1])
+  
+  if ( R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if( R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+      print(c(CumR, PR, R24, NetR[i]))
+    }
+  
+  else if ( R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+NetR
+
+C3 <- NetR
+
+Column3 <- c(0, 0, .46, 0, .03, 0, 0, .05, 0, 0, 0, 0, 0, .02, 0, .01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .05, .16)
+
+cor(C3, Column3) #Check the match
+```
+
+Air temperature. Data from Figure 1 of Keetch & Byram 1968.
+```{r}
+MaxTemp <- c(79, 75, 70, 76, 79, 84, 65, 66, 83, 70, 67, 65, 76, 69, 65, 75, 78, 85, 88, 79, 69, 75, 84, 89, 93, 92, 96, 91, 78, 83)
+
+Column4 <- MaxTemp
+```
+
+Drought factor equation. Eq. 18 from Keetch & Byram, 1968. Q: Drought Index Yesterday (initial value), MaxTemp: Today's high temperature (F) and R is annual average rainfall in inches.
+```{r}
+Q <- 164
+R <- 42
+MaxT <- 79
+
+( DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxT) - .830) /(1 + 10.88 * exp(-.0441 * R)) * .001 )
+```
+
+Implemented for each day.
+```{r}
+Q <- 164
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:30){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - .83) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+Ql
+DeltaQl
+
+C5 <- Ql - DeltaQl
+C6 <- DeltaQl
+C7 <- Ql
+
+DroughtIndex <- floor(Ql/100)
+```
+
+Check how well they match the Figure 1.
+```{r}
+Column5 <- c(164, 174, 136, 142, 148, 159, 173, 172, 176, 190, 196, 200, 204, 210, 215, 218, 226, 235, 248, 263, 271, 276, 283, 295, 311, 328, 345, 365, 373, 364)
+cor(C5, Column5)
+Column6 <- c(10, 8, 6, 9, 11, 14, 4, 4, 14, 6, 4, 4, 8, 5, 4, 8, 9, 13, 15, 8, 5, 7, 12, 16, 17, 17, 20, 13, 7, 10)
+cor(C6, Column6)
+Column7 <- c(174, 182, 142, 151, 159, 173, 177, 176, 190, 196, 200, 204, 212, 215, 219, 226, 235, 248, 263, 271, 276, 283, 295, 311, 328, 345, 365, 378, 380, 374)
+cor(C7, Column7)
+```
+
+### Repeat for a month of data from Tallahassee airport.
+
+Import the data and first filter for May 2017 only then since May 2017.
+```{r}
+library(lubridate)
+library(dplyr)
+
+TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+      filter(STATION == 'USW00093805') %>%
+      mutate(Date = as.Date(DATE)) %>%
+      mutate(Year = year(Date), 
+             Month = month(Date), 
+             Day = day(Date),
+             doy = yday(Date)) %>%
+#      filter(Year == 2017 & Month == 5) %>%
+      filter(Date >= as.Date("2017-05-01")) %>%
+      dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, TMIN, Rainfall24 = PRCP)
+```
+
+Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_index.html
+
+Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bin/get_archive_v2.py?date=2017-05-01 (only past three years are available) 
+```{r}
+Q <- 429
+```
+
+Annual avg precipitation for Tallahassee, FL: https://www.usclimatedata.com/climate/tallahassee/florida/united-states/usfl0479 : 59.23 in.
+```{r}
+R <- 59.23
+```
+
+Step one: Compute net rainfall.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  
+  if ( R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if( R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  
+  else if ( R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+
+TLH.df$NetR <- NetR
+```
+
+Step two: Compute drought index.
+```{r}
+Q <- 269
+R <- 59.23
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - .83) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+#Ql
+#DeltaQl
+
+TLH.df$Ql <- Ql
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+```
+
+We could locate change points in a time series with the {tsoutliers} package.
+https://cran.r-project.org/web/packages/tsoutliers/vignettes/tsoutliers-intro.pdf
