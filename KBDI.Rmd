@@ -117,7 +117,7 @@ TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
              Day = day(Date),
              doy = yday(Date)) %>%
 #      filter(Year == 2017 & Month == 5) %>%
-      filter(Date >= as.Date("2017-05-01")) %>%
+      filter(Date >= as.Date("2012-01-01")) %>%
       dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, TMIN, Rainfall24 = PRCP)
 ```
 
@@ -168,7 +168,6 @@ for(i in 1:length(Rainfall24)) {
   }
 }
 
-
 TLH.df$NetR <- NetR
 ```
 
@@ -184,6 +183,7 @@ DeltaQl <- numeric()
 for(i in 1:length(Rainfall24)){
   DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - .83) /(1 + 10.88 * exp(-.0441 * R)) * .001 
   Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
   Ql <- c(Ql, Q)
   DeltaQl <- c(DeltaQl, DeltaQ)
 }
@@ -193,7 +193,22 @@ for(i in 1:length(Rainfall24)){
 TLH.df$Ql <- Ql
 TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
+
+range(TLH.df$Ql)
 ```
+
+```{r}
+library(ggplot2)
+
+ggplot(TLH.df, aes(x = Date, y = Ql)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 800)) +
+  ylab("") + xlab("") +
+  theme_minimal() +
+  ggtitle("Keetch-Byram Drought Index", 
+          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
+```
+
 
 We could locate change points in a time series with the {tsoutliers} package.
 https://cran.r-project.org/web/packages/tsoutliers/vignettes/tsoutliers-intro.pdf
