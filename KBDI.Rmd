@@ -106,6 +106,7 @@ Import the data and first filter for May 2017 only then since May 2017.
 ```{r}
 library(lubridate)
 library(dplyr)
+library(tidyr)
 
 TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
                    stringsAsFactors = FALSE,
@@ -117,8 +118,11 @@ TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
              Day = day(Date),
              doy = yday(Date)) %>%
 #      filter(Year == 2017 & Month == 5) %>%
-      filter(Date >= as.Date("2012-01-01")) %>%
-      dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, TMIN, Rainfall24 = PRCP)
+      filter(Date >= as.Date("1951-01-01")) %>%
+      dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, TMIN, Rainfall24 = PRCP) %>%
+      dplyr::mutate(Rainfall24 = replace_na(Rainfall24, 0))
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 ```
 
 Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_index.html
@@ -204,6 +208,7 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
   geom_line() +
   scale_y_continuous(limits = c(0, 800)) +
   ylab("") + xlab("") +
+  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
   theme_minimal() +
   ggtitle("Keetch-Byram Drought Index", 
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
