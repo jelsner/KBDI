@@ -66,7 +66,7 @@ Q <- 164
 R <- 42
 MaxT <- 79
 
-( DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxT) - .830) /(1 + 10.88 * exp(-.0441 * R)) * .001 )
+( DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxT) - 8.30) /(1 + 10.88 * exp(-.0441 * R)) * .001 )
 ```
 
 Implemented for each day.
@@ -75,7 +75,7 @@ Q <- 164
 Ql <- numeric()
 DeltaQl <- numeric()
 for(i in 1:30){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - .83) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.30) /(1 + 10.88 * exp(-.0441 * R)) * .001 
   Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
   Ql <- c(Ql, Q)
   DeltaQl <- c(DeltaQl, DeltaQ)
@@ -185,7 +185,7 @@ MaxTemp <- TLH.df$MaxTemp
 Ql <- numeric()
 DeltaQl <- numeric()
 for(i in 1:length(Rainfall24)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - .83) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
   Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
   Q <- ifelse(Q < 0, 0, Q) 
   Ql <- c(Ql, Q)
@@ -217,3 +217,22 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
 
 We could locate change points in a time series with the {tsoutliers} package.
 https://cran.r-project.org/web/packages/tsoutliers/vignettes/tsoutliers-intro.pdf
+```{r}
+library(tsoutliers)
+```
+
+First create a time series object from the vector `TLH.df$Ql`.
+```{r}
+sequentialDays <- seq(TLH.df$Date[1], TLH.df$Date[nrow(TLH.df)], by = "day")
+
+Qlts <- ts(TLH.df$Ql, 
+           start = c(2012, 1),
+           frequency = 365)
+
+library(zoo)
+
+#Qlts <- zoo(TLH.df$Ql, inds)
+
+resKBDI <- tso(y = Qlts, types = c("SLS"))
+resKBDI
+```
