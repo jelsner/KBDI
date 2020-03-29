@@ -214,25 +214,59 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
 ```
 
-
-We could locate change points in a time series with the {tsoutliers} package.
-https://cran.r-project.org/web/packages/tsoutliers/vignettes/tsoutliers-intro.pdf
+Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
 ```{r}
-library(tsoutliers)
+library(sf)
+
+FL_Fires.sf <- st_read(dsn = "FL_Fires")
 ```
 
-First create a time series object from the vector `TLH.df$Ql`.
+Make a map
 ```{r}
-sequentialDays <- seq(TLH.df$Date[1], TLH.df$Date[nrow(TLH.df)], by = "day")
+library(USAboundaries)
 
-Qlts <- ts(TLH.df$Ql, 
-           start = c(2012, 1),
-           frequency = 365)
+FLcty <- us_counties(state = "FL")
 
-library(zoo)
+library(tmap)
 
-#Qlts <- zoo(TLH.df$Ql, inds)
+tm_shape(FLcty) +
+  tm_borders() +
+tm_shape(FL_Fires.sf) +
+  tm_dots()
+```
 
-resKBDI <- tso(y = Qlts, types = c("SLS"))
-resKBDI
+Tallahassee airport location: Lat: 30.3931° N Lon: -84.3533° W
+```{r}
+TLH.df <- data.frame(Longitude = -84.3533, Latitude = 30.3931)
+TLH.sf <- st_as_sf(TLH.df,
+                   coords = c("Longitude", "Latitude"),
+                   crs = 4326) %>%
+  st_transform(crs = st_crs(FL_Fires.sf))
+TLH_Area.sf <- st_buffer(TLH.sf, dist = 100000)
+
+tm_shape(TLH_Area.sf) +
+  tm_borders() +
+tm_shape(FL_Fires.sf) +
+  tm_dots() +
+tm_shape(FLcty) +
+  tm_borders()
+```
+
+Simplify data frame and add empty geometries.
+```{r}
+library(lubridate)
+
+FL_Fires2.sf <- FL_Fires.sf %>%
+  st_intersection(TLH_Area.sf)
+
+  mutate(YMD = ymd(as.Date(DISCOVERY_))) %>%
+  group_by(YMD) %>%
+  summarize(nF = n())
+
+DateSequence.df <- data.frame(YMD = seq(as.Date("1992-01-01"), as.Date("2015-12-31"), 
+                                        by = "days"))
+XY <- left_join(alldays.df, FL_Fires2.sf, by = "YMD") %>%
+  st_as_sf()
+
+r <- st_is_empty(XY)
 ```
