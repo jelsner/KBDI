@@ -231,15 +231,18 @@ April.df <- TLH.df %>%
 ```
 
 ```{r}
-df <- TLH.df %>%
-  group_by(Year) %>%
+TLH.df %>%
+  group_by(Year, Month) %>%
   summarize(nD = n(),
             fw = sum(Rainfall24mm >= 1)/nD,
             mu = mean(Rainfall24mm[Rainfall24mm > 1]),
             Pr = fw * exp(-50/mu),
             xbar = mu * fw,
             xbar2 = mean(Rainfall24mm[Rainfall24mm >= 0]),
-            fraction = sum(Rainfall24mm > 50)/nD)
+            fraction = sum(Rainfall24mm > 50)/nD) %>%
+  group_by(Month) %>%
+  summarize(cc = cor.test(fw, mu)$estimate)
+
   ggplot(data = df, aes(x = Year, y = fw)) +
     geom_point() +
     geom_smooth() +
