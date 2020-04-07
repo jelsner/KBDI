@@ -7,7 +7,7 @@ editor_options:
 
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
-## Reproduce values in Figure 1 of Keetch & Byram 1968
+## Keetch & Byram drought index
 
 Rainfall. Data from Figure 1 of Keetch & Byram 1968.
 ```{r}
@@ -102,7 +102,7 @@ cor(C7, Column7)
 
 ## Repeat for a month of data from the Tallahassee airport.
 
-Import the data and first filter for May 2017 only then since May 2017.
+Import the data.
 ```{r}
 library(lubridate)
 library(dplyr)
@@ -119,8 +119,9 @@ TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
              doy = yday(Date)) %>%
 #      filter(Year == 2017 & Month == 5) %>%
       filter(Date >= as.Date("1951-01-01")) %>%
-      dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, TMIN, Rainfall24 = PRCP) %>%
-      dplyr::mutate(Rainfall24 = replace_na(Rainfall24, 0))
+      dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, MinTemp = TMIN, Rainfall24 = PRCP) %>%
+      mutate(Rainfall24 = replace_na(Rainfall24, 0),
+             Rainfall24mm = Rainfall24 * 25.4)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 ```
@@ -213,6 +214,24 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
   ggtitle("Keetch-Byram Drought Index", 
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
 ```
+
+## Simple equation for rainfall statistics
+
+https://iopscience.iop.org/article/10.1088/1748-9326/ab2bb2
+
+$$
+\Pr(X > x) = f_w \exp(-x/\mu)
+$$
+where $X$ is the 24 h rainfall and $x$ is the threshold defining heavy precipitation, $f_w$ is the wet-day frequency and $\mu$ is the wet-day mean.
+
+Start with April rainfall only.
+```{r}
+April.df <- TLH.df %>%
+  filter(Month == 4)
+```
+
+
+## Wildfires
 
 Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
 ```{r}
