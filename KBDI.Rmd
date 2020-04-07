@@ -118,7 +118,7 @@ TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
              Day = day(Date),
              doy = yday(Date)) %>%
 #      filter(Year == 2017 & Month == 5) %>%
-      filter(Date >= as.Date("1951-01-01")) %>%
+      filter(Date >= as.Date("1941-01-01")) %>%
       dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, MinTemp = TMIN, Rainfall24 = PRCP) %>%
       mutate(Rainfall24 = replace_na(Rainfall24, 0),
              Rainfall24mm = Rainfall24 * 25.4)
@@ -230,6 +230,25 @@ April.df <- TLH.df %>%
   filter(Month == 4)
 ```
 
+```{r}
+df <- TLH.df %>%
+  group_by(Year) %>%
+  summarize(nD = n(),
+            fw = sum(Rainfall24mm >= 1)/nD,
+            mu = mean(Rainfall24mm[Rainfall24mm > 1]),
+            Pr = fw * exp(-50/mu),
+            xbar = mu * fw,
+            xbar2 = mean(Rainfall24mm[Rainfall24mm >= 0]),
+            fraction = sum(Rainfall24mm > 50)/nD)
+  ggplot(data = df, aes(x = Year, y = fw)) +
+    geom_point() +
+    geom_smooth() +
+  facet_wrap(~ Month)
+  
+ggplot(df, aes(x = mu, y = fw, color = Year)) + 
+  geom_point() +
+  scale_color_viridis_c()
+```
 
 ## Wildfires
 
