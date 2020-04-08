@@ -253,6 +253,8 @@ ggplot(df, aes(x = mu, y = fw, color = Year)) +
   scale_color_viridis_c()
 ```
 
+Use percentiles instead of mu? Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
+
 ## Wildfires
 
 Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
