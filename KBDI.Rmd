@@ -231,29 +231,39 @@ April.df <- TLH.df %>%
 ```
 
 ```{r}
-TLH.df %>%
-  group_by(Year, Month) %>%
+df <- TLH.df %>%
+  filter(Month %in% c(12, 1, 2)) %>%
+  group_by(Year) %>%
   summarize(nD = n(),
             fw = sum(Rainfall24mm >= 1)/nD,
             mu = mean(Rainfall24mm[Rainfall24mm > 1]),
+            q75 = quantile(Rainfall24mm[Rainfall24mm > 1], probs = .75),
+            q95 = quantile(Rainfall24mm[Rainfall24mm > 1], probs = .95),
+            q99 = quantile(Rainfall24mm[Rainfall24mm > 1], probs = .99),
             Pr = fw * exp(-50/mu),
             xbar = mu * fw,
             xbar2 = mean(Rainfall24mm[Rainfall24mm >= 0]),
-            fraction = sum(Rainfall24mm > 50)/nD) %>%
+            fraction = sum(Rainfall24mm > 50)/nD,
+            avgTmax = mean(MaxTemp[Rainfall24mm > 1]),
+            avgTmin = mean(MinTemp[Rainfall24mm > 1])) %>%
   group_by(Month) %>%
-  summarize(cc = cor.test(fw, mu)$estimate)
+  summarize(cc = cor.test(fw, q95)$estimate)
 
-  ggplot(data = df, aes(x = Year, y = fw)) +
+  ggplot(data = df, aes(x = Year, y = avgTmax)) +
     geom_point() +
-    geom_smooth() +
+    geom_smooth(method = lm) +
   facet_wrap(~ Month)
   
-ggplot(df, aes(x = mu, y = fw, color = Year)) + 
+ggplot(df, aes(x = q75, y = fw, color = Year)) + 
   geom_point() +
   scale_color_viridis_c()
 ```
 
-Use percentiles instead of mu? Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
+Use percentiles instead of mu? See FreqInt.Rmd on Desktop. Use avgTmax and correlate with EOFs of freq vs intensity.
+
+Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
+
+Winter rainfall getting more intense.
 
 ## Wildfires
 
