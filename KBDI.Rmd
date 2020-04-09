@@ -215,7 +215,7 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
 ```
 
-## Simple equation for rainfall statistics
+## A simple equation for rainfall statistics 
 
 https://iopscience.iop.org/article/10.1088/1748-9326/ab2bb2
 
@@ -232,7 +232,7 @@ April.df <- TLH.df %>%
 
 ```{r}
 df <- TLH.df %>%
-  filter(Month %in% c(12, 1, 2)) %>%
+#  filter(Month %in% c(9, 10, 11)) %>%
   group_by(Year) %>%
   summarize(nD = n(),
             fw = sum(Rainfall24mm >= 1)/nD,
@@ -260,6 +260,52 @@ ggplot(df, aes(x = q75, y = fw, color = Year)) +
 ```
 
 Use percentiles instead of mu? See FreqInt.Rmd on Desktop. Use avgTmax and correlate with EOFs of freq vs intensity.
+
+```{r}
+theta = seq(1, 180, by = 1)
+r = NULL ; pval = NULL
+for (k in theta){
+  C1 = cos(k * pi/180)
+  C2 = sin(k * pi/180)
+  Rclim = C1 * scale(df$q99) + C2 * scale(df$fw)
+  ctest = cor.test(Rclim, df$avgTmax)
+  r = c(r, as.numeric(ctest$estimate))
+  pval = c(pval, as.numeric(ctest$p.value))
+}
+range(r)
+
+signif = .05
+plot(-10, -10, xlim=c(-1, 1.3), ylim=c(-1, 1.3), axes=FALSE, xlab='', ylab='', main='')
+
+i = seq(0, 360, .5)
+Outl = cbind(cos(i * pi/180), sin(i * pi/180))
+Innl = cbind(.5 * cos(i * pi/180), .5 * sin(i * pi/180))
+
+polygon(Outl[, 1], Outl[, 2], border=colors()[229], col='white', lwd=2)
+polygon(Innl[, 1], Innl[, 2], border=colors()[229], col=NULL, lwd=2)
+
+Line.xcord = c(-1, 1, NA, 0, 0, NA, -cos(pi/4), cos(pi/4), NA, -cos(pi/4), cos(pi/4))
+Line.ycord = c(0, 0, NA, -1, 1, NA, sin(pi/4), -sin(pi/4), NA, -sin(pi/4), sin(pi/4))
+lines(Line.xcord, Line.ycord, col=colors()[229], lwd=1)
+
+text(par('usr')[2] - 0.29, 0.0, srt=0, adj = 0, labels = 'INT', xpd = TRUE, cex=1.3) 
+text(par('usr')[2] - 0.6, 0.81, srt=0, adj = 0, labels = 'ACT', xpd = TRUE, cex=1.3)
+text(par('usr')[2] - 1.52, 1.17, srt=0, adj = 0, labels = 'FRQ', xpd = TRUE, cex=1.3)
+text(par('usr')[2] - 0.6, -0.81, srt=0, adj = 0, labels = 'EINT', xpd = TRUE, cex=1.3)
+text(0,0.55, '0.5', cex=1.4, col=colors()[229])
+text(0,1.05, '1.0', cex=1.4, col=colors()[229])
+
+dg = theta
+polygon(r * cos(dg * pi/180), r * sin(dg * pi/180), border="#ff9900", lwd=7, col=NULL)
+r2 = c(r[which.max(pval):length(pval)], r[1:(which.max(pval) - 1)])
+pval2 = c(pval[which.max(pval):length(pval)], pval[1:(which.max(pval) - 1)])
+dg2 = c(dg[which.max(pval):length(pval)], dg[1:(which.max(pval) - 1)])
+lines(r2[pval2 <= signif] * cos(dg2[pval2 <= signif] * pi/180),
+      r2[pval2 <= signif] * sin(dg2[pval2 <= signif] * pi/180), col="#cc3300", lwd=7) 
+```
+
+Not very enlightening as avgTmax responds to precipitation rather than is a response to precipitation.
+
 
 Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
 
