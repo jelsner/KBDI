@@ -215,6 +215,106 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
 ```
 
+## Calendar map of KDBI
+https://mgimond.github.io/meteo_waterville/
+
+## Florida USNG
+https://usngcenter.org/portfolio-item/usng-gis-data/
+```{r}
+unzip("FL_USNG.zip")
+
+FL16 <- st_read(dsn = "FL_USNG_UTM16.shp")
+```
+
+Download the POSITIVE lightning strikes within the PubLand footprint for the time period:
+```{r}
+download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLightningHexagonsPos.zip?dl=1",
+              destfile = "TempLightning.zip")
+unzip("TempLightning.zip")
+Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
+  st_transform(crs = st_crs(FL16))
+head(Lightning.sf)
+```
+
+Aggregate lightning strikes to grids.
+```{r}
+library(tidyverse)
+library(lubridate)
+
+LG.sf <- Lightning.sf %>%
+           mutate(Mo = month(Date)) %>%
+           filter(Mo %in% c(4, 5, 6, 7, 8))
+LG.sf <- aggregate(LG.sf[, "OBJECTID"], 
+                   by = FL16, 
+                   FUN = length) %>%
+    rename(Count = OBJECTID) %>%
+  filter(!is.na(Count))
+
+library(tmap)
+
+tm_shape(LG.sf) +
+  tm_polygons(col = "Count", border.col = "transparent")
+```
+
+## Wildfires
+
+Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
+```{r}
+library(sf)
+
+FL_Fires.sf <- st_read(dsn = "FL_Fires")
+```
+
+Make a map
+```{r}
+library(USAboundaries)
+
+FLcty <- us_counties(state = "FL")
+
+library(tmap)
+
+tm_shape(FLcty) +
+  tm_borders() +
+tm_shape(FL_Fires.sf) +
+  tm_dots()
+```
+
+Tallahassee airport location: Lat: 30.3931° N Lon: -84.3533° W
+```{r}
+TLH.df <- data.frame(Longitude = -84.3533, Latitude = 30.3931)
+TLH.sf <- st_as_sf(TLH.df,
+                   coords = c("Longitude", "Latitude"),
+                   crs = 4326) %>%
+  st_transform(crs = st_crs(FL_Fires.sf))
+TLH_Area.sf <- st_buffer(TLH.sf, dist = 100000)
+
+tm_shape(TLH_Area.sf) +
+  tm_borders() +
+tm_shape(FL_Fires.sf) +
+  tm_dots() +
+tm_shape(FLcty) +
+  tm_borders()
+```
+
+Simplify data frame and add empty geometries.
+```{r}
+library(lubridate)
+
+FL_Fires2.sf <- FL_Fires.sf %>%
+  st_intersection(TLH_Area.sf)
+
+  mutate(YMD = ymd(as.Date(DISCOVERY_))) %>%
+  group_by(YMD) %>%
+  summarize(nF = n())
+
+DateSequence.df <- data.frame(YMD = seq(as.Date("1992-01-01"), as.Date("2015-12-31"), 
+                                        by = "days"))
+XY <- left_join(alldays.df, FL_Fires2.sf, by = "YMD") %>%
+  st_as_sf()
+
+r <- st_is_empty(XY)
+```
+
 ## A simple equation for rainfall statistics 
 
 https://iopscience.iop.org/article/10.1088/1748-9326/ab2bb2
@@ -306,66 +406,7 @@ lines(r2[pval2 <= signif] * cos(dg2[pval2 <= signif] * pi/180),
 
 Not very enlightening as avgTmax responds to precipitation rather than is a response to precipitation.
 
-
 Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
 
 Winter rainfall getting more intense.
 
-## Wildfires
-
-Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
-```{r}
-library(sf)
-
-FL_Fires.sf <- st_read(dsn = "FL_Fires")
-```
-
-Make a map
-```{r}
-library(USAboundaries)
-
-FLcty <- us_counties(state = "FL")
-
-library(tmap)
-
-tm_shape(FLcty) +
-  tm_borders() +
-tm_shape(FL_Fires.sf) +
-  tm_dots()
-```
-
-Tallahassee airport location: Lat: 30.3931° N Lon: -84.3533° W
-```{r}
-TLH.df <- data.frame(Longitude = -84.3533, Latitude = 30.3931)
-TLH.sf <- st_as_sf(TLH.df,
-                   coords = c("Longitude", "Latitude"),
-                   crs = 4326) %>%
-  st_transform(crs = st_crs(FL_Fires.sf))
-TLH_Area.sf <- st_buffer(TLH.sf, dist = 100000)
-
-tm_shape(TLH_Area.sf) +
-  tm_borders() +
-tm_shape(FL_Fires.sf) +
-  tm_dots() +
-tm_shape(FLcty) +
-  tm_borders()
-```
-
-Simplify data frame and add empty geometries.
-```{r}
-library(lubridate)
-
-FL_Fires2.sf <- FL_Fires.sf %>%
-  st_intersection(TLH_Area.sf)
-
-  mutate(YMD = ymd(as.Date(DISCOVERY_))) %>%
-  group_by(YMD) %>%
-  summarize(nF = n())
-
-DateSequence.df <- data.frame(YMD = seq(as.Date("1992-01-01"), as.Date("2015-12-31"), 
-                                        by = "days"))
-XY <- left_join(alldays.df, FL_Fires2.sf, by = "YMD") %>%
-  st_as_sf()
-
-r <- st_is_empty(XY)
-```
