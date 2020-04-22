@@ -218,6 +218,35 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
 ## Calendar map of KDBI
 https://mgimond.github.io/meteo_waterville/
 
+```{r}
+TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+      filter(STATION == 'USW00093805') %>%
+      mutate(Date = as.Date(DATE)) %>%
+      mutate(Year = year(Date), 
+             Month = month(Date), 
+             month = month(Date, label = TRUE, abbr = TRUE),
+             Day = day(Date),
+             doy = yday(Date),
+             weekday = wday(Date, label = TRUE),
+             monthw = ceiling(Day / 7)) %>%
+      filter(Date >= as.Date("1990-01-01")) 
+
+ggplot(TLH.df) + 
+    aes(weekday, monthw, fill = TMAX) + 
+  geom_tile(colour = "white") + 
+  facet_grid(Year ~ month) + 
+  scale_fill_gradient(low = "green", high = "red") +
+    theme_minimal() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        strip.text  =element_text(angle=0),
+        strip.text.y = element_text(angle=0),
+        panel.spacing = unit(0, "lines"))
+```
+
 ## Florida USNG
 https://usngcenter.org/portfolio-item/usng-gis-data/
 ```{r}
@@ -243,7 +272,7 @@ library(lubridate)
 
 LG.sf <- Lightning.sf %>%
            mutate(Mo = month(Date)) %>%
-           filter(Mo %in% c(4, 5, 6, 7, 8))
+           filter(Mo %in% c(6, 7, 8))
 LG.sf <- aggregate(LG.sf[, "OBJECTID"], 
                    by = FL16, 
                    FUN = length) %>%
@@ -252,8 +281,9 @@ LG.sf <- aggregate(LG.sf[, "OBJECTID"],
 
 library(tmap)
 
+tmap_mode("view")
 tm_shape(LG.sf) +
-  tm_polygons(col = "Count", border.col = "transparent")
+  tm_polygons(col = "Count", alpha = .6, border.col = "transparent")
 ```
 
 ## Wildfires
@@ -314,6 +344,7 @@ XY <- left_join(alldays.df, FL_Fires2.sf, by = "YMD") %>%
 
 r <- st_is_empty(XY)
 ```
+
 
 ## A simple equation for rainfall statistics 
 
