@@ -274,38 +274,6 @@ ggplot(TLH.df) +
         panel.spacing = unit(0, "lines"))
 ```
 
-
-```{r}
-
-TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
-                   stringsAsFactors = FALSE,
-                   header = TRUE) %>%
-      filter(STATION == 'USW00093805') %>%
-      mutate(Date = as.Date(DATE)) %>%
-      mutate(Year = year(Date), 
-             Month = month(Date), 
-             month = month(Date, label = TRUE, abbr = TRUE),
-             Day = day(Date),
-             doy = yday(Date),
-             weekday = wday(Date, label = TRUE),
-             monthw = ceiling(Day / 7)) %>%
-      filter(Date >= as.Date("2018-01-01")) 
-
-ggplot(TLH.df) + 
-    aes(weekday, monthw, fill = TMAX) + 
-  geom_tile(colour = "white") + 
-  scale_y_reverse() +
-  facet_grid(Year ~ month) + 
-  scale_fill_gradient(low = "green", high = "red") +
-    theme_minimal() +
-  theme(axis.title = element_blank(),
-        axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        strip.text  =element_text(angle=0),
-        strip.text.y = element_text(angle=0),
-        panel.spacing = unit(0, "lines"))
-```
-
 ## Florida USNG
 https://usngcenter.org/portfolio-item/usng-gis-data/
 ```{r}
