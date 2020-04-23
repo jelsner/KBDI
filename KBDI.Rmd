@@ -251,7 +251,7 @@ TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
       filter(STATION == 'USW00093805') %>%
-      filter(DATE >= as.Date("2015-01-01")) %>%
+      filter(DATE >= as.Date("1990-01-01")) %>%
       mutate(Date = as.Date(DATE)) %>%
       mutate(Year = year(Date), 
              Month = month(Date), 
