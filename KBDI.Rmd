@@ -101,6 +101,12 @@ cor(C7, Column7)
 ```
 
 ## Repeat for a month of data from the Tallahassee airport.
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
+
+AWND = Average daily wind speed (tenths of meters per second)
 
 Import the data.
 ```{r}
@@ -216,7 +222,6 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
 ```
 
 ## Calendar map of KDBI
-https://mgimond.github.io/meteo_waterville/
 
 Functions for calendar heat map.
 ```{r}
@@ -247,31 +252,32 @@ vdaycol <- function(dts) {
     sapply(dts, daycol)
 }
 
-TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
+TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
-      filter(STATION == 'USW00093805') %>%
-      filter(DATE >= as.Date("1990-01-01")) %>%
-      mutate(Date = as.Date(DATE)) %>%
-      mutate(Year = year(Date), 
-             Month = month(Date), 
-             month = month(Date, label = TRUE, abbr = TRUE),
-             weekrow = vweekrow(Date),
-             daycol = vdaycol(Date))
+  mutate(Date = as.Date(DATE)) %>%
+  filter(Date >= as.Date("1990-08-01")) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         weekrow = vweekrow(Date),
+         daycol = vdaycol(Date))
 
 ggplot(TLH.df) + 
     aes(daycol, weekrow, fill = TMAX) + 
   geom_tile(colour = "white") + 
   scale_y_reverse() +
   facet_grid(Year ~ month) + 
-  scale_fill_gradient(low = "green", high = "red") +
+  scale_fill_gradient(low = "green", high = "red",
+                      name = "°F") +
     theme_minimal() +
   theme(axis.title = element_blank(),
         axis.text = element_blank(),
         axis.ticks = element_blank(),
-        strip.text  =element_text(angle=0),
+        strip.text  = element_text(angle=0),
         strip.text.y = element_text(angle=0),
-        panel.spacing = unit(0, "lines"))
+        panel.spacing = unit(0, "lines")) +
+  ggtitle("Official Daily High Temperature in Tallahassee, Florida", 
+          subtitle = "Every day since I arrived")
 ```
 
 ## Florida USNG
