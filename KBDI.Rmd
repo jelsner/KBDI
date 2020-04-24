@@ -106,7 +106,37 @@ https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/deta
 https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 
-AWND = Average daily wind speed (tenths of meters per second)
+AWND = Average daily wind speed (tenths of meters per second) 
+
+Functions for weeks and days.
+```{r}
+cal <- function(dt) {
+    # Reads a date object and returns a tuple (weekrow, daycol)
+    # where weekrow starts at 1 and daycol starts at 1 for Sunday
+    #http://swingleydev.org/blog/tag/r/
+    year <- year(dt)
+    month <- month(dt)
+    day <- day(dt)
+    wday_first <- wday(ymd(paste(year, month, 1, sep = '-'), quiet = TRUE))
+    offset <- 7 + (wday_first - 2)
+    weekrow <- ((day + offset) %/% 7) - 1
+    daycol <- (day + offset) %% 7
+
+    c(weekrow, daycol)
+}
+weekrow <- function(dt) {
+    cal(dt)[1]
+}
+daycol <- function(dt) {
+    cal(dt)[2]
+}
+vweekrow <- function(dts) {
+    sapply(dts, weekrow)
+}
+vdaycol <- function(dts) {
+    sapply(dts, daycol)
+}
+```
 
 Import the data.
 ```{r}
@@ -114,20 +144,20 @@ library(lubridate)
 library(dplyr)
 library(tidyr)
 
-TLH.df <- read.csv(file = 'TLH_SOD1892.csv',
+TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
-      filter(STATION == 'USW00093805') %>%
-      mutate(Date = as.Date(DATE)) %>%
-      mutate(Year = year(Date), 
-             Month = month(Date), 
-             Day = day(Date),
-             doy = yday(Date)) %>%
-#      filter(Year == 2017 & Month == 5) %>%
-      filter(Date >= as.Date("1941-01-01")) %>%
-      dplyr::select(Date, Year, Month, Day, doy, MaxTemp = TMAX, MinTemp = TMIN, Rainfall24 = PRCP) %>%
-      mutate(Rainfall24 = replace_na(Rainfall24, 0),
-             Rainfall24mm = Rainfall24 * 25.4)
+  mutate(Date = as.Date(DATE)) %>%
+  filter(Date >= as.Date("1990-01-01")) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         weekrow = vweekrow(Date),
+         daycol = vdaycol(Date), 
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 ```
@@ -223,47 +253,9 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
 
 ## Calendar map of KDBI
 
-Functions for calendar heat map.
 ```{r}
-cal <- function(dt) {
-    # Reads a date object and returns a tuple (weekrow, daycol)
-    # where weekrow starts at 1 and daycol starts at 1 for Sunday
-    #http://swingleydev.org/blog/tag/r/
-    year <- year(dt)
-    month <- month(dt)
-    day <- day(dt)
-    wday_first <- wday(ymd(paste(year, month, 1, sep = '-'), quiet = TRUE))
-    offset <- 7 + (wday_first - 2)
-    weekrow <- ((day + offset) %/% 7) - 1
-    daycol <- (day + offset) %% 7
-
-    c(weekrow, daycol)
-}
-weekrow <- function(dt) {
-    cal(dt)[1]
-}
-daycol <- function(dt) {
-    cal(dt)[2]
-}
-vweekrow <- function(dts) {
-    sapply(dts, weekrow)
-}
-vdaycol <- function(dts) {
-    sapply(dts, daycol)
-}
-
-TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
-                   stringsAsFactors = FALSE,
-                   header = TRUE) %>%
-  mutate(Date = as.Date(DATE)) %>%
-  filter(Date >= as.Date("1990-08-01")) %>%
-  mutate(Year = year(Date), 
-         month = month(Date, label = TRUE, abbr = TRUE),
-         weekrow = vweekrow(Date),
-         daycol = vdaycol(Date))
-
 ggplot(TLH.df) + 
-    aes(daycol, weekrow, fill = TMAX) + 
+    aes(daycol, weekrow, fill = Ql) + 
   geom_tile(colour = "white") + 
   scale_y_reverse() +
   facet_grid(Year ~ month) + 
@@ -275,9 +267,9 @@ ggplot(TLH.df) +
         axis.ticks = element_blank(),
         strip.text  = element_text(angle=0),
         strip.text.y = element_text(angle=0),
-        panel.spacing = unit(0, "lines")) +
-  ggtitle("Official Daily High Temperature in Tallahassee, Florida", 
-          subtitle = "Every day since I arrived")
+        panel.spacing = unit(0, "lines")) 
+#  ggtitle("Official Daily High Temperature in Tallahassee, Florida", 
+#          subtitle = "Every day since I arrived")
 ```
 
 ## Florida USNG
