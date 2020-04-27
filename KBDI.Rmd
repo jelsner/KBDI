@@ -151,6 +151,7 @@ TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
   filter(Date >= as.Date("1990-01-01")) %>%
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
          weekrow = vweekrow(Date),
          daycol = vdaycol(Date), 
          MaxTemp = TMAX,
@@ -236,12 +237,15 @@ TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 
 range(TLH.df$Ql)
+
+TLH2.df <- TLH.df %>%
+  filter(Year >= 2000 & Year <= 2015)
 ```
 
 ```{r}
 library(ggplot2)
 
-ggplot(TLH.df, aes(x = Date, y = Ql)) +
+ggplot(TLH2.df, aes(x = Date, y = Ql)) +
   geom_line() +
   scale_y_continuous(limits = c(0, 800)) +
   ylab("") + xlab("") +
@@ -249,18 +253,41 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
   theme_minimal() +
   ggtitle("Keetch-Byram Drought Index", 
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
+
+ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
+  geom_tile() +
+  scale_y_reverse(breaks = 2000:2015) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
+  ylab("") + xlab("") +
+  theme_minimal()
+
+ggplot(TLH2.df, aes(x = doy, y = Year, fill = Ql * .254)) +
+  geom_tile() +
+  scale_y_reverse(breaks = 2000:2015) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+  ylab("") + xlab("") +
+  theme_minimal() +
+  ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
+          subtitle = "Amount of water needed to bring soil moisture to full capacity")
+  
 ```
 
 ## Calendar map of KDBI
 
 ```{r}
 ggplot(TLH.df) + 
-    aes(daycol, weekrow, fill = Ql) + 
-  geom_tile(colour = "white") + 
+    aes(daycol, weekrow, fill = DroughtIndex) + 
+  geom_tile(colour = "transparent") + 
   scale_y_reverse() +
   facet_grid(Year ~ month) + 
-  scale_fill_gradient(low = "green", high = "red",
-                      name = "°F") +
+#  scale_fill_gradient(low = "green", high = "red",
+#                      name = "°F") +
+    scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+#   scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
     theme_minimal() +
   theme(axis.title = element_blank(),
         axis.text = element_blank(),
@@ -276,7 +303,6 @@ ggplot(TLH.df) +
 https://usngcenter.org/portfolio-item/usng-gis-data/
 ```{r}
 unzip("FL_USNG.zip")
-
 FL16 <- st_read(dsn = "FL_USNG_UTM16.shp")
 ```
 
