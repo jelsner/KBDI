@@ -285,7 +285,7 @@ plot_gg(gg, multicore = FALSE,
         scale = 150,
         background = "#afceff",
         shadowcolor = "#3a4f70",
-        windowsize = c(1400, 866),
+        windowsize = c(1400, 866), # higher resolution images
         zoom = 0.75, phi = 30)
 render_snapshot()
 ```
