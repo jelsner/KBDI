@@ -263,17 +263,60 @@ ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
   ylab("") + xlab("") +
   theme_minimal()
 
-ggplot(TLH2.df, aes(x = doy, y = Year, fill = Ql * .254)) +
+( gg <- ggplot(TLH2.df, aes(x = doy, y = Year, fill = Ql * .254)) +
   geom_tile() +
   scale_y_reverse(breaks = 2000:2015) +
   scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
                      labels = month.abb, position = "top") +
   scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
   ylab("") + xlab("") +
-  theme_minimal() +
+#  theme_minimal() +
   ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
-          subtitle = "Amount of water needed to bring soil moisture to full capacity")
-  
+          subtitle = "Amount of water needed to bring soil moisture to full capacity") )
+```
+
+Render in 3D. https://www.tylermw.com/3d-ggplots-with-rayshader/
+```{r}
+library(rayshader)
+
+plot_gg(gg, multicore = FALSE, 
+        width = 5, 
+        height = 5, 
+        scale = 150,
+        background = "#afceff",
+        shadowcolor = "#3a4f70",
+        windowsize = c(1400, 866),
+        zoom = 0.75, phi = 30)
+render_snapshot()
+```
+
+To video. Plotting device must be open.
+```{r}
+png("TLH%i.png", width = 1280, height = 1280)
+angles = seq(0, 360, length.out = 141)[-1]
+for(i in 1:140) {
+  render_camera(theta=-45+angles[i])
+  render_snapshot(filename = sprintf("TLH%i.png", i), 
+                  title_text = "",
+                  title_bar_color = "#1f5214", title_color = "white", title_bar_alpha = 1)
+}
+rgl::rgl.close()
+
+av::av_encode_video(sprintf("TLH%d.png", seq(1, 140, by=1)), framerate = 10,
+                    output = "test.mp4")
+utils::browseURL('test.mp4')
+```
+
+Another example:
+```{r}
+png("input%03d.png", width = 1280, height = 720, res = 108)
+for(i in 1:10){
+  print(ggplot2::qplot(rnorm(100)))
+}
+dev.off()
+png_files <- sprintf("input%03d.png", 1:10)
+av::av_encode_video(png_files, 'output.mp4', framerate = 1)
+utils::browseURL('output.mp4')
 ```
 
 ## Calendar map of KDBI
