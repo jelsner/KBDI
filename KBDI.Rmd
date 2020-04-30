@@ -1,5 +1,5 @@
 ---
-title: "Keetch-Byram Drought Index"
+title: "Drought/Lightning/Fires"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -438,6 +438,101 @@ XY <- left_join(alldays.df, FL_Fires2.sf, by = "YMD") %>%
 
 r <- st_is_empty(XY)
 ```
+
+## County-level lightning
+
+Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
+
+Get Florida fips codes.
+```{r}
+library(tidycensus)
+library(dplyr)
+
+FLfips <- fips_codes %>%
+  filter(state == "FL") %>%
+  pull(county_code)
+
+```
+
+Import the data.
+```{r}
+fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
+
+df <- data.frame()
+for(i in 1:length(fn)){
+  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
+  df <- rbind(df, X)
+}
+```
+
+Change `SEQDAY` into a date object. Add day, month, and year colunns.
+```{r}
+library(lubridate)
+
+df <- df %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY))
+```
+
+Seasonal cycle.
+```{r}
+sc <- df %>%
+  group_by(MONTH, DAY) %>%
+  summarize(AvgCount = mean(FCOUNT_NLDN, na.rm = TRUE),
+            SEQDAY = first(SEQDAY)) %>%
+  mutate(YearDay = yday(SEQDAY))
+
+library(ggplot2)
+
+ggplot(sc, aes(YearDay, AvgCount)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335), 
+                     labels = month.abb) +
+  ylab("Average") +
+  xlab("") +
+  ggtitle("Daily average number of cloud to ground lightning strikes in Florida",
+          subtitle = "1986-2012")
+```
+
+Group by FIPS and compute the average.
+```{r}
+ByFIPS <- df %>%
+  group_by(FIPS) %>%
+  summarize(Avg = mean(FCOUNT_NLDN, na.rm = TRUE))
+```
+
+Join this data frame to a simple feature data frame of county boundaries.
+```{r}
+library(USAboundaries)
+
+FLcty <- us_counties(state = "FL") %>%
+  mutate(FIPS = as.integer(geoid))
+
+ByFIPS.sf <- left_join(FLcty, ByFIPS, by = "FIPS")
+```
+
+Make a map.
+```{r}
+library(tmap)
+
+tm_shape(ByFIPS.sf) +
+  tm_polygons(col = "Avg")
+```
+
+Change the CRS and compute the daily average per square km by dividing by area.
+```{r}
+ByFIPS.sf <- st_transform(ByFIPS.sf, crs = 3857)
+
+areas <- st_area(ByFIPS.sf)
+ByFIPS.sf <- ByFIPS.sf %>%
+  mutate(AvgPerArea = Avg/areas * 10^10)
+
+tm_shape(ByFIPS.sf) +
+  tm_polygons(col = "AvgPerArea")
+```
+
 
 
 ## A simple equation for rainfall statistics 
