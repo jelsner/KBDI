@@ -2,7 +2,7 @@
 title: "Drought/Lightning/Fires"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
@@ -347,13 +347,15 @@ https://usngcenter.org/portfolio-item/usng-gis-data/
 ```{r}
 unzip("FL_USNG.zip")
 FL16 <- st_read(dsn = "FL_USNG_UTM16.shp")
+# plot(FL16)
 ```
 
-Download the POSITIVE lightning strikes within the PubLand footprint for the time period:
+Download the POSITIVE lightning strikes within the public lands footprint for the time period.
 ```{r}
 download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLightningHexagonsPos.zip?dl=1",
               destfile = "TempLightning.zip")
 unzip("TempLightning.zip")
+
 Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
   st_transform(crs = st_crs(FL16))
 head(Lightning.sf)
@@ -365,8 +367,7 @@ library(tidyverse)
 library(lubridate)
 
 LG.sf <- Lightning.sf %>%
-           mutate(Mo = month(Date)) %>%
-           filter(Mo %in% c(6, 7, 8))
+           mutate(Mo = month(Date))
 LG.sf <- aggregate(LG.sf[, "OBJECTID"], 
                    by = FL16, 
                    FUN = length) %>%
