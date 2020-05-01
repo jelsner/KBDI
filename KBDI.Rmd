@@ -5,110 +5,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+From Michael Keys: Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10km2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the SE United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in the state. The resulting 528,987-hectare landscape footprint was imported as a simple feature data frame and corresponding lightning and wildfire point data were similarly imported from shapefiles uploaded to Dropbox.
 
-## Keetch & Byram drought index
-
-Rainfall. Data from Figure 1 of Keetch & Byram 1968.
-```{r}
-Rainfall24 <- c(0, 0, .66, 0, .23, 0, .16, .09, 0, 0, .08, .03, 0, .22, 0, .21, 0, 0, 0, .01, 0, 0, 0, 0, 0, 0, 0, 0, .25, .16)
-
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:30) {
-  R24 <- Rainfall24[i]
-  PR <- ifelse(i == 1, NA, Rainfall24[i-1])
-  
-  if ( R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if( R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-      print(c(CumR, PR, R24, NetR[i]))
-    }
-  
-  else if ( R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-NetR
-
-C3 <- NetR
-
-Column3 <- c(0, 0, .46, 0, .03, 0, 0, .05, 0, 0, 0, 0, 0, .02, 0, .01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .05, .16)
-
-cor(C3, Column3) #Check the match
-```
-
-Air temperature. Data from Figure 1 of Keetch & Byram 1968.
-```{r}
-MaxTemp <- c(79, 75, 70, 76, 79, 84, 65, 66, 83, 70, 67, 65, 76, 69, 65, 75, 78, 85, 88, 79, 69, 75, 84, 89, 93, 92, 96, 91, 78, 83)
-
-Column4 <- MaxTemp
-```
-
-Drought factor equation. Eq. 18 from Keetch & Byram, 1968. Q: Drought Index Yesterday (initial value), MaxTemp: Today's high temperature (F) and R is annual average rainfall in inches.
-```{r}
-Q <- 164
-R <- 42
-MaxT <- 79
-
-( DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxT) - 8.30) /(1 + 10.88 * exp(-.0441 * R)) * .001 )
-```
-
-Implemented for each day.
-```{r}
-Q <- 164
-Ql <- numeric()
-DeltaQl <- numeric()
-for(i in 1:30){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.30) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-Ql
-DeltaQl
-
-C5 <- Ql - DeltaQl
-C6 <- DeltaQl
-C7 <- Ql
-
-DroughtIndex <- floor(Ql/100)
-```
-
-Check how well they match the Figure 1.
-```{r}
-Column5 <- c(164, 174, 136, 142, 148, 159, 173, 172, 176, 190, 196, 200, 204, 210, 215, 218, 226, 235, 248, 263, 271, 276, 283, 295, 311, 328, 345, 365, 373, 364)
-cor(C5, Column5)
-Column6 <- c(10, 8, 6, 9, 11, 14, 4, 4, 14, 6, 4, 4, 8, 5, 4, 8, 9, 13, 15, 8, 5, 7, 12, 16, 17, 17, 20, 13, 7, 10)
-cor(C6, Column6)
-Column7 <- c(174, 182, 142, 151, 159, 173, 177, 176, 190, 196, 200, 204, 212, 215, 219, 226, 235, 248, 263, 271, 276, 283, 295, 311, 328, 345, 365, 378, 380, 374)
-cor(C7, Column7)
-```
-
-## Repeat for a month of data from the Tallahassee airport.
-https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
-
-https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
-Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
-
-AWND = Average daily wind speed (tenths of meters per second) 
-
-Functions for weeks and days.
+## Functions for weeks and days of the year
 ```{r}
 cal <- function(dt) {
     # Reads a date object and returns a tuple (weekrow, daycol)
@@ -138,6 +37,15 @@ vdaycol <- function(dts) {
 }
 ```
 
+## Keetch & Byram drought index computed from data collected at the Tallahassee airport
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
+AWND = Average daily wind speed (tenths of meters per second) 
+
 Import the data.
 ```{r}
 library(lubridate)
@@ -165,13 +73,9 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 
 Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_index.html
 
-Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bin/get_archive_v2.py?date=2017-05-01 (only past three years are available) 
+Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bin/get_archive_v2.py?date=2017-05-01 (only past three years are available). Annual avg precipitation for Tallahassee, FL: https://www.usclimatedata.com/climate/tallahassee/florida/united-states/usfl0479 : 59.23 in.
 ```{r}
 Q <- 429
-```
-
-Annual avg precipitation for Tallahassee, FL: https://www.usclimatedata.com/climate/tallahassee/florida/united-states/usfl0479 : 59.23 in.
-```{r}
 R <- 59.23
 ```
 
@@ -229,8 +133,6 @@ for(i in 1:length(Rainfall24)){
   Ql <- c(Ql, Q)
   DeltaQl <- c(DeltaQl, DeltaQ)
 }
-#Ql
-#DeltaQl
 
 TLH.df$Ql <- Ql
 TLH.df$DeltaQl <- DeltaQl
@@ -273,10 +175,22 @@ ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
 #  theme_minimal() +
   ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
           subtitle = "Amount of water needed to bring soil moisture to full capacity") )
+
+( gg <- ggplot(TLH2.df, aes(x = doy, y = Year, fill = AWND)) +
+  geom_tile() +
+  scale_y_reverse(breaks = 2000:2015) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+  ylab("") + xlab("") +
+#  theme_minimal() +
+#  ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
+#          subtitle = "Amount of water needed to bring soil moisture to full capacity") )
+   ggtitle("Daily Average Wind Speed (m/s) in Tallahassee, Florida") )
 ```
 
-Render in 3D. https://www.tylermw.com/3d-ggplots-with-rayshader/
-```{r}
+Render in 3D. https://www.tylermw.com/3d-ggplots-with-rayshader/. Uses X11.
+```{r, eval=FALSE}
 library(rayshader)
 
 plot_gg(gg, multicore = FALSE, 
@@ -291,7 +205,7 @@ render_snapshot()
 ```
 
 To video. Plotting device must be open.
-```{r}
+```{r, eval=FALSE}
 png("TLH%i.png", width = 1280, height = 1280)
 angles = seq(0, 360, length.out = 141)[-1]
 for(i in 1:140) {
@@ -307,18 +221,6 @@ av::av_encode_video(sprintf("TLH%d.png", seq(1, 140, by=1)), framerate = 10,
 utils::browseURL('test.mp4')
 ```
 
-Another example:
-```{r}
-png("input%03d.png", width = 1280, height = 720, res = 108)
-for(i in 1:10){
-  print(ggplot2::qplot(rnorm(100)))
-}
-dev.off()
-png_files <- sprintf("input%03d.png", 1:10)
-av::av_encode_video(png_files, 'output.mp4', framerate = 1)
-utils::browseURL('output.mp4')
-```
-
 ## Calendar map of KDBI
 
 ```{r}
@@ -327,8 +229,6 @@ ggplot(TLH.df) +
   geom_tile(colour = "transparent") + 
   scale_y_reverse() +
   facet_grid(Year ~ month) + 
-#  scale_fill_gradient(low = "green", high = "red",
-#                      name = "°F") +
     scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
 #   scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
     theme_minimal() +
@@ -338,16 +238,51 @@ ggplot(TLH.df) +
         strip.text  = element_text(angle=0),
         strip.text.y = element_text(angle=0),
         panel.spacing = unit(0, "lines")) 
-#  ggtitle("Official Daily High Temperature in Tallahassee, Florida", 
-#          subtitle = "Every day since I arrived")
+
+ggplot(TLH.df) + 
+    aes(daycol, weekrow, fill = MaxTemp) + 
+  geom_tile(colour = "transparent") + 
+  scale_y_reverse() +
+  facet_grid(Year ~ month) + 
+  scale_fill_gradient(low = "green", high = "red",
+                      name = "°F") +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        strip.text  = element_text(angle=0),
+        strip.text.y = element_text(angle=0),
+        panel.spacing = unit(0, "lines")) +
+  ggtitle("Official Daily High Temperature in Tallahassee, Florida", 
+          subtitle = "Every day since I arrived")
 ```
 
 ## Florida USNG
 https://usngcenter.org/portfolio-item/usng-gis-data/
 ```{r}
+library(sf)
 unzip("FL_USNG.zip")
 FL16 <- st_read(dsn = "FL_USNG_UTM16.shp")
-# plot(FL16)
+```
+
+## Public land footprint
+Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
+```{r}
+download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
+              destfile = "TempPubLand.zip")
+unzip("TempPubLand.zip")
+LandHex.sf <- read_sf(dsn = "NorthFloridaPublicLandHexagons10km.shp") %>%
+  st_transform(crs = st_crs(FL16))
+```
+
+Clip the FL grid to the land border. The first way keeps all partial grid boxes. The second way keeps only grid boxes completely inside the land border. 
+```{r}
+FL16i <- st_intersection(LandHex.sf, FL16)
+plot(FL16i$geometry)
+
+Index <- st_contains_properly(LandHex.sf, FL16, sparse = TRUE)
+FL16c <- FL16[Index[[1]], ]
+plot(FL16c$geometry)
 ```
 
 Download the POSITIVE lightning strikes within the public lands footprint for the time period.
@@ -367,12 +302,14 @@ library(tidyverse)
 library(lubridate)
 
 LG.sf <- Lightning.sf %>%
-           mutate(Mo = month(Date))
+           mutate(Mo = month(Date)) %>%
+           filter(Mo == 6)
 LG.sf <- aggregate(LG.sf[, "OBJECTID"], 
-                   by = FL16, 
+                   by = FL16b, 
                    FUN = length) %>%
-    rename(Count = OBJECTID) %>%
-  filter(!is.na(Count))
+    rename(Count = OBJECTID) 
+
+LG.sf$Count[is.na(LG.sf$Count)] <- 0
 
 library(tmap)
 
