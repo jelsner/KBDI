@@ -275,7 +275,7 @@ LandHex.sf <- read_sf(dsn = "NorthFloridaPublicLandHexagons10km.shp") %>%
   st_transform(crs = st_crs(FL16))
 ```
 
-Clip the FL grid to the land border. The first way keeps all partial grid boxes. The second way keeps only grid boxes completely inside the land border. 
+Trim the FL grid to the land border. The first way keeps all partial grid boxes. The second way keeps only grid boxes completely inside the land border. 
 ```{r}
 FL16i <- st_intersection(LandHex.sf, FL16)
 plot(FL16i$geometry)
@@ -292,7 +292,7 @@ download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLight
 unzip("TempLightning.zip")
 
 Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
-  st_transform(crs = st_crs(FL16))
+  st_transform(crs = st_crs(FL16c))
 head(Lightning.sf)
 ```
 
@@ -302,10 +302,9 @@ library(tidyverse)
 library(lubridate)
 
 LG.sf <- Lightning.sf %>%
-           mutate(Mo = month(Date)) %>%
-           filter(Mo == 6)
+           mutate(Mo = month(Date))
 LG.sf <- aggregate(LG.sf[, "OBJECTID"], 
-                   by = FL16b, 
+                   by = FL16c, 
                    FUN = length) %>%
     rename(Count = OBJECTID) 
 
@@ -318,13 +317,60 @@ tm_shape(LG.sf) +
   tm_polygons(col = "Count", alpha = .6, border.col = "transparent")
 ```
 
+Compute spatial autocorrelation. Compare with random counts generated from a Poisson model.
+```{r}
+library(spdep)
+
+nbs <- poly2nb(LG.sf)
+wts <- nb2listw(nbs)
+
+moran.test(LG.sf$Count,
+           listw = wts)
+
+CountR <- rpois(n = m, lambda = mean(LG.sf$Count))
+moran.test(CountR,
+           listw = wts)
+
+LG.sf$CountR <- CountR
+tm_shape(LG.sf) +
+  tm_polygons(col = "CountR", 
+              alpha = .6, 
+              border.col = "transparent")
+```
+
 ## Wildfires
 
 Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
 ```{r}
-library(sf)
+FL_Fires.sf <- st_read(dsn = "FL_Fires",
+                       layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(FL16c)) %>%
+  filter(STAT_CAU_1 == "Lightning")
 
-FL_Fires.sf <- st_read(dsn = "FL_Fires")
+FIp.sf <- st_intersection(LandHex.sf, FL_Fires.sf)
+plot(FIp.sf$geometry)
+
+FIg.sf <- aggregate(FIp.sf[, "OBJECTID"], 
+                    by = FL16c, 
+                    FUN = length) %>%
+    rename(Count = OBJECTID) 
+
+FIg.sf$Count[is.na(FIg.sf$Count)] <- 0
+
+moran.test(FIg.sf$Count,
+           listw = wts)
+
+tm_shape(FIg.sf) +
+  tm_polygons(col = "Count", alpha = .6, border.col = "transparent")
+
+lightning <- LG.sf$Count
+fires <- FIg.sf$Count
+
+mean(lightning[fires == 0])
+mean(lightning[fires == 1])
+mean(lightning[fires == 2])
+mean(lightning[fires == 3])
+
 ```
 
 Make a map
