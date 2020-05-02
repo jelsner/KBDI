@@ -46,6 +46,8 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought. 
+
 Import the data.
 ```{r}
 library(lubridate)
@@ -141,7 +143,7 @@ TLH.df$DroughtIndex <- floor(Ql/100)
 range(TLH.df$Ql)
 
 TLH2.df <- TLH.df %>%
-  filter(Year >= 2000 & Year <= 2015)
+  filter(Year >= 1992 & Year <= 2015)
 ```
 
 ```{r}
@@ -187,6 +189,17 @@ ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
 #  ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
 #          subtitle = "Amount of water needed to bring soil moisture to full capacity") )
    ggtitle("Daily Average Wind Speed (m/s) in Tallahassee, Florida") )
+```
+
+Number of days per year with KBDI above 400.
+```{r}
+TLH.df %>%
+  filter(Year != 2020) %>%
+  group_by(Year) %>%
+  summarize(nD = sum(Ql > 400)) %>%
+  ggplot(aes(Year, nD)) +
+  geom_point() +
+  geom_smooth(method = lm)
 ```
 
 Render in 3D. https://www.tylermw.com/3d-ggplots-with-rayshader/. Uses X11.
@@ -263,7 +276,13 @@ https://usngcenter.org/portfolio-item/usng-gis-data/
 library(sf)
 unzip("FL_USNG.zip")
 FL16 <- st_read(dsn = "FL_USNG_UTM16.shp")
+FL17 <- st_read(dsn = "FL_USNG_UTM17.shp") %>%
+  st_transform(crs = st_crs(FL16))
+
+FL1617 <- rbind(FL16, FL17)
 ```
+
+We may need UTM17 for eastern most boundary of the ANF.
 
 ## Public land footprint
 Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
@@ -272,17 +291,18 @@ download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPubli
               destfile = "TempPubLand.zip")
 unzip("TempPubLand.zip")
 LandHex.sf <- read_sf(dsn = "NorthFloridaPublicLandHexagons10km.shp") %>%
-  st_transform(crs = st_crs(FL16))
+  st_transform(crs = st_crs(FL16)) %>%
+  filter(NAME == "APALACHICOLA")
 ```
 
 Trim the FL grid to the land border. The first way keeps all partial grid boxes. The second way keeps only grid boxes completely inside the land border. 
 ```{r}
-FL16i <- st_intersection(LandHex.sf, FL16)
-plot(FL16i$geometry)
+FL1617i <- st_intersection(LandHex.sf, FL1617)
+plot(FL1617i$geometry)
 
-Index <- st_contains_properly(LandHex.sf, FL16, sparse = TRUE)
-FL16c <- FL16[Index[[1]], ]
-plot(FL16c$geometry)
+Index <- st_contains_properly(LandHex.sf, FL1617, sparse = TRUE)
+FL1617c <- FL1617[Index[[1]], ]
+plot(FL1617c$geometry)
 ```
 
 Download the POSITIVE lightning strikes within the public lands footprint for the time period.
@@ -292,8 +312,72 @@ download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLight
 unzip("TempLightning.zip")
 
 Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
-  st_transform(crs = st_crs(FL16c))
+  st_transform(crs = st_crs(FL16)) %>%
+  filter(NAME == "APALACHICOLA") %>%
+  mutate(Year = year(Date),
+         Month = month(Date),
+         Day = day(Date))
 head(Lightning.sf)
+```
+
+```{r}
+Lightning.sf %>%
+  group_by(Year) %>%
+  summarize(nL = n()) %>%
+ggplot(aes(x = Year, y = nL)) +
+  geom_point()
+```
+
+## Wildfires
+
+Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
+```{r}
+Fires.sf <- st_read(dsn = "FL_Fires",
+                       layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(FL16)) %>%
+  filter(STAT_CAU_1 == "Lightning") 
+Fires.sf <- st_intersection(LandHex.sf, Fires.sf)
+
+Fires.sf <- Fires.sf %>%
+  mutate(Year = year(DISCOVERY_),
+         Month = month(DISCOVERY_),
+         Day = day(DISCOVERY_),
+         YDay = yday(DISCOVERY_),
+         YDayF = factor(YDay, levels = as.character(1:366))) %>%
+  select(Year, Month, Day, YDay, YDayF)
+plot(Fires.sf$geometry)
+```
+
+```{r}
+Monthly <- 
+  Fires.sf %>%
+  as.data.frame() %>%
+  mutate(MonthF = factor(Month, levels = as.character(1:12), ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n())
+
+Yearly <- 
+  Fires.sf %>%
+  as.data.frame() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n())
+
+ggplot(Monthly, aes(x = MonthF, y = nF)) +
+  geom_bar(stat = "identity")
+
+ggplot(Yearly, aes(x = YearF, y = nF)) +
+  geom_point()
+
+PSDI <- TLH2.df %>%
+  filter(month == "Apr") %>%
+  group_by(Year) %>%
+  summarize(KBDI = last(Ql))
+cor(PSDI$KBDI, Yearly$nF)
+
+model <- glm(mpg~hp, family=poisson, data=mtcars)
+ggplot(mtcars,aes(hp,mpg))+geom_point()+geom_line(aes(y=fitted(model)))
 ```
 
 Aggregate lightning strikes to grids.
