@@ -58,7 +58,7 @@ TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
   mutate(Date = as.Date(DATE)) %>%
-  filter(Date >= as.Date("1990-01-01")) %>%
+#  filter(Date >= as.Date("1990-01-01")) %>%
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
@@ -76,10 +76,6 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_index.html
 
 Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bin/get_archive_v2.py?date=2017-05-01 (only past three years are available). Annual avg precipitation for Tallahassee, FL: https://www.usclimatedata.com/climate/tallahassee/florida/united-states/usfl0479 : 59.23 in.
-```{r}
-Q <- 429
-R <- 59.23
-```
 
 Step one: Compute net rainfall.
 ```{r}
@@ -193,13 +189,18 @@ ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
 
 Number of days per year with KBDI above 400.
 ```{r}
+library(MASS)
+
 TLH.df %>%
   filter(Year != 2020) %>%
   group_by(Year) %>%
-  summarize(nD = sum(Ql > 400)) %>%
+  summarize(nD = sum(Ql > 700)) %>%
   ggplot(aes(Year, nD)) +
   geom_point() +
-  geom_smooth(method = lm)
+  stat_smooth(method = "glm.nb",
+              formula = y ~ x, 
+              se = FALSE,
+              col = "orange") 
 ```
 
 Render in 3D. https://www.tylermw.com/3d-ggplots-with-rayshader/. Uses X11.
