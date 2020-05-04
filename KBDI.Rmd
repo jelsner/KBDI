@@ -187,7 +187,7 @@ ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
    ggtitle("Daily Average Wind Speed (m/s) in Tallahassee, Florida") )
 ```
 
-Number of days per year with KBDI above 400.
+Number of days per year with KBDI above 700.
 ```{r}
 library(MASS)
 
@@ -271,6 +271,137 @@ ggplot(TLH.df) +
           subtitle = "Every day since I arrived")
 ```
 
+## Public land footprint
+
+Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
+```{r}
+download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
+              destfile = "TempPubLand.zip")
+unzip("TempPubLand.zip")
+
+LandHex.sf <- read_sf(dsn = "NorthFloridaPublicLandHexagons10km.shp")
+#  filter(NAME == "APALACHICOLA")
+plot(LandHex.sf$geometry)
+```
+
+## Wildfires
+
+Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
+```{r}
+Fires.sf <- st_read(dsn = "FL_Fires",
+                       layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(LandHex.sf)) %>%
+  filter(STAT_CAU_1 == "Lightning") %>%
+  st_intersection(LandHex.sf)
+
+plot(Fires.sf$geometry, add = TRUE)
+
+Fires.sf <- Fires.sf %>%
+  mutate(Year = year(DISCOVERY_),
+         Month = month(DISCOVERY_),
+         Day = day(DISCOVERY_),
+         YDay = yday(DISCOVERY_),
+         YDayF = factor(YDay, levels = as.character(1:366))) %>%
+  dplyr::select(Year, Month, Day, YDay, YDayF)
+```
+
+```{r}
+Fires.sf %>%
+  as.data.frame() %>%
+  mutate(MonthF = factor(Month, levels = as.character(1:12), ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n()) %>%
+ggplot(aes(x = MonthF, y = nF)) +
+  geom_bar(stat = "identity")
+
+Yearly <- 
+  Fires.sf %>%
+  as.data.frame() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n())
+
+ggplot(Yearly, aes(x = YearF, y = nF)) +
+  geom_point()
+
+PSDI <- TLH2.df %>%
+  filter(month == "Apr") %>%
+  group_by(Year) %>%
+  summarize(KBDI = last(Ql))
+cor(PSDI$KBDI, Yearly$nF)
+```
+
+Negative binomial regression.
+```{r}
+library(MASS)
+
+df <- data.frame(Year = PSDI$Year, 
+                 nF = Yearly$nF,
+                 KBDI = PSDI$KBDI * .0254) # convert to cm of soil moisture deficit
+
+var(df$nF)/mean(df$nF)
+exp(coef(glm.nb(nF ~ 1, data = df)))
+exp(coef(glm.nb(nF ~ KBDI, data = df))) # 1.189 or 19% per cm increase in soil moisture deficit
+
+
+model <- glm.nb(nF ~ KBDI, data = df)
+
+ggplot(df, aes(x = KBDI, y = nF)) +
+  geom_point() + 
+  geom_line(aes(y = fitted(model)))
+```
+
+## Lightning data
+
+Download the POSITIVE lightning strikes within the public lands footprint for the time period.
+```{r}
+download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLightningHexagonsPos.zip?dl=1",
+              destfile = "TempLightning.zip")
+unzip("TempLightning.zip")
+
+Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
+  st_transform(crs = st_crs(LandHex.s)) %>%
+  mutate(Year = year(Date),
+         Month = month(Date),
+         Day = day(Date))
+head(Lightning.sf)
+```
+
+```{r}
+Lightning.df <- Lightning.sf %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  group_by(Year) %>%
+  summarize(nL = sum(AMP >= 20))
+ggplot(Lightning.df, aes(x = Year, y = nL)) +
+  geom_point()
+
+df2 <- df %>%
+  filter(Year >= 2000) %>%
+  mutate(nL = Lightning.df$nL)
+
+cor(df2$nF, df2$nL)
+```
+
+More lightning fewer lightning caused wild fires. More rainfall?
+
+```{r}
+RainLightning <- TLH2.df %>%
+  mutate(Month = month(DATE)) %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  group_by(Year) %>%
+  summarize(AvgKBDI = mean(Ql)) %>%
+  filter(Year >= 2000) %>%
+  mutate(nL = Lightning.df$nL,
+         AprilKBDI = df$KBDI[df$Year >= 2000],
+         nF = df$nF[df$Year >= 2000])
+
+cor(RainLightning$AvgKBDI, RainLightning$nL)
+
+summary(glm.nb(nF ~ AprilKBDI + nL + AvgKBDI, data = RainLightning))
+```
+
+
 ## Florida USNG
 https://usngcenter.org/portfolio-item/usng-gis-data/
 ```{r}
@@ -285,17 +416,6 @@ FL1617 <- rbind(FL16, FL17)
 
 We may need UTM17 for eastern most boundary of the ANF.
 
-## Public land footprint
-Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
-```{r}
-download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
-              destfile = "TempPubLand.zip")
-unzip("TempPubLand.zip")
-LandHex.sf <- read_sf(dsn = "NorthFloridaPublicLandHexagons10km.shp") %>%
-  st_transform(crs = st_crs(FL16)) %>%
-  filter(NAME == "APALACHICOLA")
-```
-
 Trim the FL grid to the land border. The first way keeps all partial grid boxes. The second way keeps only grid boxes completely inside the land border. 
 ```{r}
 FL1617i <- st_intersection(LandHex.sf, FL1617)
@@ -306,80 +426,7 @@ FL1617c <- FL1617[Index[[1]], ]
 plot(FL1617c$geometry)
 ```
 
-Download the POSITIVE lightning strikes within the public lands footprint for the time period.
-```{r}
-download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLightningHexagonsPos.zip?dl=1",
-              destfile = "TempLightning.zip")
-unzip("TempLightning.zip")
 
-Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
-  st_transform(crs = st_crs(FL16)) %>%
-  filter(NAME == "APALACHICOLA") %>%
-  mutate(Year = year(Date),
-         Month = month(Date),
-         Day = day(Date))
-head(Lightning.sf)
-```
-
-```{r}
-Lightning.sf %>%
-  group_by(Year) %>%
-  summarize(nL = n()) %>%
-ggplot(aes(x = Year, y = nL)) +
-  geom_point()
-```
-
-## Wildfires
-
-Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
-```{r}
-Fires.sf <- st_read(dsn = "FL_Fires",
-                       layer = "FL_Fires")  %>%
-  st_transform(crs = st_crs(FL16)) %>%
-  filter(STAT_CAU_1 == "Lightning") 
-Fires.sf <- st_intersection(LandHex.sf, Fires.sf)
-
-Fires.sf <- Fires.sf %>%
-  mutate(Year = year(DISCOVERY_),
-         Month = month(DISCOVERY_),
-         Day = day(DISCOVERY_),
-         YDay = yday(DISCOVERY_),
-         YDayF = factor(YDay, levels = as.character(1:366))) %>%
-  select(Year, Month, Day, YDay, YDayF)
-plot(Fires.sf$geometry)
-```
-
-```{r}
-Monthly <- 
-  Fires.sf %>%
-  as.data.frame() %>%
-  mutate(MonthF = factor(Month, levels = as.character(1:12), ordered = TRUE)) %>%
-  group_by(MonthF, .drop = FALSE) %>%
-  summarize(nF = n())
-
-Yearly <- 
-  Fires.sf %>%
-  as.data.frame() %>%
-  filter(Month %in% c(5, 6, 7)) %>%
-  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
-  group_by(YearF, .drop = FALSE) %>%
-  summarize(nF = n())
-
-ggplot(Monthly, aes(x = MonthF, y = nF)) +
-  geom_bar(stat = "identity")
-
-ggplot(Yearly, aes(x = YearF, y = nF)) +
-  geom_point()
-
-PSDI <- TLH2.df %>%
-  filter(month == "Apr") %>%
-  group_by(Year) %>%
-  summarize(KBDI = last(Ql))
-cor(PSDI$KBDI, Yearly$nF)
-
-model <- glm(mpg~hp, family=poisson, data=mtcars)
-ggplot(mtcars,aes(hp,mpg))+geom_point()+geom_line(aes(y=fitted(model)))
-```
 
 Aggregate lightning strikes to grids.
 ```{r}
