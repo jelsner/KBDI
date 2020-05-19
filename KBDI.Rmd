@@ -740,9 +740,177 @@ lines(r2[pval2 <= signif] * cos(dg2[pval2 <= signif] * pi/180),
       r2[pval2 <= signif] * sin(dg2[pval2 <= signif] * pi/180), col="#cc3300", lwd=7) 
 ```
 
-Not very enlightening as avgTmax responds to precipitation rather than is a response to precipitation.
+Not very enlightening as avgTmax responds to precipitation rather than precipitation as a response to temperature.
 
 Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
 
 Winter rainfall getting more intense.
+
+## Prism data
+
+Get and manipulate prism rainfall data.
+```{r}
+library(prism)
+
+options(prism.path = "Data/PRISM")
+
+get_prism_dailys(
+  type = "tmax", 
+  minDate = "2008-08-19", 
+  maxDate = "2008-08-19", 
+  keepZip = FALSE 
+)
+```
+
+When we use `get_prism_dailys()` to download data, it creates one folder for each day. So, I have about folders inside the folder I designated as the download destination above with the `options()` function.
+
+```{r}
+library(raster)
+
+tmax.r <- raster("Data/PRISM/PRISM_tmax_stable_4kmD2_20080819_bil/PRISM_tmax_stable_4kmD2_20080819_bil.bil") 
+
+library(tmap)
+tm_shape(tmax.r) +
+  tm_raster() 
+```
+
+```{r}
+library(USAboundaries)
+
+FL.sf <- us_states(states = "FL") %>%
+  st_transform(crs = projection(tmax.r))
+
+tmax.r <- crop(tmax.r, FL.sf)
+
+tm_shape(tmax.r) +
+  tm_raster() 
+
+LandHex.sf <- LandHex.sf %>%
+  st_transform(crs = projection(tmax.r))
+tmax.r2 <- crop(tmax.r, LandHex.sf)
+
+tm_shape(tmax.r2) +
+  tm_raster() 
+```
+
+Hypothesis: Daily high temperatures have larger spatial correlation compared with daily low temperatures during spring.
+```{r}
+get_prism_dailys(
+  type = "tmax",
+  minDate = "2020-04-19", 
+  maxDate = "2020-04-19", 
+  keepZip = FALSE 
+)
+
+tmax.r <- raster("Data/PRISM/PRISM_tmax_provisional_4kmD2_20200419_bil/PRISM_tmax_provisional_4kmD2_20200419_bil.bil")
+tmax.r <- crop(tmax.r, FL.sf)
+plot(tmax.r)
+Moran(tmax.r)
+
+get_prism_dailys(
+  type = "tmin",
+  minDate = "2020-04-19", 
+  maxDate = "2020-04-19", 
+  keepZip = FALSE 
+)
+
+tmin.r <- raster("Data/PRISM/PRISM_tmin_provisional_4kmD2_20200419_bil/PRISM_tmin_provisional_4kmD2_20200419_bil.bil")
+tmin.r <- crop(tmin.r, FL.sf)
+plot(tmin.r)
+Moran(tmin.r)
+
+Leon.sf <- us_counties(states = "FL") %>%
+  dplyr::filter(name == "Leon") %>%
+  st_transform(crs = projection(tmax.r))
+
+tmin.r2 <- crop(tmin.r, Leon.sf)
+tmax.r2 <- crop(tmax.r, Leon.sf)
+Moran(tmin.r2)
+Moran(tmax.r2)
+```
+
+Another day.
+```{r}
+get_prism_dailys(
+  type = "tmax",
+  minDate = "2020-04-10", 
+  maxDate = "2020-04-10", 
+  keepZip = FALSE 
+)
+get_prism_dailys(
+  type = "tmin",
+  minDate = "2020-04-10", 
+  maxDate = "2020-04-10", 
+  keepZip = FALSE 
+)
+
+tmin.r <- raster("Data/PRISM/PRISM_tmin_provisional_4kmD2_20200410_bil/PRISM_tmin_provisional_4kmD2_20200410_bil.bil")
+tmax.r <- raster("Data/PRISM/PRISM_tmax_provisional_4kmD2_20200410_bil/PRISM_tmax_provisional_4kmD2_20200410_bil.bil")
+
+tmin.r2 <- crop(tmin.r, Leon.sf)
+tmax.r2 <- crop(tmax.r, Leon.sf)
+Moran(tmin.r2)
+Moran(tmax.r2)
+
+Sites.df <- data.frame(Name = c("Regional Airport", "Downtown", 
+                                "Dale Mabry Field", "Municipal Airport"), 
+                       Latitude = c(30.39306, 30.43333, 30.44, 30.38),
+                       Longitude = c(-84.35333, -84.28333, -84.338, -84.37))
+Sites.sf <- st_as_sf(Sites.df, coords = c("Longitude", "Latitude"),
+                     crs = 4326) %>%
+  st_transform(crs = projection(tmax.r))
+
+tm_shape(tmin.r2) +
+  tm_raster() +
+tm_shape(Leon.sf) +
+  tm_borders() +
+tm_shape(Sites.sf) +
+  tm_dots(size = .1)
+```
+
+30-yr normals.
+```{r}
+get_prism_normals(type = "tmin",
+                  mon = 4,
+                  resolution = "800m")
+tmin.r <- raster("Data/PRISM/PRISM_tmin_30yr_normal_800mM2_04_bil/PRISM_tmin_30yr_normal_800mM2_04_bil.bil")
+tmin.r2 <- crop(tmin.r, Leon.sf)
+
+tmap_mode("view")
+
+tm_shape(tmin.r2) +
+  tm_raster(alpha = .5) +
+tm_shape(Leon.sf) +
+  tm_borders() 
+#tm_shape(Sites.sf) +
+#  tm_dots(size = .1)
+
+Moran(tmin.r2)
+
+get_prism_normals(type = "tmax",
+                  mon = 4,
+                  resolution = "800m")
+tmax.r <- raster("Data/PRISM/PRISM_tmax_30yr_normal_800mM2_04_bil/PRISM_tmax_30yr_normal_800mM2_04_bil.bil")
+tmax.r2 <- crop(tmax.r, Leon.sf)
+tm_shape(tmax.r2) +
+  tm_raster(alpha = .5) +
+tm_shape(Leon.sf) +
+  tm_borders() +
+tm_shape(Sites.sf) +
+  tm_dots(size = .1)
+
+Moran(tmax.r2)
+
+get_prism_normals(type = "ppt",
+                  mon = 4,
+                  resolution = "800m")
+ppt.r <- raster("Data/PRISM/PRISM_ppt_30yr_normal_800mM2_04_bil/PRISM_ppt_30yr_normal_800mM2_04_bil.bil")
+ppt.r2 <- crop(ppt.r, Leon.sf)
+
+tm_shape(ppt.r2) +
+  tm_raster(alpha = .5, palette ="Greens")
+
+```
+
+https://tmieno2.github.io/R-as-GIS-for-Economists/
 
