@@ -68,9 +68,19 @@ TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
          MinTemp = TMIN,
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
-         Rainfall24mm = Rainfall24 * 25.4)
+         Rainfall24mm = Rainfall24 * 25.4,
+         AWND = AWND,
+         ACMH = ACMH)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+```
+
+Find dates since 1990 in April when ACMH = 0 and AWND < 5
+```{r}
+X <- TLH.df %>%
+  dplyr::filter(!is.na(AWND)) %>%
+  dplyr::filter(month == "Apr") %>%
+  dplyr::filter(ACMH == 0 & AWND < 5) 
 ```
 
 Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_index.html
@@ -361,7 +371,7 @@ download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLight
 unzip("TempLightning.zip")
 
 Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
-  st_transform(crs = st_crs(LandHex.s)) %>%
+  st_transform(crs = st_crs(LandHex.sf)) %>%
   mutate(Year = year(Date),
          Month = month(Date),
          Day = day(Date))
@@ -740,7 +750,7 @@ lines(r2[pval2 <= signif] * cos(dg2[pval2 <= signif] * pi/180),
       r2[pval2 <= signif] * sin(dg2[pval2 <= signif] * pi/180), col="#cc3300", lwd=7) 
 ```
 
-Not very enlightening as avgTmax responds to precipitation rather than precipitation as a response to temperature.
+Not very enlightening: avgTmax responds to precipitation rather than precipitation as a response to temperature.
 
 Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
 
