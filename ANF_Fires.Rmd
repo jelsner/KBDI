@@ -3,3 +3,111 @@ title: "Lightning Caused Fires in the ANF"
 output: html_document
 ---
 
+Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the SE United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in the state. The resulting 528,987-hectare landscape footprint was imported as a simple feature data frame and corresponding lightning and wildfire point data were similarly imported from shapefiles uploaded to Dropbox.
+
+## Keetch & Byram drought index computed from data collected at the Tallahassee airport
+
+NWS Tallahassee daily weather data:
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
+AWND = Average daily wind speed (tenths of meters per second) 
+
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought.
+
+For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam=30", clay=25" and sand=80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to increased difficulty in fire suppression.
+
+High values of the KBDI are an indication that conditions are favorable for the occurrence and spread of wildfires, but drought is not by itself a prerequisite for wildfires. Other weather factors, such as wind, temperature, relative humidity and atmospheric stability, play a major role in determining the actual fire danger.
+
+### Import the data and add columns to the data frame. 
+Replace missing rainfall with 0.
+```{r}
+library(lubridate)
+library(dplyr)
+library(tidyr)
+
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+  mutate(Date = as.Date(DATE)) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+```
+
+### Compute daily KBDI
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
+Step one: Compute net rainfall.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  
+  if ( R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if( R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  
+  else if ( R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+```
+
+Step two: Compute drought index.
+```{r}
+Q <- 269
+R <- 59.23
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+
+range(TLH.df$Ql)
+
+TLH2.df <- TLH.df %>%
+  filter(Year >= 1992 & Year <= 2015)
+```
+

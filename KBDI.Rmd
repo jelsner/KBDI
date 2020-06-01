@@ -143,27 +143,54 @@ for(i in 1:length(Rainfall24)){
 }
 
 TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
 TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 
+TLH.df <- TLH.df %>%
+ dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
 range(TLH.df$Ql)
-
-TLH2.df <- TLH.df %>%
-  filter(Year >= 1992 & Year <= 2015)
 ```
 
 ```{r}
 library(ggplot2)
 
-ggplot(TLH2.df, aes(x = Date, y = Ql)) +
+ggplot(TLH.df, aes(x = Date, y = Ql)) +
   geom_line() +
   scale_y_continuous(limits = c(0, 800)) +
   ylab("") + xlab("") +
-  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
+#  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
+  geom_smooth(method = lm) +
   theme_minimal() +
   ggtitle("Keetch-Byram Drought Index", 
-          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (2012-2018)")
+          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1940-2020)")
+```
 
+Linear trend model.
+```{r}
+summary(lm(Qlm ~ Date, data = TLH.df))
+```
+
+Soil moisture deficits are increasing at .000672 mm/day on average. Which amounts to .245 mm/year or 2.45 mm/decade.
+
+It terms of frequency by Drought Index category.
+```{r}
+TLH.df %>%
+  group_by(Year, DroughtIndex) %>%
+  summarize(N = n()) %>%
+  ggplot(aes(x = Year, y = N)) +
+  geom_col(aes(fill = as.factor(DroughtIndex))) +
+  scale_fill_viridis_d(name = "KBDI") +
+  scale_x_continuous(name = "", breaks = seq(1948, 2019, 4)) +
+  scale_y_reverse() +
+  theme_minimal() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  guides(fill = guide_legend(reverse=T))
+```
+
+```{r}
 ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
   geom_tile() +
   scale_y_reverse(breaks = 2000:2015) +
