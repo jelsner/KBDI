@@ -1,6 +1,8 @@
 ---
 title: "Lightning Caused Fires in the ANF"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the SE United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in the state. The resulting 528,987-hectare landscape footprint was imported as a simple feature data frame and corresponding lightning and wildfire point data were similarly imported from shapefiles uploaded to Dropbox.
@@ -102,12 +104,148 @@ for(i in 1:length(Rainfall24)){
 }
 
 TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
 TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 
+TLH.df <- TLH.df %>%
+ dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
 range(TLH.df$Ql)
-
-TLH2.df <- TLH.df %>%
-  filter(Year >= 1992 & Year <= 2015)
 ```
 
+### Trends
+
+```{r}
+library(ggplot2)
+
+ggplot(TLH.df, aes(x = Date, y = Ql)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 800)) +
+  ylab("") + xlab("") +
+#  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
+  geom_smooth(method = lm) +
+  facet_wrap(~ month) +
+  theme_minimal() +
+  ggtitle("Keetch-Byram Drought Index", 
+          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1940-2020)")
+```
+
+Linear trend model.
+```{r}
+summary(lm(Qlm ~ Date, data = TLH.df)) # this assumes daily Qlm are independent
+
+library(broom)
+library(quantreg)
+
+TLH.df %>% 
+  group_by(Year, month) %>%
+  summarize(AvgQlm = mean(Qlm)) %>%
+  group_by(month) %>%
+#  do(tidy(rq(AvgQlm ~ Year, tau = .5, data = .))) %>%
+  do(tidy(lm(AvgQlm ~ Year, data = .))) %>%
+  dplyr::filter(term == "Year")
+```
+
+Soil moisture deficits are increasing at .4 mm/year on average during April. Which amounts to 4 mm/decade.
+
+Get SOI data and join with TLH.df.
+```{r}
+SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
+                   skip = 1, header = TRUE) %>%
+  mutate(Date = parse_date_time(as.character(Date), "ym"),
+         Year = year(Date),
+         Month = month(Date),
+         month = month(Date, label = TRUE, abbr = TRUE),
+         SOI = Value) %>%
+  dplyr::select(Year, Month, month, SOI)
+
+Joined.df <- TLH.df %>% 
+  dplyr::filter(Year >= 1951) %>%
+  group_by(Year, month) %>%
+  summarize(AvgQlm = mean(Qlm)) %>%
+  dplyr::select(Year, month, AvgQlm) %>%
+  left_join(SOI.df, by = c("Year", "month"))
+
+Joined.df %>%
+  group_by(month) %>%
+  do(tidy(lm(AvgQlm ~ Year + SOI, data = .))) %>%
+  dplyr::filter(term == "Year")
+
+Joined.df %>%
+  group_by(month) %>%
+  do(tidy(lm(AvgQlm ~ Year + SOI, data = .))) %>%
+  dplyr::filter(term == "SOI")
+```
+
+It terms of frequency by Drought Index category.
+```{r}
+TLH.df %>%
+#  dplyr::filter(month == "May") %>%
+  group_by(Year, DroughtIndex) %>%
+  summarize(N = n()) %>%
+  ggplot(aes(x = Year, y = N)) +
+  geom_col(aes(fill = as.factor(DroughtIndex))) +
+  scale_fill_viridis_d(name = "KBDI") +
+  scale_x_continuous(name = "", breaks = seq(1948, 2019, 4)) +
+  scale_y_reverse() +
+  theme_minimal() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+Daily
+```{r}
+ggplot(TLH.df, aes(x = doy, y = Year, fill = Qlm)) +
+  geom_tile() +
+  scale_y_reverse(breaks = seq(1948, 2019, 4)) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+  ylab("") + xlab("") +
+  theme_minimal() +
+  ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
+          subtitle = "Amount of water needed to bring soil moisture to full capacity") 
+
+ggplot(TLH.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
+  geom_tile() +
+  scale_y_reverse(breaks = seq(1948, 2019, 4)) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
+  ylab("") + xlab("") +
+  theme_minimal() +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+Number of days per year with KBDI above 700.
+```{r}
+library(MASS)
+
+TLH.df %>%
+  filter(Year != 2020) %>%
+  group_by(Year) %>%
+  summarize(nD = sum(Ql > 650)) %>%
+  ggplot(aes(Year, nD)) +
+  geom_point() +
+  stat_smooth(method = "glm.nb",
+              formula = y ~ x, 
+              se = FALSE,
+              col = "orange") 
+```
+
+## ANF Boundary file
+
+Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
+```{r}
+#download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
+#              destfile = "TempPubLand.zip")
+#unzip("TempPubLand.zip")
+
+library(sf)
+
+LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp")
+#  filter(NAME == "APALACHICOLA")
+plot(LandHex.sf$geometry)
+```

@@ -166,13 +166,6 @@ ggplot(TLH.df, aes(x = Date, y = Ql)) +
           subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1940-2020)")
 ```
 
-Linear trend model.
-```{r}
-summary(lm(Qlm ~ Date, data = TLH.df))
-```
-
-Soil moisture deficits are increasing at .000672 mm/day on average. Which amounts to .245 mm/year or 2.45 mm/decade.
-
 It terms of frequency by Drought Index category.
 ```{r}
 TLH.df %>%
@@ -316,7 +309,7 @@ download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPubli
               destfile = "TempPubLand.zip")
 unzip("TempPubLand.zip")
 
-LandHex.sf <- read_sf(dsn = "NorthFloridaPublicLandHexagons10km.shp")
+LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp")
 #  filter(NAME == "APALACHICOLA")
 plot(LandHex.sf$geometry)
 ```
