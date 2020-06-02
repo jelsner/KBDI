@@ -119,11 +119,11 @@ range(TLH.df$Ql)
 ```{r}
 library(ggplot2)
 
-ggplot(TLH.df, aes(x = Date, y = Qlm)) +
+ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   geom_line() +
-  scale_y_continuous() +
+  scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
+  scale_y_continuous(breaks = seq(0, 200, by = 50), labels = c("Wet", 50, 100, 150, "Dry")) +
   ylab("") + xlab("") +
-#  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
   geom_smooth(method = lm, se = FALSE) +
   facet_wrap(~ month, ncol = 12) +
   theme_minimal() +
@@ -131,8 +131,6 @@ ggplot(TLH.df, aes(x = Date, y = Qlm)) +
   labs(title = "Daily soil moisture deficit (mm), Tallahassee, FL", 
        subtitle = "Amount of water needed to bring soil moisture to full capacity",
        caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
-#  ggtitle("Keetch-Byram Drought Index", 
-#          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1946-2019)")
 ```
 
 Linear trend model.
