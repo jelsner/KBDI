@@ -135,18 +135,34 @@ ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
 
 Linear trend model.
 ```{r}
-summary(lm(Qlm ~ Date, data = TLH.df)) # this assumes daily Qlm are independent
+summary(lm(Qlm ~ Date, data = TLH.df)) # this assumes daily Qlm are independent (they are certainly not)
 
 library(broom)
 library(quantreg)
 
-TLH.df %>% 
+Trends.df <- TLH.df %>% 
   group_by(Year, month) %>%
   summarize(AvgQlm = mean(Qlm)) %>%
   group_by(month) %>%
 #  do(tidy(rq(AvgQlm ~ Year, tau = .5, data = .))) %>%
   do(tidy(lm(AvgQlm ~ Year, data = .))) %>%
   dplyr::filter(term == "Year")
+
+Avg <- TLH.df %>%
+  group_by(month) %>%
+  summarize(AvgQlm = mean(Qlm)) %>%
+  pull(AvgQlm)
+
+cor(Trends.df$estimate, Avg)
+
+Avg <- TLH.df %>%
+  group_by(month) %>%
+  summarize(nYear = n_distinct(Year), 
+            TotalPRCP = sum(PRCP, na.rm = TRUE),
+            AvgMonthlyPRCP = TotalPRCP/nYear) %>%
+  pull(AvgMonthlyPRCP)
+
+cor(Trends.df$estimate, Avg)
 ```
 
 Soil moisture deficits are increasing at .4 mm/year on average during April. Which amounts to 4 mm/decade.
