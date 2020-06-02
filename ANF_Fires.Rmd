@@ -5,9 +5,13 @@ editor_options:
   chunk_output_type: console
 ---
 
-Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the SE United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in the state. The resulting 528,987-hectare landscape footprint was imported as a simple feature data frame and corresponding lightning and wildfire point data were similarly imported from shapefiles uploaded to Dropbox.
-
 ## Keetch & Byram drought index computed from data collected at the Tallahassee airport
+
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought.
+
+For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam=30", clay=25" and sand=80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to increased difficulty in fire suppression.
+
+High values of the KBDI indicate conditions favorable for the occurrence and spread of wildfires, but drought is not by itself a prerequisite for wildfires. Other weather factors, such as wind, temperature, relative humidity and atmospheric stability, play a major role in determining the actual fire danger.
 
 NWS Tallahassee daily weather data:
 https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
@@ -15,14 +19,9 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought.
+### Import the data and add columns to the data frame
 
-For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam=30", clay=25" and sand=80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to increased difficulty in fire suppression.
-
-High values of the KBDI are an indication that conditions are favorable for the occurrence and spread of wildfires, but drought is not by itself a prerequisite for wildfires. Other weather factors, such as wind, temperature, relative humidity and atmospheric stability, play a major role in determining the actual fire danger.
-
-### Import the data and add columns to the data frame. 
-Replace missing rainfall with 0.
+Assign 0 rainfall to days with missing values.
 ```{r}
 library(lubridate)
 library(dplyr)
@@ -42,11 +41,15 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
          Rainfall24mm = Rainfall24 * 25.4)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+
+sum(is.na(TLH.df$PRCP))
+nrow(TLH.df)
+sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of all days]
 ```
 
 ### Compute daily KBDI
 
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction in Alexander1992.pdf in Dropbox/Literature.
 
 Step one: Compute net rainfall.
 ```{r}
@@ -59,7 +62,6 @@ NetR <- numeric()
 
 for(i in 1:length(Rainfall24)) {
   R24 <- Rainfall24[i]
-  
   if ( R24 == 0) {
     NetR[i] <- 0
     CumR <- 0
@@ -70,7 +72,6 @@ for(i in 1:length(Rainfall24)) {
       else if (CumR > .2) NetR[i] <- CumR - .2
       else NetR[i] <- 0
     }
-  
   else if ( R24 > .2) {
       if (CumR <= .2) {
       NetR[i] <- CumR + R24 - .2
@@ -118,16 +119,20 @@ range(TLH.df$Ql)
 ```{r}
 library(ggplot2)
 
-ggplot(TLH.df, aes(x = Date, y = Ql)) +
+ggplot(TLH.df, aes(x = Date, y = Qlm)) +
   geom_line() +
-  scale_y_continuous(limits = c(0, 800)) +
+  scale_y_continuous() +
   ylab("") + xlab("") +
 #  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
-  geom_smooth(method = lm) +
-  facet_wrap(~ month) +
+  geom_smooth(method = lm, se = FALSE) +
+  facet_wrap(~ month, ncol = 12) +
   theme_minimal() +
-  ggtitle("Keetch-Byram Drought Index", 
-          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1940-2020)")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Daily soil moisture deficit (mm), Tallahassee, FL", 
+       subtitle = "Amount of water needed to bring soil moisture to full capacity",
+       caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
+#  ggtitle("Keetch-Byram Drought Index", 
+#          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1946-2019)")
 ```
 
 Linear trend model.
@@ -235,7 +240,13 @@ TLH.df %>%
               col = "orange") 
 ```
 
-## ANF Boundary file
+## Spatial domain
+
+Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. 
+
+While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the Southeast United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in Florida. 
+
+The resulting 528,987-hectare landscape footprint is imported as a simple feature data frame and corresponding lightning and wildfire point data are similarly imported from shapefiles uploaded to Dropbox.
 
 Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
 ```{r}
