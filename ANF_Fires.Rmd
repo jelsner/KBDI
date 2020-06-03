@@ -122,7 +122,7 @@ library(ggplot2)
 ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   geom_line() +
   scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
-  scale_y_reverse(breaks = seq(0, 200, by = 50), labels = c("Wet", 50, 100, 150, "Dry")) +
+#  scale_y_reverse(breaks = seq(0, 200, by = 50), labels = c("Wet", 50, 100, 150, "Dry")) +
   ylab("") + xlab("") +
   geom_smooth(method = lm, se = FALSE) +
   facet_wrap(~ month, ncol = 12) +
@@ -166,6 +166,14 @@ cor(Trends.df$estimate, Avg)
 ```
 
 Soil moisture deficits are increasing at .4 mm/year on average during April. Which amounts to 4 mm/decade.
+
+What is the correlation between PRCP, TMAX and Qlm grouped by month?
+```{r}
+TLH.df %>%
+  group_by(month) %>%
+  summarize(rPRCP = cor(Qlm, PRCP, use = "complete"),
+            rTMAX = cor(Qlm, TMAX, use = "complete"))
+```
 
 Get SOI data and join with TLH.df.
 ```{r}
