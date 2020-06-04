@@ -372,7 +372,7 @@ df <- data.frame(Year = PSDI$Year,
 
 var(df$nF)/mean(df$nF)
 exp(coef(glm.nb(nF ~ 1, data = df)))
-exp(coef(glm.nb(nF ~ KBDI, data = df))) # 1.189 or 19% per cm increase in soil moisture deficit
+exp(coef(glm.nb(nF ~ KBDI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
 
 
 model <- glm.nb(nF ~ KBDI, data = df)

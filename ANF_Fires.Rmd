@@ -291,7 +291,11 @@ plot(LandHex.sf$geometry)
 
 ## Wildfires
 
-Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox.
+Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
+
+Short, Karen C. 2017. Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508]. 4th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.4
+
+Abstract:This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
 ```{r}
 Fires.sf <- st_read(dsn = "Data/FL_Fires",
                     layer = "FL_Fires")  %>%
@@ -307,7 +311,15 @@ Fires.sf <- Fires.sf %>%
          Day = day(DISCOVERY_),
          YDay = yday(DISCOVERY_),
          YDayF = factor(YDay, levels = as.character(1:366))) %>%
-  dplyr::select(Year, Month, Day, YDay, YDayF)
+  dplyr::select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, FIRE_SIZE_)
+```
+
+Make fire size and ordered factor and create a model that predicts the probability by size category similar to EF rating.
+```{r}
+Fires.sf %>%
+  group_by(FIRE_SIZE_) %>%
+  summarize(Range1 = range(FIRE_SIZE)[1],
+            Range2 = range(FIRE_SIZE)[2])
 ```
 
 ```{r}
