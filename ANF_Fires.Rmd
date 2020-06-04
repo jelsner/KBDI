@@ -114,6 +114,10 @@ TLH.df <- TLH.df %>%
 range(TLH.df$Ql)
 ```
 
+Package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for PDSI.
+
+### Soil moisture data from ESA
+
 ### Trends
 
 ```{r}
@@ -172,7 +176,9 @@ What is the correlation between PRCP, TMAX and Qlm grouped by month?
 TLH.df %>%
   group_by(month) %>%
   summarize(rPRCP = cor(Qlm, PRCP, use = "complete"),
-            rTMAX = cor(Qlm, TMAX, use = "complete"))
+            rTMAX = cor(Qlm, TMAX, use = "complete"),
+            rTMIN = cor(Qlm, TMIN, use = "complete"),
+            rTAVG = cor(Qlm, TAVG, use = "complete"))
 ```
 
 Get SOI data and join with TLH.df.
@@ -281,4 +287,52 @@ library(sf)
 LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp")
 #  filter(NAME == "APALACHICOLA")
 plot(LandHex.sf$geometry)
+```
+
+## Wildfires
+
+Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox.
+```{r}
+Fires.sf <- st_read(dsn = "Data/FL_Fires",
+                    layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(LandHex.sf)) %>%
+  dplyr::filter(STAT_CAU_1 == "Lightning") %>%
+  st_intersection(LandHex.sf)
+
+plot(Fires.sf$geometry, add = TRUE)
+
+Fires.sf <- Fires.sf %>%
+  mutate(Year = year(DISCOVERY_),
+         Month = month(DISCOVERY_),
+         Day = day(DISCOVERY_),
+         YDay = yday(DISCOVERY_),
+         YDayF = factor(YDay, levels = as.character(1:366))) %>%
+  dplyr::select(Year, Month, Day, YDay, YDayF)
+```
+
+```{r}
+Fires.sf %>%
+  group_by(Month) %>%
+  summarize(nF = n()) %>%
+ggplot(aes(x = Month, y = nF)) +
+  geom_col(col = "gray70", fill = "gray70") +
+  scale_x_continuous(breaks = 1:12) +
+  theme_minimal()
+
+Yearly <- 
+  Fires.sf %>%
+  as.data.frame() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n())
+
+ggplot(Yearly, aes(x = YearF, y = nF)) +
+  geom_point()
+
+PSDI <- TLH2.df %>%
+  filter(month == "Apr") %>%
+  group_by(Year) %>%
+  summarize(KBDI = last(Ql))
+cor(PSDI$KBDI, Yearly$nF)
 ```
