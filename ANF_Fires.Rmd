@@ -314,7 +314,7 @@ Fires.sf <- Fires.sf %>%
   dplyr::select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, FIRE_SIZE_)
 ```
 
-Make fire size and ordered factor and create a model that predicts the probability by size category similar to EF rating.
+Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
 ```{r}
 Fires.sf %>%
   group_by(FIRE_SIZE_) %>%
@@ -324,11 +324,13 @@ Fires.sf %>%
 
 ```{r}
 Fires.sf %>%
-  group_by(Month) %>%
-  summarize(nF = n()) %>%
-ggplot(aes(x = Month, y = nF)) +
+  as.data.frame() %>%
+  mutate(MonthF = factor(month.name[Month], levels = month.name, ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n()) %>% 
+ggplot(aes(x = MonthF, y = nF)) +
   geom_col(col = "gray70", fill = "gray70") +
-  scale_x_continuous(breaks = 1:12) +
+  coord_flip() +
   theme_minimal()
 
 Yearly <- 
