@@ -388,5 +388,7 @@ model <- glm.nb(nFires ~ KBDI, data = df)
 
 ggplot(df, aes(x = KBDI, y = nFires)) +
   geom_point() + 
-  geom_line(aes(y = fitted(model)))
+  geom_line(aes(y = fitted(model))) +
+  ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
+  theme_minimal()
 ```
