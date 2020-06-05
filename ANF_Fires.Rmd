@@ -210,6 +210,8 @@ Joined.df %>%
   dplyr::filter(term == "SOI")
 ```
 
+SOI is positively correlated with moisture deficit. La Nina conditions (positive SOI) during winter leads to larger moisture deficits (higher Qlm).
+
 It terms of frequency by Drought Index category.
 ```{r}
 TLH.df %>%
@@ -252,7 +254,7 @@ ggplot(TLH.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
   guides(fill = guide_legend(reverse = TRUE))
 ```
 
-Number of days per year with KBDI above 700.
+Number of days per year with KBDI above 650.
 ```{r}
 library(MASS)
 
@@ -284,9 +286,14 @@ Public land footprint. Download the footprint of North Florida public land hexag
 
 library(sf)
 
-LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp")
-#  filter(NAME == "APALACHICOLA")
-plot(LandHex.sf$geometry)
+LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp") %>%
+  dplyr::filter(NAME == "APALACHICOLA")
+
+library(tmap)
+
+tmap_mode("view")
+tm_shape(LandHex.sf) +
+  tm_borders()
 ```
 
 ## Wildfires
@@ -303,7 +310,10 @@ Fires.sf <- st_read(dsn = "Data/FL_Fires",
   dplyr::filter(STAT_CAU_1 == "Lightning") %>%
   st_intersection(LandHex.sf)
 
-plot(Fires.sf$geometry, add = TRUE)
+tm_shape(LandHex.sf) +
+  tm_borders() +
+tm_shape(Fires.sf) +
+  tm_dots(size = .03)
 
 Fires.sf <- Fires.sf %>%
   mutate(Year = year(DISCOVERY_),
@@ -318,7 +328,8 @@ Make fire size an ordered factor and create a model that predicts the probabilit
 ```{r}
 Fires.sf %>%
   group_by(FIRE_SIZE_) %>%
-  summarize(Range1 = range(FIRE_SIZE)[1],
+  summarize(nFires = n(),
+            Range1 = range(FIRE_SIZE)[1],
             Range2 = range(FIRE_SIZE)[2])
 ```
 
@@ -330,8 +341,14 @@ Fires.sf %>%
   summarize(nF = n()) %>% 
 ggplot(aes(x = MonthF, y = nF)) +
   geom_col(col = "gray70", fill = "gray70") +
-  coord_flip() +
-  theme_minimal()
+  coord_flip() + xlab("") + ylab("") +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank()
+    )
 
 Yearly <- 
   Fires.sf %>%
@@ -344,9 +361,32 @@ Yearly <-
 ggplot(Yearly, aes(x = YearF, y = nF)) +
   geom_point()
 
-PSDI <- TLH2.df %>%
-  filter(month == "Apr") %>%
+PSDI <- TLH.df %>%
+  dplyr::filter(Year >= 1992 & Year <= 2015) %>%
+  dplyr::filter(month == "Apr") %>%
   group_by(Year) %>%
-  summarize(KBDI = last(Ql))
-cor(PSDI$KBDI, Yearly$nF)
+  summarize(KBDI = last(Qlm))
+
+SOI <- SOI.df %>%
+  dplyr::filter(Year >= 1992 & Year <= 2015) %>%
+  dplyr::filter(month == "Apr") %>%
+  pull(SOI)
+
+df <- data.frame(Year = PSDI$Year, nFires = Yearly$nF, KBDI = PSDI$KBDI, SOI = SOI)
+```
+
+Negative binomial regression.
+```{r}
+library(MASS)
+
+var(df$nFires)/mean(df$nFires)
+exp(coef(glm.nb(nFires ~ 1, data = df)))
+exp(coef(glm.nb(nFires ~ KBDI + SOI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
+
+
+model <- glm.nb(nFires ~ KBDI, data = df)
+
+ggplot(df, aes(x = KBDI, y = nFires)) +
+  geom_point() + 
+  geom_line(aes(y = fitted(model)))
 ```
