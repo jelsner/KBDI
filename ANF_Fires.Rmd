@@ -382,25 +382,25 @@ df <- data.frame(Year = PSDI$Year, nFires = Yearly$nF, KBDI = PSDI$KBDI, SOI = S
 
 Correlation by day of Month during April.
 ```{r}
-X <- TLH.df %>%
+TLH.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2015) %>%
-  dplyr::filter(month == "Apr") %>%
-  mutate(Day = day(Date)) %>%
-  group_by(Day, Year) %>%
-  summarize(KBDI = Qlm)
-
-XX <- left_join(X, Yearly, by = "Year")
-
-XX %>%
-  group_by(Day) %>%
-  summarize(r = cor.test(KBDI, nF)$estimate,
-            rLo = cor.test(KBDI, nF, conf.level = .9)$conf.int[1],
-            rHi = cor.test(KBDI, nF, conf.level = .9)$conf.int[2]) %>%
-  ggplot(aes(x = Day, y = r)) +
+#  dplyr::filter(month == "Apr") %>%
+#  mutate(Day = day(Date)) %>%
+  group_by(doy, Year) %>%
+  summarize(KBDI = Qlm) %>%
+  dplyr::filter(doy != 366) %>%
+  group_by(doy) %>%
+  summarize(r = cor.test(KBDI, Yearly$nF)$estimate,
+            rLo = cor.test(KBDI, Yearly$nF, conf.level = .9)$conf.int[1],
+            rHi = cor.test(KBDI, Yearly$nF, conf.level = .9)$conf.int[2]) %>%
+  ggplot(aes(x = doy, y = r)) +
   geom_ribbon(aes(ymin = rLo, ymax = rHi), fill = "gray90") +
   geom_point() +
   geom_line() +
-  scale_y_continuous(limits = c(0, 1)) +
+  geom_segment(lineend = "round", aes(x = 121, xend = 213, y = .9, yend = .9), size = 3, col = "red") +
+  scale_y_continuous(limits = c(-1, 1)) +
+  scale_x_continuous(breaks = c(1,	32,	60,	91, 121, 152, 182, 213, 244, 274, 305, 335),
+                     labels = month.abb, position = "top") +
   theme_minimal()
 ```
 
