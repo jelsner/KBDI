@@ -5,6 +5,10 @@ editor_options:
   chunk_output_type: console
 ---
 
+https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
+
+https://www.cpc.ncep.noaa.gov/products/predictions/90day/
+
 ## Keetch & Byram drought index computed from data collected at the Tallahassee airport
 
 The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought.
@@ -356,7 +360,8 @@ Yearly <-
   filter(Month %in% c(5, 6, 7)) %>%
   mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
   group_by(YearF, .drop = FALSE) %>%
-  summarize(nF = n())
+  summarize(nF = n()) %>%
+  mutate(Year = 1992:2015)
 
 ggplot(Yearly, aes(x = YearF, y = nF)) +
   geom_point()
@@ -373,6 +378,30 @@ SOI <- SOI.df %>%
   pull(SOI)
 
 df <- data.frame(Year = PSDI$Year, nFires = Yearly$nF, KBDI = PSDI$KBDI, SOI = SOI)
+```
+
+Correlation by day of Month during April.
+```{r}
+X <- TLH.df %>%
+  dplyr::filter(Year >= 1992 & Year <= 2015) %>%
+  dplyr::filter(month == "Apr") %>%
+  mutate(Day = day(Date)) %>%
+  group_by(Day, Year) %>%
+  summarize(KBDI = Qlm)
+
+XX <- left_join(X, Yearly, by = "Year")
+
+XX %>%
+  group_by(Day) %>%
+  summarize(r = cor.test(KBDI, nF)$estimate,
+            rLo = cor.test(KBDI, nF, conf.level = .9)$conf.int[1],
+            rHi = cor.test(KBDI, nF, conf.level = .9)$conf.int[2]) %>%
+  ggplot(aes(x = Day, y = r)) +
+  geom_ribbon(aes(ymin = rLo, ymax = rHi), fill = "gray90") +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1)) +
+  theme_minimal()
 ```
 
 Negative binomial regression.
