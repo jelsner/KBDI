@@ -5,6 +5,10 @@ editor_options:
   chunk_output_type: console
 ---
 
+Climatic classification of drought typologies
+https://essd.copernicus.org/articles/12/741/2020/
+https://github.com/robertmonjo/drought
+
 From Michael Keys: Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10km2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the SE United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in the state. The resulting 528,987-hectare landscape footprint was imported as a simple feature data frame and corresponding lightning and wildfire point data were similarly imported from shapefiles uploaded to Dropbox.
 
 ## Functions for weeks and days of the year
