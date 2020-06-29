@@ -123,6 +123,7 @@ Package to compute the standaridized precip-evapotranspiration index {SPEI}. Onl
 
 ### Trends
 
+The second plot is statistically more realistic in that it removes the temporal autocorrelations.
 ```{r}
 library(ggplot2)
 
@@ -153,7 +154,47 @@ TLH.df %>%
   labs(title = "Monthly average soil moisture deficit (mm) by year, Tallahassee, FL", 
        subtitle = "Amount of water needed to bring soil moisture to full capacity",
        caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
+```
 
+Side-by-side daily distribution plots (early vs late) by month. 1943:1980, 1981:2019
+Temperature distributions by epoch for days defined by the hot day/night seasons.
+```{r}
+TLH.df %>%
+  mutate(Epoch = Year > 1980) %>%
+  ggplot(aes(x = Qlm, color = Epoch)) +
+#  geom_density(bw = 10, size = 1) +
+  geom_freqpoly(size = 1, bins = 8) +
+  scale_color_manual(labels = c("1943-1980", "1981-2019"), values = c("black", "sandybrown")) +
+  scale_x_continuous(limits = c(0, 250), breaks = c(0, 100, 200)) +
+  ylab("Number of days") + xlab("Daily soil moisture deficit (mm)") +
+  facet_wrap(~ month, ncol = 12) +
+#  coord_flip() +
+  theme_minimal()
+```
+
+
+library(forcats)
+
+FreqByT <- rbind(NightFreqByT, DayFreqByT) %>%
+  mutate(EpochF = factor(Epoch, 
+                         levels = c("FALSE", "TRUE"))) %>%
+  mutate(EpochF = fct_reorder(EpochF, Temp),
+         EpochF = fct_reorder(EpochF, When))
+
+ggplot(FreqByT, aes(x = Temp, color = EpochF)) +
+  geom_density(bw = 1, size = 1) +
+  geom_hline(yintercept = 0, size = 1, col = "gray70") +
+  scale_x_continuous(breaks = seq(40, 100, 10),
+                     labels = paste0(seq(40, 100, 10), "°")) +
+#  scale_color_manual(labels = c("1980-2018", "1940-1979"), values = c("red", "orange")) +
+  scale_color_manual(labels = c("1940-1979", "1980-2018"), values = c("orange", "red")) +
+  facet_wrap(~ When, nrow = 2) +
+  xlab("Temperature (F)") +  ylab("Relative Frequency") +
+  labs(color = "") +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = "top")
 ```
 
 Linear trend model.
