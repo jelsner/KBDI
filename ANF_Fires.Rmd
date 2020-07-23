@@ -22,7 +22,7 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-### Import the data and add columns to the data frame
+### Import the summary of the day data and add columns to the data frame
 
 Assign no rainfall on days with missing values.
 ```{r}
@@ -43,18 +43,18 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
          Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4)
 
-TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96 # missing max temperature. Filled from weather underground data
 
 sum(is.na(TLH.df$PRCP))
 nrow(TLH.df)
 sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of all days]
 ```
 
-### Compute daily KBDI
+### Compute daily values of the KBDI
 
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction in Alexander1992.pdf in Dropbox/Literature.
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
 
-Step one: Compute net rainfall.
+Step one: Compute net rainfall on each day.
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -65,17 +65,17 @@ NetR <- numeric()
 
 for(i in 1:length(Rainfall24)) {
   R24 <- Rainfall24[i]
-  if ( R24 == 0) {
+  if (R24 == 0) {
     NetR[i] <- 0
     CumR <- 0
   } 
-  else if( R24 > 0 & R24 <= .2) {
+  else if(R24 > 0 & R24 <= .2) {
       CumR <- CumR + R24
       if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
       else if (CumR > .2) NetR[i] <- CumR - .2
       else NetR[i] <- 0
     }
-  else if ( R24 > .2) {
+  else if (R24 > .2) {
       if (CumR <= .2) {
       NetR[i] <- CumR + R24 - .2
       CumR <- CumR + R24
@@ -90,7 +90,7 @@ for(i in 1:length(Rainfall24)) {
 TLH.df$NetR <- NetR
 ```
 
-Step two: Compute drought index.
+Step two: Compute daily drought index.
 ```{r}
 Q <- 269
 R <- 59.23
@@ -123,7 +123,7 @@ Package to compute the standaridized precip-evapotranspiration index {SPEI}. Onl
 
 ### Trends
 
-The second plot is statistically more realistic in that it removes the temporal autocorrelations.
+Make some trend plots. The second plot is statistically more realistic in that it removes the temporal autocorrelations.
 ```{r}
 library(ggplot2)
 
@@ -172,31 +172,6 @@ TLH.df %>%
   theme_minimal()
 ```
 
-
-library(forcats)
-
-FreqByT <- rbind(NightFreqByT, DayFreqByT) %>%
-  mutate(EpochF = factor(Epoch, 
-                         levels = c("FALSE", "TRUE"))) %>%
-  mutate(EpochF = fct_reorder(EpochF, Temp),
-         EpochF = fct_reorder(EpochF, When))
-
-ggplot(FreqByT, aes(x = Temp, color = EpochF)) +
-  geom_density(bw = 1, size = 1) +
-  geom_hline(yintercept = 0, size = 1, col = "gray70") +
-  scale_x_continuous(breaks = seq(40, 100, 10),
-                     labels = paste0(seq(40, 100, 10), "°")) +
-#  scale_color_manual(labels = c("1980-2018", "1940-1979"), values = c("red", "orange")) +
-  scale_color_manual(labels = c("1940-1979", "1980-2018"), values = c("orange", "red")) +
-  facet_wrap(~ When, nrow = 2) +
-  xlab("Temperature (F)") +  ylab("Relative Frequency") +
-  labs(color = "") +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(),
-        legend.position = "top")
-```
-
 Linear trend model.
 ```{r}
 summary(lm(Qlm ~ Date, data = TLH.df)) # this assumes daily Qlm are independent (they are certainly not)
@@ -217,7 +192,7 @@ Avg <- TLH.df %>%
   summarize(AvgQlm = mean(Qlm)) %>%
   pull(AvgQlm)
 
-cor(Trends.df$estimate, Avg)
+cor(Trends.df$estimate, Avg) # positive indicating upward trends are occurring in months with higher drought index values
 
 Avg <- TLH.df %>%
   group_by(month) %>%
@@ -226,7 +201,7 @@ Avg <- TLH.df %>%
             AvgMonthlyPRCP = TotalPRCP/nYear) %>%
   pull(AvgMonthlyPRCP)
 
-cor(Trends.df$estimate, Avg)
+cor(Trends.df$estimate, Avg)  # negative as expected since upward trends are occurring in months with less rainfall
 ```
 
 Soil moisture deficits are increasing at .4 mm/year on average during April. Which amounts to 4 mm/decade.
@@ -272,7 +247,7 @@ Joined.df %>%
 
 SOI is positively correlated with moisture deficit. La Nina conditions (positive SOI) during winter leads to larger moisture deficits (higher Qlm).
 
-It terms of frequency by Drought Index category.
+In terms of frequency by Drought Index category. Proportion of the year in each drought category.
 ```{r}
 TLH.df %>%
 #  dplyr::filter(month == "May") %>%
@@ -311,7 +286,9 @@ ggplot(TLH.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
   scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
   ylab("") + xlab("") +
   theme_minimal() +
-  guides(fill = guide_legend(reverse = TRUE))
+  guides(fill = guide_legend(reverse = TRUE)) +
+  ggtitle("Daily drought category, Tallahassee, FL",
+          subtitle = "7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated")
 ```
 
 Number of days per year with KBDI above 650.
