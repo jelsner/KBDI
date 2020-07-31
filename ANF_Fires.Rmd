@@ -309,13 +309,13 @@ TLH.df %>%
 
 ## Spatial domain
 
-Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. 
+Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not substantially influenced by confounding effects of urbanization, agricultural land or roadways. 
 
 While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the Southeast United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in Florida. 
 
 The resulting 528,987-hectare landscape footprint is imported as a simple feature data frame and corresponding lightning and wildfire point data are similarly imported from shapefiles uploaded to Dropbox.
 
-Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
+Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area. We focus only on the Apalachicola National Forest.
 ```{r}
 #download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
 #              destfile = "TempPubLand.zip")
@@ -328,9 +328,18 @@ LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp") %>%
 
 library(tmap)
 
+Airport.sf <- data.frame(Name = c("Regional Airport"), 
+                       Latitude = c(30.39306),
+                       Longitude = c(-84.35333)) %>%
+  st_as_sf(coords = c("Longitude", "Latitude"),
+           crs = 4326) %>%
+  st_transform(crs = st_crs(LandHex.sf))
+
 tmap_mode("view")
 tm_shape(LandHex.sf) +
-  tm_borders()
+  tm_borders() +
+tm_shape(Airport.sf) +
+  tm_dots(size = .1, col = "darkgreen")
 ```
 
 ## Wildfires
@@ -339,7 +348,7 @@ Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox. These data were c
 
 Short, Karen C. 2017. Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508]. 4th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.4
 
-Abstract:This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
+Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
 ```{r}
 Fires.sf <- st_read(dsn = "Data/FL_Fires",
                     layer = "FL_Fires")  %>%
@@ -350,7 +359,9 @@ Fires.sf <- st_read(dsn = "Data/FL_Fires",
 tm_shape(LandHex.sf) +
   tm_borders() +
 tm_shape(Fires.sf) +
-  tm_dots(size = .03)
+  tm_dots(size = .03) +
+tm_shape(Airport.sf) +
+  tm_dots(size = .1, col = "darkgreen")
 
 Fires.sf <- Fires.sf %>%
   mutate(Year = year(DISCOVERY_),
