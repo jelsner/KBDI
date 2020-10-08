@@ -10,6 +10,8 @@ https://www.cpc.ncep.noaa.gov/products/predictions/90day/
 
 ## Keetch & Byram drought index computed from data collected at the Tallahassee airport
 
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
 The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. 
 
 For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to greater difficulty in fire suppression.
@@ -123,7 +125,7 @@ Package to compute the standaridized precip-evapotranspiration index {SPEI}. Onl
 
 ### Trends
 
-Make some trend plots. The second plot is statistically more realistic in that it removes the temporal autocorrelations.
+Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
 ```{r}
 library(ggplot2)
 
