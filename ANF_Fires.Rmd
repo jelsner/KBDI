@@ -10,6 +10,8 @@ https://www.cpc.ncep.noaa.gov/products/predictions/90day/
 
 ## Keetch & Byram drought index computed from data collected at the Tallahassee airport
 
+Adding Zach.
+
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
 The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. 
