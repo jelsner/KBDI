@@ -119,9 +119,7 @@ TLH.df <- TLH.df %>%
 range(TLH.df$Ql)
 ```
 
-Package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for PDSI.
-
-### Soil moisture data from ESA
+Note: There is a package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for PDSI.
 
 ### Trends
 
