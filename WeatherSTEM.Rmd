@@ -1,0 +1,121 @@
+---
+title: "WeatherSTEM data across Leon County"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Data location: https://leon.weatherstem.com/
+
+Choose a active WeatherSTEM site.
+Get raw data by clicking on <raw data> under current conditions.
+
+One station: https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalacheepark/davis.json
+
+Get the data into R.
+```{r}
+library(tidyverse)
+
+loc <- "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalacheepark/davis.json"
+json_data <- fromJSON(file = loc)
+```
+
+Create a data frame
+```{r}
+ID <- json_data$davis_current_observation$DID
+Name <- json_data$davis_current_observation$station_name
+Latitude <- as.numeric(json_data$latitude)
+Longitude <- as.numeric(json_data$longitude)
+Day_Low_Time <- json_data$davis_current_observation$temp_day_low_time
+Day_Low_Temp <- as.numeric(json_data$davis_current_observation$temp_day_low_f)
+
+df <- data.frame(ID, Name, Latitude, Longitude, Day_Low_Temp, Day_Low_Time)
+```
+
+Create a station list.
+```{r}
+loc <- c("https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalacheepark/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/bucklake/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/canopyoaks/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/chaires/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/clc/davis.json",
+#         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/chiles/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/conley/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/deerlake/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/desototrail/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/famudrs/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsus/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fortbraden/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsuesc/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsursp/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsurez/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/gilchrist/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/hartsfield/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/hawksrise/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/sullivan/davis.json", 
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/killearnlakes/davis.json",
+          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/leon/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/lincoln/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/maclay/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/netallahassee/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/oakridge/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/rickards/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/ruediger/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/sail/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/sealey/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/success/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/swiftcreek/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tcc/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tallahasseenurseries/davis.json"
+
+)
+```
+
+Loop over the station list importanting the data and making a data frame.
+```{r}
+ID <- NULL
+Name <- NULL
+Latitude <- NULL
+Longitude <- NULL
+Date <- NULL
+Day_Low_Time <- NULL
+Day_Low_Temp <- NULL
+
+for(i in 1:length(loc)){
+  json_data <- fromJSON(file = loc[i])
+  
+    ID[i] <- json_data$davis_current_observation$DID
+    Name[i] <- json_data$davis_current_observation$station_name
+    Latitude[i] <- as.numeric(json_data$latitude)
+    Longitude[i] <- as.numeric(json_data$longitude)
+    Date[i] <- substring(json_data$observation_time_rfc822, 6, 16)
+    Day_Low_Time[i] <- json_data$davis_current_observation$temp_day_low_time
+    Day_Low_Temp[i] <- as.numeric(json_data$davis_current_observation$temp_day_low_f)
+}
+
+( df <- data.frame(ID, Name, Latitude, Longitude, Date, Day_Low_Time, Day_Low_Temp) %>%
+    mutate(Date = as.Date(Date, format = "%d %B %Y")) %>%
+    filter(Date == as.Date("2020-12-10")) )
+```
+
+Convert the data frame to a simple feature data frame and make an interactive map.
+```{r}
+library(sf)
+
+projcrs <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+sfdf <- st_as_sf(df, 
+                 coords = c("Longitude", "Latitude"),
+                 crs = projcrs)
+
+library(tmap)
+
+tmap_mode("view")
+
+tm_shape(sfdf) +
+  tm_dots() +
+  tm_text(text = "Name")
+
+tm_shape(sfdf) +
+  tm_text(text = "Day_Low_Temp")
+```
+         
