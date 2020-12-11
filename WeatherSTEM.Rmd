@@ -66,8 +66,10 @@ loc <- c("https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalache
          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/success/davis.json",
          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/swiftcreek/davis.json",
          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tcc/davis.json",
-         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tallahasseenurseries/davis.json"
-
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tallahasseenurseries/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/theedison/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/woodville/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/wtmoore/davis.json"
 )
 ```
 
@@ -78,6 +80,7 @@ Name <- NULL
 Latitude <- NULL
 Longitude <- NULL
 Date <- NULL
+Sunrise <- NULL
 Day_Low_Time <- NULL
 Day_Low_Temp <- NULL
 
@@ -89,13 +92,15 @@ for(i in 1:length(loc)){
     Latitude[i] <- as.numeric(json_data$latitude)
     Longitude[i] <- as.numeric(json_data$longitude)
     Date[i] <- substring(json_data$observation_time_rfc822, 6, 16)
+    Sunrise[i] <- json_data$davis_current_observation$sunrise
     Day_Low_Time[i] <- json_data$davis_current_observation$temp_day_low_time
     Day_Low_Temp[i] <- as.numeric(json_data$davis_current_observation$temp_day_low_f)
 }
 
-( df <- data.frame(ID, Name, Latitude, Longitude, Date, Day_Low_Time, Day_Low_Temp) %>%
+( df <- data.frame(ID, Name, Latitude, Longitude, Date, Sunrise, Day_Low_Time, Day_Low_Temp) %>%
     mutate(Date = as.Date(Date, format = "%d %B %Y")) %>%
-    filter(Date == as.Date("2020-12-10")) )
+    filter(Name != "DeSoto Trail Elementary WeatherSTEM") %>%
+    filter(Date == as.Date("2020-12-11")) )
 ```
 
 Convert the data frame to a simple feature data frame and make an interactive map.
@@ -117,5 +122,44 @@ tm_shape(sfdf) +
 
 tm_shape(sfdf) +
   tm_text(text = "Day_Low_Temp")
+```
+
+Get locations for interpolation.
+```{r}
+grid.sfc <- st_make_grid(sfdf,
+                         n = c(20, 40),
+                         what = "polygons")
+
+tm_shape(grid.sfc) +
+  tm_borders() +
+tm_shape(sfdf) +
+  tm_dots(col = "red")
+```
+
+Interpolate temperatures to a grid
+```{r}
+library(gstat)
+
+interpolation <- idw(formula = Day_Low_Temp ~ 1,
+                     locations = sfdf,
+                     newdata = grid.sfc)
+
+tm_shape(interpolation) +
+  tm_fill(col = "var1.pred", alpha = .5)
+```
+
+Use projection first. Here we use Florida GDL Albers (EPSG:3087). This eliminates the warnings.
+```{r}
+sfdf <- st_transform(sfdf, 
+                     crs = 3087)
+grid.sfc <- st_make_grid(sfdf,
+                         n = c(20, 40),
+                         what = "polygons")
+interpolation <- idw(formula = Day_Low_Temp ~ 1,
+                     locations = sfdf,
+                     newdata = grid.sfc)
+
+tm_shape(interpolation) +
+  tm_fill(col = "var1.pred", alpha = .5)
 ```
          
