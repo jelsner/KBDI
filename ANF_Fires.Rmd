@@ -24,6 +24,8 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
+https://www.ncdc.noaa.gov/  > I want to search for data at a particular location > DATA TOOLS > Final a Station
+
 ### Import the summary of the day data and add columns to the data frame
 
 Assign no rainfall on days with missing values.
@@ -171,6 +173,8 @@ TLH.df %>%
 #  coord_flip() +
   theme_minimal()
 ```
+
+Repeat for using data from Apalachacola.
 
 Linear trend model.
 ```{r}
