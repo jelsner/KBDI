@@ -1,0 +1,179 @@
+---
+title: "Zach RMD"
+author: "Zach"
+date: "12/11/2020"
+output: html_document
+---
+---
+title: "Lightning Caused Fires in the ANF"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
+https://www.cpc.ncep.noaa.gov/products/predictions/90day/
+
+## Keetch & Byram drought index computed from data collected at the Tallahassee airport
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. 
+
+For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to greater difficulty in fire suppression.
+
+High values of the KBDI indicate conditions favorable for the occurrence and spread of wildfires, but drought is not by itself a prerequisite for wildfires. Other weather factors, such as wind, temperature, relative humidity and atmospheric stability, play a major role in determining the actual fire danger.
+
+NWS Tallahassee daily weather data:
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
+AWND = Average daily wind speed (tenths of meters per second) 
+
+### Import the summary of the day data and add columns to the data frame
+
+Assign no rainfall on days with missing values.
+```{r}
+library(lubridate)
+library(dplyr)
+library(tidyr)
+
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+  mutate(Date = as.Date(DATE)) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96 # missing max temperature. Filled from weather underground data
+
+sum(is.na(TLH.df$PRCP))
+nrow(TLH.df)
+sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of all days]
+```
+
+### Compute daily values of the KBDI
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
+
+Step one: Compute net rainfall on each day.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+```
+
+Step two: Compute daily drought index.
+```{r}
+Q <- 269  
+R <- 59.23 # average annual rainfall for TLH
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+
+TLH.df <- TLH.df %>%
+ dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
+range(TLH.df$Ql)
+```
+
+Note: There is a package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for PDSI.
+
+### Trends
+
+Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
+```{r}
+library(ggplot2)
+
+ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
+  geom_line() +
+  scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
+#  scale_y_reverse(breaks = seq(0, 200, by = 50), labels = c("Wet", 50, 100, 150, "Dry")) +
+  ylab("") + xlab("") +
+  geom_smooth(method = lm, se = FALSE) +
+  facet_wrap(~ month, ncol = 12) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Daily soil moisture deficit (mm), Tallahassee, FL", 
+       subtitle = "Amount of water needed to bring soil moisture to full capacity",
+       caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
+
+TLH.df %>%
+  dplyr::group_by(month, Year) %>%
+  dplyr::summarise(Avg = mean(Qlm)) %>%
+  ggplot(aes(x = Year, y = Avg, color = Avg)) +
+  geom_point() +  
+  scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
+  ylab("") + xlab("") +
+  geom_smooth(method = lm) +
+  facet_wrap(~ month, ncol = 12) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Monthly average soil moisture deficit (mm) by year, Tallahassee, FL", 
+       subtitle = "Amount of water needed to bring soil moisture to full capacity",
+       caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
+```
+
+Side-by-side daily distribution plots (early vs late) by month. 1943:1980, 1981:2019
+Temperature distributions by epoch for days defined by the hot day/night seasons.
+```{r}
+TLH.df %>%
+  mutate(Epoch = Year > 1980) %>%
+  ggplot(aes(x = Qlm, color = Epoch)) +
+#  geom_density(bw = 10, size = 1) +
+  geom_freqpoly(size = 1, bins = 8) +
+  scale_color_manual(labels = c("1943-1980", "1981-2019"), values = c("black", "sandybrown")) +
+  scale_x_continuous(limits = c(0, 250), breaks = c(0, 100, 200)) +
+  ylab("Number of days") + xlab("Daily soil moisture deficit (mm)") +
+  facet_wrap(~ month, ncol = 12) +
+#  coord_flip() +
+  theme_minimal()
+```
