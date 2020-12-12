@@ -15,8 +15,9 @@ One station: https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apala
 Get the data into R.
 ```{r}
 library(tidyverse)
+library(rjson)
 
-loc <- "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalacheepark/davis.json"
+loc <- "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/wtmoore/davis.json"
 json_data <- fromJSON(file = loc)
 ```
 
@@ -68,25 +69,25 @@ loc <- c("https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalache
          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tcc/davis.json",
          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tallahasseenurseries/davis.json",
          "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/theedison/davis.json",
-         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/woodville/davis.json",
-         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/wtmoore/davis.json"
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/woodville/davis.json"
+#         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/wtmoore/davis.json"
 )
 ```
 
 Loop over the station list importanting the data and making a data frame.
 ```{r}
-ID <- NULL
-Name <- NULL
-Latitude <- NULL
-Longitude <- NULL
-Date <- NULL
-Sunrise <- NULL
-Day_Low_Time <- NULL
-Day_Low_Temp <- NULL
+ID <- rep(NA, length(loc))
+Name <- rep(NA, length(loc))
+Latitude <- rep(NA, length(loc))
+Longitude <- rep(NA, length(loc))
+Date <- rep(NA, length(loc))
+Sunrise <- rep(NA, length(loc))
+Day_Low_Time <- rep(NA, length(loc))
+Day_Low_Temp <- rep(NA, length(loc))
 
 for(i in 1:length(loc)){
   json_data <- fromJSON(file = loc[i])
-  
+
     ID[i] <- json_data$davis_current_observation$DID
     Name[i] <- json_data$davis_current_observation$station_name
     Latitude[i] <- as.numeric(json_data$latitude)
@@ -96,11 +97,13 @@ for(i in 1:length(loc)){
     Day_Low_Time[i] <- json_data$davis_current_observation$temp_day_low_time
     Day_Low_Temp[i] <- as.numeric(json_data$davis_current_observation$temp_day_low_f)
 }
+```
 
+```{r}
 ( df <- data.frame(ID, Name, Latitude, Longitude, Date, Sunrise, Day_Low_Time, Day_Low_Temp) %>%
     mutate(Date = as.Date(Date, format = "%d %B %Y")) %>%
-    filter(Name != "DeSoto Trail Elementary WeatherSTEM") %>%
-    filter(Date == as.Date("2020-12-11")) )
+#    filter(Name != "DeSoto Trail Elementary WeatherSTEM") %>%
+    filter(Date == as.Date("2020-12-12")) )
 ```
 
 Convert the data frame to a simple feature data frame and make an interactive map.
@@ -162,4 +165,68 @@ interpolation <- idw(formula = Day_Low_Temp ~ 1,
 tm_shape(interpolation) +
   tm_fill(col = "var1.pred", alpha = .5)
 ```
-         
+
+Interpolate to census tracts and correlation with median household income
+```{r}
+library(tidycensus)
+
+median_hh_income <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "FL",
+  county = "Leon",
+  year = 2019,
+  geometry = TRUE,
+  show_call = TRUE
+)
+
+sfdf <- st_transform(sfdf, 
+                     crs = 3087)
+median_hh_income <- st_transform(median_hh_income, 
+                                 crs = 3087)
+
+interpolation <- idw(formula = Day_Low_Temp ~ 1,
+                     locations = sfdf,
+                     newdata = median_hh_income)
+
+tm_shape(interpolation) +
+  tm_fill(col = "var1.pred", alpha = .5)
+
+cor.test(median_hh_income$estimate, interpolation$var1.pred)
+```
+
+Change in median household income
+```{r}
+median_hh_income <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "FL",
+  county = "Leon",
+  year = 2019,
+  geometry = TRUE,
+  show_call = TRUE
+)
+median_hh_income2015 <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "FL",
+  county = "Leon",
+  year = 2015,
+  geometry = TRUE,
+  show_call = TRUE
+)
+
+median_hh_income$estimate2 = median_hh_income2015$estimate
+
+median_hh_income <- median_hh_income %>%
+  mutate(PercentChange = (estimate - estimate2)/estimate2 * 100)
+
+
+
+st_crs(median_hh_income) <- 4326
+tmap_mode("view")
+
+tm_shape(median_hh_income) +
+  tm_fill(col = "PercentChange", alpha = .5)
+
+```         
