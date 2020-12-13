@@ -344,6 +344,27 @@ tm_shape(Airport.sf) +
   tm_dots(size = .1, col = "darkgreen")
 ```
 
+## Use {ggspatial} to make maps
+
+https://github.com/paleolimbot/ggspatial/blob/master/vignettes/ggspatial.Rmd
+
+On first use, a GIS will recognize much of the syntax of how plots are built from GIS language: there are layers, geometries, coordinate systems, and the ability to map attributes to the appearance of the layer (aesthetics). With {ggplot} version 3.0, `geom_sf()` and `coord_sf()` let users pass simple features (GIS layers from the {sf} package) objects as layers. Non-spatial data (data frames with XY or lon/lat coluns) and raster data are not well-supported in {ggplot2, which is the gap filled by the {ggspatial} package.
+
+```{r}
+library(ggspatial)
+
+LandHex.sf <- LandHex.sf %>%
+  st_transform(crs = 4326)
+
+ggplot() +
+  layer_spatial(LandHex.sf) +
+  annotation_map_tile(type = "osm")
+```
+
+Any spatial layer can be added to a `ggplot()` using `layer_spatial()` (well, any object from the **sf**, **sp**, or **raster** packages...). These layers will train the scales, meaning they will be visible unless you explicitly set the X or Y scale limits. Unlike `geom_` or `stat_` functions, `layer_spatial()` always takes its data first. Aesthetics can be passed for most types of objects, the exception being RGB rasters, which are more like backround images than data that should be mapped to a scale. Unlike `layer_spatial()`, `annotation_spatial()` layers never train the scales, so they can be used as a backdrop for other layers.
+
+
+
 ## Wildfires
 
 Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
