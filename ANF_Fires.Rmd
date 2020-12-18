@@ -56,7 +56,7 @@ sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of
 
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
 
-Step one: Compute net rainfall on each day.
+Step one: Compute net rainfall on each day. Units are inches.
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -92,7 +92,7 @@ for(i in 1:length(Rainfall24)) {
 TLH.df$NetR <- NetR
 ```
 
-Step two: Compute daily drought index.
+Step two: Compute daily drought index. Units of temperature are degrees F.
 ```{r}
 Q <- 269  
 R <- 59.23 # average annual rainfall for TLH
