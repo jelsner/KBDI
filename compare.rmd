@@ -38,7 +38,7 @@ library(lubridate)
 library(dplyr)
 library(tidyr)
 
-TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
+KAAF.df <- read.csv(file = 'Data/KAAF_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
   mutate(Date = as.Date(DATE)) %>%
@@ -51,7 +51,39 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
          Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4)
 
-TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96 # missing max temperature. Filled from weather underground data
+#Missing max temperatures. Data not found on weather underground. Filled with normals from nws: https://www.weather.gov/tae/apalachicola_normalsrecords
+KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-09"] <- 88
+KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-10"] <- 88
+KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-11"] <- 88
+KAAF.df$MaxTemp[KAAF.df$Date == "1964-11-03"] <- 76
+KAAF.df$MaxTemp[KAAF.df$Date == "1964-11-05"] <- 76
+KAAF.df$MaxTemp[KAAF.df$Date == "1996-11-15"] <- 73
+KAAF.df$MaxTemp[KAAF.df$Date == "1996-12-31"] <- 63 #7 degrees lower than day before and after. 12/30 +  1/1 maxTemp = 70.
+KAAF.df$MaxTemp[KAAF.df$Date == "1997-02-14"] <- 66
+KAAF.df$MaxTemp[KAAF.df$Date == "1997-04-30"] <- 80 #4/29 = maxTemp = 74, 5/1 maxTemp = 78. Normal of 80 does not fit in trend? 
+KAAF.df$MaxTemp[KAAF.df$Date == "1997-10-29"] <- 78 #strong cold front on 10/27. Normal of 78 does not fit trend
+KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-25"] <- 72
+KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-26"] <- 72
+KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-27"] <- 72
+KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-28"] <- 73
+KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-29"] <- 73
+KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-30"] <- 73
+
+#Missing max temperatures. Filled with Weather Underground data.
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-01"] <- 72
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-02"] <- 78
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-03"] <- 77
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-04"] <- 70
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-05"] <- 64
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-10"] <- 63
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-11"] <- 62
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-12"] <- 72
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-13"] <- 80
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-14"] <- 69
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-15"] <- 74
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-16"] <- 74
+KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-31"] <- 75
+
 
 sum(is.na(TLH.df$PRCP))
 nrow(TLH.df)
