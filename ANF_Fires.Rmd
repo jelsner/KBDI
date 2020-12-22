@@ -218,6 +218,10 @@ TLH.df %>%
             rTAVG = cor(Qlm, TAVG, use = "complete"))
 ```
 
+## Todo
+Seasonal (fire season) temperature vs precipitation scatter plot. See TempVsPrecipSeasonal.jpeg
+Create a character variable called `FireSeason`. Then group by that variable computing the average temp and total precipitation. 
+
 Get SOI data and join with TLH.df.
 ```{r}
 SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
