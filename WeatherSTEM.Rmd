@@ -7,14 +7,130 @@ editor_options:
 
 Data location: https://leon.weatherstem.com/
 
-Choose a active WeatherSTEM site.
-Get raw data by clicking on <raw data> under current conditions.
+Select stations and instruments then download.
+```{r}
+library(tidyverse)
+df <- read.csv("Data/weatherSTEMdata2020-12-26.csv")
+```
+
+Organize the data. Start with the variable of interest. Here temperature.
+```{r}
+df2 <- df %>%
+  select(contains("Thermometer")) %>%
+  select(-c(contains("Chaires"), 
+            contains("DeSoto"), 
+            contains("Rickards"), 
+            contains("Deerlake"),
+            contains("Hawks"),
+            contains("FSU.Weather"),
+            contains("Montford"),
+            contains("Golden.Eagle"),
+            contains("Ballard"),
+            contains("Florida.A.M."),
+            contains("FSWN"),
+            contains("Holy.Comforter")))
+```
+
+Next get the times as a vector.
+```{r}
+library(lubridate)
+
+times <- ymd_hms(df$Timestamp)
+```
+
+Next create a station list in order of the data frame.
+```{r}
+names(df2)
+
+loc <- c("https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/canopyoaks/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/leon/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/gilchrist/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/sail/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/chiles/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/woodville/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fortbraden/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/lincoln/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/sullivan/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tallahasseenurseries/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/maclay/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/ruediger/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/conley/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/hartsfield/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/oakridge/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/sealey/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/killearnlakes/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/wtmoore/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/bucklake/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/swiftcreek/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/famudrs/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsurez/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsursp/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/clc/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsus/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/success/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/theedison/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/tcc/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/fsuesc/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalacheepark/davis.json",
+         "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/netallahassee/davis.json"
+)
+```
+
+Loop over the station list importing the latitude and longitude and making a data frame.
+```{r}
+Latitude <- rep(NA, length(loc))
+Longitude <- rep(NA, length(loc))
+Name <- rep(NA, length(loc))
+
+for(i in 1:length(loc)){
+  json_data <- fromJSON(file = loc[i])
+    Name[i] <- json_data$davis_current_observation$station_name
+    Latitude[i] <- as.numeric(json_data$latitude)
+    Longitude[i] <- as.numeric(json_data$longitude)
+}
+
+df3 <- data.frame(Name, Latitude, Longitude)
+```
+
+Convert the data frame to a simple feature data frame and make an interactive map.
+```{r}
+library(sf)
+
+projcrs <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+df.sf <- st_as_sf(df3, 
+                  coords = c("Longitude", "Latitude"),
+                  crs = projcrs)
+
+library(tmap)
+
+tmap_mode("view")
+
+tm_shape(sfdf) +
+  tm_dots() +
+  tm_text(text = "Name")
+```
+
+Create a space-time object.
+```{r}
+library(stars)
+
+d <- st_dimensions(location = df.sf$geometry, 
+                   time = times)
+
+df.st <- st_as_stars(list(Temperature = matrix(stack(df2)$values, ncol = length(times))), dimensions = d)
+```
+
+
+
+
+
+
+Choose an active WeatherSTEM site. Get raw data by clicking on <raw data> under current conditions.
 
 One station: https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalacheepark/davis.json
 
 Get the data into R.
 ```{r}
-library(tidyverse)
 library(rjson)
 
 loc <- "https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/wtmoore/davis.json"
@@ -74,7 +190,7 @@ loc <- c("https://cdn.weatherstem.com/dashboard/data/dynamic/model/leon/apalache
 )
 ```
 
-Loop over the station list importanting the data and making a data frame.
+Loop over the station list importing the data and making a data frame.
 ```{r}
 ID <- rep(NA, length(loc))
 Name <- rep(NA, length(loc))
