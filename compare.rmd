@@ -52,6 +52,13 @@ KAAF.df <- read.csv(file = 'Data/KAAF_Daily1940.csv',
          Rainfall24mm = Rainfall24 * 25.4)
 
 #Missing max temperatures. Data not found on weather underground. Filled with normals from nws: https://www.weather.gov/tae/apalachicola_normalsrecords
+
+x <- c(1, 2, 4, NA, 6, NA, 10)
+is.na(x)
+y <- c(20, 30)
+x[is.na(x)] <- y
+x
+
 KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-09"] <- 88
 KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-10"] <- 88
 KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-11"] <- 88
