@@ -4,12 +4,6 @@ author: "Zach"
 date: "12/11/2020"
 output: html_document
 ---
----
-title: "Lightning Caused Fires in the ANF"
-output: html_document
-editor_options: 
-  chunk_output_type: console
----
 
 https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
 https://www.cpc.ncep.noaa.gov/products/predictions/90day/
