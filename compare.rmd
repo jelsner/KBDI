@@ -47,341 +47,352 @@ KAAF.df <- read.csv(file = 'Data/KAAF_Daily1940.csv',
 
 #Missing max temperatures. Data not found on weather underground. Filled with normals from nws: https://www.weather.gov/tae/apalachicola_normalsrecords
 
-x <- c(1, 2, 4, NA, 6, NA, 10)
+# x <- c(1, 2, 4, NA, 6, NA, 10)
+# is.na(x)
+# y <- c(20, 30)
+# x[is.na(x)] <- y
+# x
+
+
+#updated code filling missing max temp data.
+#Only small sample of data has been filled to ensure correct formatting.
+x <- c(KAAF.df$MaxTemp)
 is.na(x)
-y <- c(20, 30)
+y <- c(88,88,88,76,76,73,63,66,80,78,72,72,72,73,73,73)
 x[is.na(x)] <- y
 x
 
-KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-09"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-10"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-11"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "1964-11-03"] <- 76
-KAAF.df$MaxTemp[KAAF.df$Date == "1964-11-05"] <- 76
-KAAF.df$MaxTemp[KAAF.df$Date == "1996-11-15"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "1996-12-31"] <- 63 #7 degrees lower than day before and after. 12/30 +  1/1 maxTemp = 70.
-KAAF.df$MaxTemp[KAAF.df$Date == "1997-02-14"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "1997-04-30"] <- 80 #4/29 = maxTemp = 74, 5/1 maxTemp = 78. Normal of 80 does not fit in trend? 
-KAAF.df$MaxTemp[KAAF.df$Date == "1997-10-29"] <- 78 #strong cold front on 10/27. Normal of 78 does not fit trend
-KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-25"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-26"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-27"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-28"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-29"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-30"] <- 73
 
-#Missing max temperatures. Filled with Weather Underground data.
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-01"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-02"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-03"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-04"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-05"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-10"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-11"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-12"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-13"] <- 80
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-14"] <- 69
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-15"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-16"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-31"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-08-31"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-01"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-02"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-03"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-04"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-05"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-06"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-06"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-07"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-08"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-09"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-10"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-11"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-25"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-26"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-27"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-28"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-10-07"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2002-10-08"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-01-31"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-03-01"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-03-02"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-03-03"] <- 50
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-06-01"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-06-02"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-06-30"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-07-28"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-09-02"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-01"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-02"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-04"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-18"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-04"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-09"] <- 61
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-10"] <- 60
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-11"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-21"] <- 56
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-01-31"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-03-02"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-04-12"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-04-16"] <- 80
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-05-29"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-06-04"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-06-09"] <- 90
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-09-04"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-03"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-16"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-27"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-28"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-02"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-09"] <- 59
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-12"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-17"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-27"] <- 51
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-28"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-29"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-30"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-01-05"] <- 69
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-01-09"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-01-18"] <- 61
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-02-20"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-02-21"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-07"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-08"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-30"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-31"] <- 75
-
-#All of April 2007 Data Missing
-
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-05-11"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-05-28"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-06-10"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-06-18"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-07-01"] <- 93
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-07-02"] <- 90
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-07-31"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-03"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-08"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-14"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-27"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-09"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-10"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-11"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-12"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-13"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-14"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-15"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-16"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-17"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-19"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-21"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-22"] <- 75
-# KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-25"] <- missing data on weather underground
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-26"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-27"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-12-17"] <- 55
-KAAF.df$MaxTemp[KAAF.df$Date == "2007-12-30"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-17"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-19"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-21"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-26"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-04"] <- 71
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-07"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-08"] <- 59
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-11"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-13"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-15"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-17"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-18"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-19"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-23"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-24"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-31"] <- 67
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-02"] <- 76
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-04"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-05"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-08"] <- 76
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-15"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-22"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-29"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-02"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-05"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-07"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-12"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-14"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-25"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-29"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-30"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-31"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-01"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-02"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-03"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-04"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-05"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-06"] <- 90
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-07"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-22"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-30"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-01"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-06"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-07"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-08"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-12"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-20"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-22"] <- 90
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-28"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-08-17"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-08-23"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-09-06"] <- 90
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-09-24"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-09-28"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-02"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-04"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-08"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-09"] <- 80
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-10"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-11"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-12"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-13"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-14"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-15"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-17"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-27"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-30"] <- 69
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-07"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-11"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-23"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-28"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-30"] <- 70
-#Excel file missing all data from Dec 2008
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-03"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-05"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-17"] <- 50
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-22"] <- 57
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-31"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-06"] <- 57
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-08"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-14"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-17"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-19"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-22"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-02"] <- 56
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-09"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-10"] <- 73
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-19"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-24"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-29"] <- 69
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-31"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-01"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-08"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-16"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-23"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-24"] <- 80
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-26"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-30"] <- 78
-#Excel Missing data: May 2009 - July 2009
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-08-05"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-08-18"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-09-09"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-09-14"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-09-20"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-04"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-12"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-19"] <- 67
-#October 26th data missing from Weather Underground
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-08"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-09"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-14"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-15"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-16"] <- 71
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-17"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-18"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-19"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-20"] <- 71
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-21"] <- 69
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-22"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-23"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-24"] <- 67
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-25"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-26"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-27"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-28"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-29"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-30"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-01"] <- 65
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-02"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-03"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-04"] <- 49
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-11"] <- 50
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-17"] <- 62
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-21"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-22"] <- 61
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-23"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-24"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-25"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-26"] <- 56
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-27"] <- 57
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-28"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-29"] <- 55
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-30"] <- 57
-KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-31"] <- 68
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-01"] <- 58
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-02"] <- 54
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-07"] <- 56
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-08"] <- 56
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-09"] <- 40
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-14"] <- 55
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-20"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-02"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-12"] <- 46
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-20"] <- 63
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-23"] <- 69
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-24"] <- 52
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-25"] <- 53
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-10"] <- 67
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-19"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-21"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-24"] <- 67
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-25"] <- 66
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-31"] <- 71
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-04-02"] <- 72
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-04-07"] <- 76
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-04-27"] <- 77
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-05"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-11"] <- 81
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-18"] <- 89
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-25"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-31"] <- 88
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-06-18"] <- 92
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-06-23"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-02"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-10"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-13"] <- 90
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-14"] <- 86
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-04"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-17"] <- 91
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-30"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-09-23"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-07"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-08"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-09"] <- 87
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-10"] <- 85
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-11"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-12"] <- 83
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-13"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-14"] <- 84
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-15"] <- 79
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-25"] <- 82
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-01"] <- 78
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-15"] <- 74
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-17"] <- 70
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-22"] <- 75
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-23"] <- 76
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-16"] <- 64
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-25"] <- 59
-KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-26"] <- 44
-KAAF.df$MaxTemp[KAAF.df$Date == "2011-10-29"] <- 71
-#Excel missing all data 4/11/2012 - 6/1/2012
+# 
+# KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-09"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-10"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-11"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "1964-11-03"] <- 76
+# KAAF.df$MaxTemp[KAAF.df$Date == "1964-11-05"] <- 76
+# KAAF.df$MaxTemp[KAAF.df$Date == "1996-11-15"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "1996-12-31"] <- 63 #7 degrees lower than day before and after. 12/30 +  1/1 maxTemp = 70.
+# KAAF.df$MaxTemp[KAAF.df$Date == "1997-02-14"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "1997-04-30"] <- 80 #4/29 = maxTemp = 74, 5/1 maxTemp = 78. Normal of 80 does not fit in trend? 
+# KAAF.df$MaxTemp[KAAF.df$Date == "1997-10-29"] <- 78 #strong cold front on 10/27. Normal of 78 does not fit trend
+# KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-25"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-26"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-27"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-28"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-29"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "2000-03-30"] <- 73
+# 
+# #Missing max temperatures. Filled with Weather Underground data.
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-01"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-02"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-03"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-04"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-05"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-10"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-11"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-12"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-13"] <- 80
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-14"] <- 69
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-15"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-16"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-03-31"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-08-31"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-01"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-02"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-03"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-04"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-05"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-06"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-06"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-07"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-08"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-09"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-10"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-11"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-25"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-26"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-27"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-28"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-10-07"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2002-10-08"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-01-31"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-03-01"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-03-02"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-03-03"] <- 50
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-06-01"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-06-02"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-06-30"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-07-28"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-09-02"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-01"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-02"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-04"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-10-18"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-04"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-09"] <- 61
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-10"] <- 60
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-11"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-21"] <- 56
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-01-31"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-03-02"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-04-12"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-04-16"] <- 80
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-05-29"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-06-04"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-06-09"] <- 90
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-09-04"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-03"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-16"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-27"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-10-28"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-02"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-09"] <- 59
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-12"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-17"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-27"] <- 51
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-28"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-29"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2006-12-30"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-01-05"] <- 69
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-01-09"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-01-18"] <- 61
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-02-20"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-02-21"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-07"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-08"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-30"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-03-31"] <- 75
+# 
+# #All of April 2007 Data Missing
+# 
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-05-11"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-05-28"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-06-10"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-06-18"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-07-01"] <- 93
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-07-02"] <- 90
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-07-31"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-03"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-08"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-14"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-09-27"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-09"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-10"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-11"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-12"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-13"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-14"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-15"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-16"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-17"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-19"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-21"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-22"] <- 75
+# # KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-25"] <- missing data on weather underground
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-26"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-27"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-12-17"] <- 55
+# KAAF.df$MaxTemp[KAAF.df$Date == "2007-12-30"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-17"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-19"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-21"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-02-26"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-04"] <- 71
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-07"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-08"] <- 59
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-11"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-13"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-15"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-17"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-18"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-19"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-23"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-24"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-03-31"] <- 67
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-02"] <- 76
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-04"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-05"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-08"] <- 76
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-15"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-22"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-29"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-02"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-05"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-07"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-12"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-14"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-25"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-29"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-30"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-31"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-01"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-02"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-03"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-04"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-05"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-06"] <- 90
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-07"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-22"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-06-30"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-01"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-06"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-07"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-08"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-12"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-20"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-22"] <- 90
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-07-28"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-08-17"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-08-23"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-09-06"] <- 90
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-09-24"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-09-28"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-02"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-04"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-08"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-09"] <- 80
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-10"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-11"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-12"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-13"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-14"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-15"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-17"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-27"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-10-30"] <- 69
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-07"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-11"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-23"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-28"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-30"] <- 70
+# #Excel file missing all data from Dec 2008
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-03"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-05"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-17"] <- 50
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-22"] <- 57
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-31"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-06"] <- 57
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-08"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-14"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-17"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-19"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-02-22"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-02"] <- 56
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-09"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-10"] <- 73
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-19"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-24"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-29"] <- 69
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-03-31"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-01"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-08"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-16"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-23"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-24"] <- 80
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-26"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-30"] <- 78
+# #Excel Missing data: May 2009 - July 2009
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-08-05"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-08-18"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-09-09"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-09-14"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-09-20"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-04"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-12"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-19"] <- 67
+# #October 26th data missing from Weather Underground
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-08"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-09"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-14"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-15"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-16"] <- 71
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-17"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-18"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-19"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-20"] <- 71
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-21"] <- 69
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-22"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-23"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-24"] <- 67
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-25"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-26"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-27"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-28"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-29"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-30"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-01"] <- 65
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-02"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-03"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-04"] <- 49
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-11"] <- 50
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-17"] <- 62
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-21"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-22"] <- 61
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-23"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-24"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-25"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-26"] <- 56
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-27"] <- 57
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-28"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-29"] <- 55
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-30"] <- 57
+# KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-31"] <- 68
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-01"] <- 58
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-02"] <- 54
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-07"] <- 56
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-08"] <- 56
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-09"] <- 40
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-14"] <- 55
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-20"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-02"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-12"] <- 46
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-20"] <- 63
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-23"] <- 69
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-24"] <- 52
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-02-25"] <- 53
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-10"] <- 67
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-19"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-21"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-24"] <- 67
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-03-25"] <- 66
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-31"] <- 71
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-04-02"] <- 72
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-04-07"] <- 76
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-04-27"] <- 77
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-05"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-11"] <- 81
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-18"] <- 89
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-25"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-05-31"] <- 88
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-06-18"] <- 92
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-06-23"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-02"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-10"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-13"] <- 90
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-14"] <- 86
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-04"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-17"] <- 91
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-30"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-09-23"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-07"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-08"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-09"] <- 87
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-10"] <- 85
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-11"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-12"] <- 83
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-13"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-14"] <- 84
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-15"] <- 79
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-10-25"] <- 82
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-01"] <- 78
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-15"] <- 74
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-17"] <- 70
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-22"] <- 75
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-11-23"] <- 76
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-16"] <- 64
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-25"] <- 59
+# KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-26"] <- 44
+# KAAF.df$MaxTemp[KAAF.df$Date == "2011-10-29"] <- 71
+# #Excel missing all data 4/11/2012 - 6/1/2012
 
 
 sum(is.na(KAAF.df$PRCP))
