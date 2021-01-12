@@ -139,13 +139,18 @@ sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100
 ```
 Start Comparing KAAF Max Temp data and TLH Max Temp Data
 
-We want to compare max temp data from 2000 - 2013
+Perform left join to merge data frames.
+The KAAF data set is much smaller (date range 1940 - March 2013). Therefore this will be on the left, and all TLH dates before 1940 and after 2013 will be ignored. These values are not needed since they can not be compared.
+
+.x = KAAF Station Data
+.y = TLH Station Data
+
 ```{r}
 library(tidyverse)
 
-KAAF.df %>% select(DATE,TMAX)
+joineddata.df <- left_join(KAAF.df, TLH.df, by = "DATE")
+joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
 ```
-
 
 
 
