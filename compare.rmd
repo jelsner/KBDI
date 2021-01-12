@@ -24,15 +24,73 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
+
+## Functions for weeks and days of the year
+```{r}
+cal <- function(dt) {
+    # Reads a date object and returns a tuple (weekrow, daycol)
+    # where weekrow starts at 1 and daycol starts at 1 for Sunday
+    #http://swingleydev.org/blog/tag/r/
+    year <- year(dt)
+    month <- month(dt)
+    day <- day(dt)
+    wday_first <- wday(ymd(paste(year, month, 1, sep = '-'), quiet = TRUE))
+    offset <- 7 + (wday_first - 2)
+    weekrow <- ((day + offset) %/% 7) - 1
+    daycol <- (day + offset) %% 7
+
+    c(weekrow, daycol)
+}
+weekrow <- function(dt) {
+    cal(dt)[1]
+}
+daycol <- function(dt) {
+    cal(dt)[2]
+}
+vweekrow <- function(dts) {
+    sapply(dts, weekrow)
+}
+vdaycol <- function(dts) {
+    sapply(dts, daycol)
+}
+```
+
+
 ### Import the summary of the day data and add columns to the data frame
 
 Assign no rainfall on days with missing values.
 
+For Tallahassee Station TLH
 ```{r}
 library(lubridate)
 library(dplyr)
 library(tidyr)
 
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+  mutate(Date = as.Date(DATE)) %>%
+#  filter(Date >= as.Date("1990-01-01")) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         #weekrow = vweekrow(Date),
+         #daycol = vdaycol(Date), 
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
+         #AWND = AWND,
+         #ACMH = ACMH)
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+```
+
+
+
+For Apalachicola Station KAAF
+```{r}
 KAAF.df <- read.csv(file = 'Data/KAAF_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
@@ -79,8 +137,22 @@ sum(is.na(KAAF.df$PRCP))
 nrow(KAAF.df)
 sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100
 ```
+Start Comparing KAAF Max Temp data and TLH Max Temp Data
+
+We want to compare max temp data from 2000 - 2013
+```{r}
+library(tidyverse)
+
+KAAF.df %>% select(DATE,TMAX)
+```
 
 
+
+
+
+
+
+This code chunk is for notes purposes at the moment 
 
 ```{r}
 library(lubridate)
