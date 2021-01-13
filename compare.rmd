@@ -137,19 +137,40 @@ sum(is.na(KAAF.df$PRCP))
 nrow(KAAF.df)
 sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100
 ```
-Start Comparing KAAF Max Temp data and TLH Max Temp Data
+###Start Comparing KAAF Max Temp data and TLH Max Temp Data
+
+
 
 Perform left join to merge data frames.
-The KAAF data set is much smaller (date range 1940 - March 2013). Therefore this will be on the left, and all TLH dates before 1940 and after 2013 will be ignored. These values are not needed since they can not be compared.
+The KAAF data set is much smaller (date range 1940 - March 2013). Therefore this will be on the left, and all TLH dates after March 2013 will be ignored. These values are not needed since they can not be compared.
 
 .x = KAAF Station Data
 .y = TLH Station Data
 
 ```{r}
 library(tidyverse)
+#KAAF.df
 
 joineddata.df <- left_join(KAAF.df, TLH.df, by = "DATE")
-joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
+
+joineddata.df %>% na.omit(joineddata.df$Date.x) %>% na.omit(joineddata.df$Date.y) %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
+
+#if (isTRUE(!is.na(joineddata.df$Date.x)) || isTRUE(!is.na(joineddata.df$Date.y))) {
+#  na.omit(joineddata.df$DATE)
+ # joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
+#}
+#joineddata.df
+  
+#na.omit(joineddata.df$Date.x)
+#na.omit(joineddata.df$Date.y)
+#joineddata.df
+#joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
+#joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
+#KAAFna.df <- !is.na(joineddata.df$Date.x)
+#KAAF.df
+#TLHna.df <- !is.na(joineddata.df$Date.y)
+#TLHna.df
+
 ```
 
 
