@@ -124,10 +124,10 @@ April 11, 2012 - June 1, 2012
 
 ```{r}
 x <- c(KAAF.df$MaxTemp)
-is.na(x)
+#is.na(x)
 y <- c(88,88,88,76,76,73,63,66,80,78,72,72,72,73,73,73,72,78,77,70,64,63,62,72,80,69,74,74,75,91,89,88,86,87,88,87,82,84,87,87,87,85,81,84,84,82,86,86,54,62,54,50,75,82,87,89,91,88,89,89,81,73,61,60,54,56,64,63,75,80,88,87,90,88,84,79,78,54,65,72,51,64,72,68,69,64,61,64,73,68,72,74,75,84,82,91,88,93,90,91,87,88,86,88,84,85,86,77,81,82,82,79,83,75,77,75,71,75,65,55,74,72,63,70,77,71,66,59,68,68,74,72,73,75,77,65,67,76,78,78,76,66,87,78,77,85,81,81,79,83,87,84,84,89,91,88,88,88,90,88,83,86,85,86,84,85,88,91,90,88,84,82,90,83,85,79,84,84,80,79,84,83,87,83,82,8372,69,74,72,62,74,70,70,72,50,57,64,57,65,64,62,70,64,56,79,73,75,74,69,72,72,65,72,81,80,78,78,89,88,89,86,86,84,89,67,78,78,72,74,72,71,74,66,68,71,69,75,72,67,62,65,62,64,68,72,65,70,64,49,50,62,54,61,63,66,66,56,57,54,55,57,68,58,54,56,56,40,55,63,63,46,63,69,52,53,67,70,64,67,66,71,72,76,77,81,81,89,85,88,92,91,83,91,90,86,91,91,84,87,83,85,87,85,82,83,82,84,79,82,78,74,70,75,76,64,59,44,71)
 x[is.na(x)] <- y
-x
+KAAF.df$MaxTemp <- x
 ```
 
 ### Finding percent of days with missing precip data
@@ -137,46 +137,166 @@ sum(is.na(KAAF.df$PRCP))
 nrow(KAAF.df)
 sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100
 ```
-###Start Comparing KAAF Max Temp data and TLH Max Temp Data
 
+
+### Compute daily values of the KBDI For TLH From 2000 - 2012
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
+
+Step one: Compute net rainfall on each day.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+```
+
+Step two: Compute daily drought index.
+```{r}
+Q <- 269  
+R <- 59.23
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+
+TLHcompare.df <- TLH.df %>%
+ dplyr::filter(Year >= 2000 & Year <= 2012) # Only comparing data from 2000 - 2012
+range(TLHcompare.df$Ql)
+```
+
+
+### Compute daily values of the KBDI For KAAF From 2000 - 2012
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
+
+Step one: Compute net rainfall on each day.
+```{r}
+Rainfall24 <- KAAF.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+KAAF.df$NetR <- NetR
+```
+
+Step two: Compute daily drought index.
+```{r}
+Q <- 269  
+R <- 59.23
+
+MaxTemp <- KAAF.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+KAAF.df$Ql <- Ql
+KAAF.df$Qlm <- Ql * .254  # tenth of an inch to mm
+KAAF.df$DeltaQl <- DeltaQl
+KAAF.df$DroughtIndex <- floor(Ql/100)
+
+KAAFcompare.df <- KAAF.df %>%
+ dplyr::filter(Year >= 2000 & Year <= 2012) # Only comparing data from 2000 - 2013
+range(KAAFcompare.df$Ql)
+```
+
+
+
+###Start Comparing KAAF and TLH Daily KBDI values
 
 
 Perform left join to merge data frames.
-The KAAF data set is much smaller (date range 1940 - March 2013). Therefore this will be on the left, and all TLH dates after March 2013 will be ignored. These values are not needed since they can not be compared.
 
 .x = KAAF Station Data
 .y = TLH Station Data
 
 ```{r}
 library(tidyverse)
-#KAAF.df
 
-joineddata.df <- left_join(KAAF.df, TLH.df, by = "DATE")
-
-joineddata.df %>% na.omit(joineddata.df$Date.x) %>% na.omit(joineddata.df$Date.y) %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
-
-#if (isTRUE(!is.na(joineddata.df$Date.x)) || isTRUE(!is.na(joineddata.df$Date.y))) {
-#  na.omit(joineddata.df$DATE)
- # joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
-#}
-#joineddata.df
-  
-#na.omit(joineddata.df$Date.x)
-#na.omit(joineddata.df$Date.y)
-#joineddata.df
-#joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
-#joineddata.df %>% select(DATE, NAME.x, TMAX.x, NAME.y, TMAX.y)
-#KAAFna.df <- !is.na(joineddata.df$Date.x)
-#KAAF.df
-#TLHna.df <- !is.na(joineddata.df$Date.y)
-#TLHna.df
-
+joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "DATE")
+joineddata.df %>% select(DATE, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
 ```
 
 
 
 
 
+
+###Notes/ Extra Code Chunks
 
 This code chunk is for notes purposes at the moment 
 
@@ -561,74 +681,6 @@ nrow(KAAF.df)
 sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100  #105 missing precip days
 ```
 
-### Compute daily values of the KBDI
-
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
-
-Step one: Compute net rainfall on each day.
-```{r}
-Rainfall24 <- KAAF.df$Rainfall24
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
-
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[i]
-  if (R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if(R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-  else if (R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-KAAF.df$NetR <- NetR
-```
-
-Step two: Compute daily drought index.
-```{r}
-Q <- 269  
-R <- 57.70 # average annual rainfall for Apalachicola Airport https://climatecenter.fsu.edu/products-services/data/1981-2010-normals/apalachicola
-
-MaxTemp <- KAAF.df$MaxTemp
-
-Ql <- numeric()
-DeltaQl <- numeric()
-for(i in 1:length(Rainfall24)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-  Q <- ifelse(Q < 0, 0, Q) 
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-
-KAAF.df$Ql <- Ql
-KAAF.df$Qlm <- Ql * .254  # tenth of an inch to mm
-KAAF.df$DeltaQl <- DeltaQl
-KAAF.df$DroughtIndex <- floor(Ql/100)
-
-KAAF.df <- TLH.df %>%
- dplyr::filter(Year >= 1940 & Year <= 2012) # Only full years
-range(KAAF.df$Ql)
-```
-
-Note: There is a package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for PDSI.
 
 ### Trends
 
