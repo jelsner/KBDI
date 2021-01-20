@@ -35,6 +35,13 @@ Fill in the missing temperature data.
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 ```
 
+Percent of missing precipitation days
+```{r}
+sum(is.na(TLH.df$PRCP))
+nrow(TLH.df)
+sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100
+```
+
 For Apalachicola Station KAAF
 ```{r}
 KAAF.df <- read_csv(file = 'Data/KAAF_Daily1940.csv') %>%
@@ -81,13 +88,18 @@ sum(is.na(KAAF.df$PRCP))
 nrow(KAAF.df)
 sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100
 ```
+## Filter the two the two data frames to have a common period of record
+
+```{r}
+TLH.df <- TLH.df %>%
+  filter(Year >= 2000 & Year <= 2012)
+KAAF.df <- KAAF.df %>%
+  filter(Year >= 2000 & Year <= 2012)
+```
 
 
-### Compute daily values of the KBDI For TLH From 2000 - 2012
+## Compute daily values of the KBDI For TLH From 2000 - 2012
 
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
-
-Step one: Compute net rainfall on each day.
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -121,10 +133,7 @@ for(i in 1:length(Rainfall24)) {
 }
 
 TLH.df$NetR <- NetR
-```
 
-Step two: Compute daily drought index.
-```{r}
 Q <- 269  
 R <- 59.23
 
@@ -149,7 +158,6 @@ TLHcompare.df <- TLH.df %>%
  dplyr::filter(Year >= 2000 & Year <= 2012) # Only comparing data from 2000 - 2012
 range(TLHcompare.df$Ql)
 ```
-
 
 ### Compute daily values of the KBDI For KAAF From 2000 - 2012
 
