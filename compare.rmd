@@ -91,10 +91,10 @@ sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100
 ## Filter the two the two data frames to have a common period of record
 
 ```{r}
-TLH.df <- TLH.df %>%
-  filter(Year >= 2000 & Year <= 2012)
-KAAF.df <- KAAF.df %>%
-  filter(Year >= 2000 & Year <= 2012)
+#KAAF.df %>%
+  #filter(Date >= 1940-03-01)
+#KAAF.df <- KAAF.df %>%
+  #filter(Year >= 2000 & Year <= 2012)
 ```
 
 
@@ -155,7 +155,7 @@ TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 
 TLHcompare.df <- TLH.df %>%
- dplyr::filter(Year >= 2000 & Year <= 2012) # Only comparing data from 2000 - 2012
+ dplyr::filter(Date >= "1992-07-01" & Date <= "2007-03-31") #Create common Period with KAAF that has no missing dates
 range(TLHcompare.df$Ql)
 ```
 
@@ -197,10 +197,7 @@ for(i in 1:length(Rainfall24)) {
 }
 
 KAAF.df$NetR <- NetR
-```
 
-Step two: Compute daily drought index.
-```{r}
 Q <- 269  
 R <- 59.23
 
@@ -222,7 +219,7 @@ KAAF.df$DeltaQl <- DeltaQl
 KAAF.df$DroughtIndex <- floor(Ql/100)
 
 KAAFcompare.df <- KAAF.df %>%
- dplyr::filter(Year >= 2000 & Year <= 2012) # Only comparing data from 2000 - 2013
+ dplyr::filter(Date >= "1992-07-01" & Date <= "2007-03-31") #Create common Period with TLH that has no missing dates
 range(KAAFcompare.df$Ql)
 ```
 
@@ -239,8 +236,9 @@ Perform left join to merge data frames.
 ```{r}
 library(tidyverse)
 
-joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "DATE")
-joineddata.df %>% select(DATE, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
+joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date")
+joineddata.df %>% select(Date, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
+cor(KAAFcompare.df$DroughtIndex,TLHcompare.df$DroughtIndex)
 ```
 
 
