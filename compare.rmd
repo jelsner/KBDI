@@ -3,6 +3,8 @@ title: "Compare KDBI from TLH and AAF"
 author: "Zach"
 date: "12/11/2020"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 Here we compare the KDBI computed using data from TLH and from AAF.
@@ -227,6 +229,38 @@ Perform left join to merge data frames.
 ```{r}
 library(tidyverse)
 
+KAAFcompare.df <- KAAFcompare.df %>%
+  dplyr::select(NAME, Date, MaxTemp, Rainfall24mm, NetR, Qlm)
+
+TLHcompare.df <- TLHcompare.df %>%
+  dplyr::select(NAME, Date, MaxTemp, Rainfall24mm, NetR, Qlm)
+
+CompareLong.df <- rbind(KAAFcompare.df, TLHcompare.df)
+CompareWide.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date") %>%
+  mutate(Year = year(Date), 
+         Month = month(Date))
+
+ByYear <- CompareWide.df %>%
+  group_by(Year) %>%
+  summarise(cc = cor(Qlm.x, Qlm.y))
+
+ByMonth <- CompareWide.df %>%
+  group_by(Month) %>%
+  summarise(cc = cor(Qlm.x, Qlm.y))
+```
+
+Make plots
+```{r}
+library(ggplot2)
+
+ggplot(data = CompareLong.df, aes(x = Date, y = Qlm, color = NAME)) +
+  geom_line() 
+```
+
+
+
+
+```{r}
 joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date")
 joineddata.df %>% dplyr::select(Date, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
 cor(KAAFcompare.df$DroughtIndex,TLHcompare.df$DroughtIndex)
