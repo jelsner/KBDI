@@ -235,6 +235,10 @@ cor(KAAFcompare.df$Ql,TLHcompare.df$Ql)
 joineddata.df %>%
   group_by(month.x) %>%
   summarise(cc = cor(Ql.x,Ql.y))
+
+joineddata.df %>%
+  group_by(Year.x) %>%
+  summarise(cc = cor(Ql.x,Ql.y))
 ```
 ```{r}
 joineddata.df %>%
@@ -243,8 +247,150 @@ joineddata.df %>%
   summarise(cc = cor(Ql.x,Ql.y)) %>%
   pull(cc)
 ```
+Plotting Ql for TLH and APL 1999
+
+```{r}
+library(ggplot2)
+
+joineddata.df %>%
+  filter(Year.x == '1999') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") 
+
+ 
+```
+
+1999 is the year with the highest cc, plot Ql for TLH vs APL and see how months vary
+
+```{r}
+joineddata.df %>%
+  filter(Year.x == '1999') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ month.x, scales = "free_x")
+```
+1998 is the year with the highest cc value.
+```{r}
+joineddata.df %>%
+  filter(Year.x == '1998') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") 
+```
+```{r}
+joineddata.df %>%
+  filter(Year.x == '1998') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ month.x, scales = "free_x")
+```
+```{r}
+joineddata.df %>%
+  filter(month.x == 'Apr') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ Year.x, scales = "free_x")
+```
+Break time up into seasons. 
+Dry period: May - Oct
+
+```{r}
+joineddata.df %>%
+  filter(month.x == 'May' | month.x == 'Jun' | month.x == 'Jul' | month.x == 'Aug' | month.x == 'Sep.' | month.x == 'Oct') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ Year.x, scales = "free_x")
+```
+Further Filtering summer dry period: June - August
+
+```{r}
+joineddata.df %>%
+  filter(month.x == 'Jun' | month.x == 'Jul' | month.x == 'Aug') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ Year.x, scales = "free_x")
+```
 
 
+
+Wet Period: November - April
+```{r}
+joineddata.df %>%
+  filter(month.x == 'Nov' | month.x == 'Dec' | month.x == 'Jan' | month.x == 'Feb' | month.x == 'Mar' | month.x == 'Apr') %>%
+ggplot(aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ Year.x, scales = "free_x")
+```
+
+
+
+
+
+Comparing Correlation Coefficient grouped by Month
+
+```{r}
+library(ggplot2)
+
+joineddata.df %>%
+  group_by(month.x) %>%
+  summarise(cc = cor(Ql.x, Ql.y)) %>%
+ggplot(mapping = aes(x = month.x, y = cc)) +
+  geom_point()
+```
+
+Comparing Correlation Coefficient grouped by year
+
+```{r}
+joineddata.df %>%
+  group_by(Year.x) %>%
+  summarise(cc = cor(Ql.x, Ql.y)) %>%
+ggplot(mapping = aes(x = Year.x, y = cc)) +
+  geom_point()
+```
+Filter out April which is the month of highest cc. Group by year
+```{r}
+
+joineddata.df %>%
+  filter(month.x == 'Apr') %>%
+  group_by(Year.x) %>%
+  summarise(cc = cor(Ql.x, Ql.y)) %>%
+ggplot(mapping = aes(x = Year.x, y = cc)) +
+  geom_point()
+
+joineddata.df %>%
+  filter(month.x == 'Apr') %>%
+  group_by(Year.x) %>%
+  summarise(cc = cor(Ql.x, Ql.y)) %>%
+ggplot(mapping = aes(x = Year.x, y = cc)) +
+  geom_col()
+  #geom_hline(yintercept = mean(cc))
+```
+
+```{r}
+ggplot(data = joineddata.df, aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue")
+```
+```{r}
+library(tidyverse)
+
+joineddata.df %>%
+  filter(Year.x >= 2000)
+  #group_by(Year.x)
+
+ggplot(data = joineddata.df, aes(x = Date)) +
+  geom_line(aes(y = Ql.x), color = "darkred") +
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  facet_wrap(~ Year.x)
+
+```
 
 
 
