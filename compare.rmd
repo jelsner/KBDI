@@ -247,7 +247,10 @@ joineddata.df %>%
   summarise(cc = cor(Ql.x,Ql.y)) %>%
   pull(cc)
 ```
-Plotting Ql for TLH and APL 1999
+
+###Plots comparing Ql for TLH and APL
+
+1999 is the year on record with the lowest correlation coefficient. 
 
 ```{r}
 library(ggplot2)
@@ -256,12 +259,15 @@ joineddata.df %>%
   filter(Year.x == '1999') %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
-  geom_line(aes(y = Ql.y), color = "steelblue") 
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  ylab("KBDI")
+  #legend("right",
+  #c("KAAF KDBI", "TLH KBDI"),
+  #col = c("darkred", "steelblue"))
 
- 
 ```
 
-1999 is the year with the highest cc, plot Ql for TLH vs APL and see how months vary
+How do the cc values for 1999 vary over each month?
 
 ```{r}
 joineddata.df %>%
@@ -269,33 +275,44 @@ joineddata.df %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
   geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ month.x, scales = "free_x")
+  facet_wrap(~ month.x, scales = "free_x") +
+  ylab("KBDI")
 ```
+
 1998 is the year with the highest cc value.
 ```{r}
 joineddata.df %>%
   filter(Year.x == '1998') %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
-  geom_line(aes(y = Ql.y), color = "steelblue") 
+  geom_line(aes(y = Ql.y), color = "steelblue") +
+  ylab("KBDI")
 ```
+
+How do the values for cc vary over each month in 1998.
+
 ```{r}
 joineddata.df %>%
   filter(Year.x == '1998') %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
   geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ month.x, scales = "free_x")
+  facet_wrap(~ month.x, scales = "free_x") +
+  ylab("KBDI")
 ```
+Our plots show that July is where the Ql values at each station vary the most.
+Plot the Ql values for July across every year to check if this trend is consistent
+
 ```{r}
 joineddata.df %>%
-  filter(month.x == 'Apr') %>%
+  filter(month.x == 'Jul') %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
   geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ Year.x, scales = "free_x")
+  facet_wrap(~ Year.x, scales = "free_x") +
+  ylab("KBDI")
 ```
-Break time up into seasons. 
+Break time up into seasons.Plot a 6 month dry season and a 6 month wet season. 
 Dry period: May - Oct
 
 ```{r}
@@ -304,20 +321,20 @@ joineddata.df %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
   geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ Year.x, scales = "free_x")
+  facet_wrap(~ Year.x, scales = "free_x") +
+  ylab("KBDI")
 ```
-Further Filtering summer dry period: June - August
+Further Filtering summer dry period: Taking out May and October
 
 ```{r}
 joineddata.df %>%
-  filter(month.x == 'Jun' | month.x == 'Jul' | month.x == 'Aug') %>%
+  filter(month.x == 'Jun' | month.x == 'Jul' | month.x == 'Aug' | month.x == 'Sep') %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
   geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ Year.x, scales = "free_x")
+  facet_wrap(~ Year.x, scales = "free_x") +
+  ylab("KBDI")
 ```
-
-
 
 Wet Period: November - April
 ```{r}
@@ -326,71 +343,22 @@ joineddata.df %>%
 ggplot(aes(x = Date)) +
   geom_line(aes(y = Ql.x), color = "darkred") +
   geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ Year.x, scales = "free_x")
+  facet_wrap(~ Year.x, scales = "free_x") +
+  ylab("KBDI")
 ```
 
-
-
-
-
-Comparing Correlation Coefficient grouped by Month
+How many more rainy days is KAAF having compared to TLH in July?
 
 ```{r}
-library(ggplot2)
 
 joineddata.df %>%
-  group_by(month.x) %>%
-  summarise(cc = cor(Ql.x, Ql.y)) %>%
-ggplot(mapping = aes(x = month.x, y = cc)) +
-  geom_point()
-```
-
-Comparing Correlation Coefficient grouped by year
-
-```{r}
-joineddata.df %>%
+  filter(month.x == 'July') %>%
   group_by(Year.x) %>%
-  summarise(cc = cor(Ql.x, Ql.y)) %>%
-ggplot(mapping = aes(x = Year.x, y = cc)) +
-  geom_point()
-```
-Filter out April which is the month of highest cc. Group by year
-```{r}
-
-joineddata.df %>%
-  filter(month.x == 'Apr') %>%
-  group_by(Year.x) %>%
-  summarise(cc = cor(Ql.x, Ql.y)) %>%
-ggplot(mapping = aes(x = Year.x, y = cc)) +
-  geom_point()
-
-joineddata.df %>%
-  filter(month.x == 'Apr') %>%
-  group_by(Year.x) %>%
-  summarise(cc = cor(Ql.x, Ql.y)) %>%
-ggplot(mapping = aes(x = Year.x, y = cc)) +
-  geom_col()
-  #geom_hline(yintercept = mean(cc))
+  summarise(Nraindays = sum(Rainfall24mm.x > 0)) %>%
+ggplot(aes(x = Year.x, y = Nraindays, fill = Nraindays)) +
+  geom_histogram()
 ```
 
-```{r}
-ggplot(data = joineddata.df, aes(x = Date)) +
-  geom_line(aes(y = Ql.x), color = "darkred") +
-  geom_line(aes(y = Ql.y), color = "steelblue")
-```
-```{r}
-library(tidyverse)
-
-joineddata.df %>%
-  filter(Year.x >= 2000)
-  #group_by(Year.x)
-
-ggplot(data = joineddata.df, aes(x = Date)) +
-  geom_line(aes(y = Ql.x), color = "darkred") +
-  geom_line(aes(y = Ql.y), color = "steelblue") +
-  facet_wrap(~ Year.x)
-
-```
 
 
 
