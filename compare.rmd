@@ -4,7 +4,7 @@ author: "Zach"
 date: "12/11/2020"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 Here we compare the KDBI computed using data from TLH and from AAF.
@@ -19,7 +19,6 @@ For Tallahassee Station TLH
 ```{r}
 library(lubridate)
 library(tidyverse)
-
 TLH.df <- read_csv(file = 'Data/TLH_Daily1940.csv') %>%
   rename(Date = DATE) %>%
   mutate(Year = year(Date), 
@@ -66,14 +65,36 @@ KAAFcompare.df <- KAAF.df %>%
   filter(KAAF.df$Date >= "2002-10-09" & KAAF.df$Date <= "2005-01-30")
 ```
 
+Filter TLH.df to match time perid of KAAFcompare.df
+
+```{r}
+TLHcompare.df <- TLH.df %>%
+  filter(TLH.df$Date >= "2002-10-09" & TLH.df$Date <= "2005-01-30")
+```
+
+
+
 
 ### Checking that there is no missing temp or precip data
 
+For KAAFcompare
 ```{r}
 sum(is.na(KAAFcompare.df$TMAX))
 sum(is.na(KAAFcompare.df$PRCP))
 nrow(KAAFcompare.df)
 ```
+For TLHcompare
+
+*Note, 3 missing precip days
+Is this acceptable? Dates defined as 
+```{r}
+sum(is.na(TLHcompare.df$TMAX))
+sum(is.na(TLHcompare.df$PRCP))
+nrow(TLHcompare.df)
+```
+
+
+
 
 ## Compute daily values of the KBDI For TLH
 
@@ -81,10 +102,8 @@ nrow(KAAFcompare.df)
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
 PR[1] <- 0
-
 CumR <- 0
 NetR <- numeric()
-
 for(i in 1:length(Rainfall24)) {
   R24 <- Rainfall24[i]
   if (R24 == 0) {
@@ -108,14 +127,10 @@ for(i in 1:length(Rainfall24)) {
       }
   }
 }
-
 TLH.df$NetR <- NetR
-
 Q <- 269  
 R <- 59.23
-
 MaxTemp <- TLH.df$MaxTemp
-
 Ql <- numeric()
 DeltaQl <- numeric()
 for(i in 1:length(Rainfall24)){
@@ -125,12 +140,10 @@ for(i in 1:length(Rainfall24)){
   Ql <- c(Ql, Q)
   DeltaQl <- c(DeltaQl, DeltaQ)
 }
-
 TLH.df$Ql <- Ql
 TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
 TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
-
 TLHcompare.df <- TLH.df %>%
  dplyr::filter(Date >= "2002-10-09" & Date <= "2005-01-30") #Create common Period with KAAF
 range(TLHcompare.df$Ql)
@@ -145,10 +158,8 @@ Step one: Compute net rainfall on each day.
 Rainfall24 <- KAAFcompare.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
 PR[1] <- 0
-
 CumR <- 0
 NetR <- numeric()
-
 for(i in 1:length(Rainfall24)) {
   R24 <- Rainfall24[i]
   if (R24 == 0) {
@@ -172,14 +183,10 @@ for(i in 1:length(Rainfall24)) {
       }
   }
 }
-
 KAAFcompare.df$NetR <- NetR
-
 Q <- 269  
 R <- 59.23
-
 MaxTemp <- KAAFcompare.df$MaxTemp
-
 Ql <- numeric()
 DeltaQl <- numeric()
 for(i in 1:length(Rainfall24)){
@@ -189,12 +196,10 @@ for(i in 1:length(Rainfall24)){
   Ql <- c(Ql, Q)
   DeltaQl <- c(DeltaQl, DeltaQ)
 }
-
 KAAFcompare.df$Ql <- Ql
 KAAFcompare.df$Qlm <- Ql * .254  # tenth of an inch to mm
 KAAFcompare.df$DeltaQl <- DeltaQl
 KAAFcompare.df$DroughtIndex <- floor(Ql/100)
-
 range(KAAFcompare.df$Ql)
 ```
 
@@ -210,22 +215,17 @@ Perform left join to merge data frames.
 
 ```{r}
 library(tidyverse)
-
 KAAFcompare.df <- KAAFcompare.df %>%
   dplyr::select(NAME, Date, MaxTemp, Rainfall24mm, NetR, Qlm)
-
 TLHcompare.df <- TLHcompare.df %>%
   dplyr::select(NAME, Date, MaxTemp, Rainfall24mm, NetR, Qlm)
-
 CompareLong.df <- rbind(KAAFcompare.df, TLHcompare.df)
 CompareWide.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date") %>%
   mutate(Year = year(Date), 
          Month = month(Date))
-
 ByYear <- CompareWide.df %>%
   group_by(Year) %>%
   summarise(cc = cor(Qlm.x, Qlm.y))
-
 ByMonth <- CompareWide.df %>%
   group_by(Month) %>%
   summarise(cc = cor(Qlm.x, Qlm.y))
@@ -234,7 +234,6 @@ ByMonth <- CompareWide.df %>%
 Make plots
 ```{r}
 library(ggplot2)
-
 ggplot(data = CompareLong.df, aes(x = Date, y = Qlm, color = NAME)) +
   geom_line() 
 ```
@@ -247,11 +246,9 @@ joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date")
 joineddata.df %>% dplyr::select(Date, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
 cor(KAAFcompare.df$DroughtIndex,TLHcompare.df$DroughtIndex)
 cor(KAAFcompare.df$Ql,TLHcompare.df$Ql)
-
 joineddata.df %>%
   group_by(month.x) %>%
   summarise(cc = cor(Ql.x,Ql.y))
-
 joineddata.df %>%
   group_by(Year.x) %>%
   summarise(cc = cor(Ql.x,Ql.y))
@@ -270,7 +267,6 @@ joineddata.df %>%
 
 ```{r}
 library(ggplot2)
-
 joineddata.df %>%
   filter(Year.x == '1999') %>%
 ggplot(aes(x = Date)) +
@@ -280,7 +276,6 @@ ggplot(aes(x = Date)) +
   #legend("right",
   #c("KAAF KDBI", "TLH KBDI"),
   #col = c("darkred", "steelblue"))
-
 #testing file
 ```
 
@@ -367,7 +362,6 @@ ggplot(aes(x = Date)) +
 How many more rainy days is KAAF having compared to TLH in July?
 
 ```{r}
-
 joineddata.df %>%
   filter(month.x == 'July') %>%
   group_by(Year.x) %>%
@@ -388,7 +382,6 @@ This code chunk is for notes purposes at the moment
 library(lubridate)
 library(dplyr)
 library(tidyr)
-
 KAAF.df <- read.csv(file = 'Data/KAAF_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
@@ -401,24 +394,18 @@ KAAF.df <- read.csv(file = 'Data/KAAF_Daily1940.csv',
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4)
-
 #Missing max temperatures. Data not found on weather underground. Filled with normals from nws: https://www.weather.gov/tae/apalachicola_normalsrecords
-
 # x <- c(1, 2, 4, NA, 6, NA, 10)
 # is.na(x)
 # y <- c(20, 30)
 # x[is.na(x)] <- y
 # x
-
-
 #updated code filling missing max temp data.
 x <- c(KAAF.df$MaxTemp)
 is.na(x)
 y <- c(88,88,88,76,76,73,63,66,80,78,72,72,72,73,73,73,72,78,77,70,64,63,62,72,80,69,74,74,75,91,89,88,86,87,88,87,82,84,87,87,87,85,81,84,84,82,86,86,54,62,54,50,75,82,87,89,91,88,89,89,81,73,61,60,54,56,64,63,75,80,88,87,90,88,84,79,78,54,65,72,51,64,72,68,69,64,61,64,73,68,72,74,75,84,82,91,88,93,90,91,87,88,86,88,84,85,86,77,81,82,82,79,83,75,77,75,71,75,65,55,74,72,63,70,77,71,66,59,68,68,74,72,73,75,77,65,67,76,78,78,76,66,87,78,77,85,81,81,79,83,87,84,84,89,91,88,88,88,90,88,83,86,85,86,84,85,88,91,90,88,84,82,90,83,85,79,84,84,80,79,84,83,87,83,82,8372,69,74,72,62,74,70,70,72,50,57,64,57,65,64,62,70,64,56,79,73,75,74,69,72,72,65,72,81,80,78,78,89,88,89,86,86,84,89,67,78,78,72,74,72,71,74,66,68,71,69,75,72,67,62,65,62,64,68,72,65,70,64,49,50,62,54,61,63,66,66,56,57,54,55,57,68,58,54,56,56,40,55,63,63,46,63,69,52,53,67,70,64,67,66,71,72,76,77,81,81,89,85,88,92,91,83,91,90,86,91,91,84,87,83,85,87,85,82,83,82,84,79,82,78,74,70,75,76,64,59,44,71)
 x[is.na(x)] <- y
 x
-
-
 # 
 # KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-09"] <- 88
 # KAAF.df$MaxTemp[KAAF.df$Date == "1964-07-10"] <- 88
@@ -457,7 +444,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-03"] <- 86
 # KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-04"] <- 87
 # KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-05"] <- 88
-
 # KAAF.df$MaxTemp[KAAF.df$Date == "2001-09-06"] <- 87
 # KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-06"] <- 82
 # KAAF.df$MaxTemp[KAAF.df$Date == "2002-05-07"] <- 84
@@ -488,7 +474,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-09"] <- 61
 # KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-10"] <- 60
 # KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-11"] <- 54
-
 # KAAF.df$MaxTemp[KAAF.df$Date == "2005-12-21"] <- 56
 # KAAF.df$MaxTemp[KAAF.df$Date == "2006-01-31"] <- 64
 # KAAF.df$MaxTemp[KAAF.df$Date == "2006-03-02"] <- 63
@@ -545,7 +530,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2007-10-19"] <- 75
 # KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-21"] <- 77
 # KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-22"] <- 75
-
 # # KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-25"] <- missing data on weather underground -normal = 71
 # KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-26"] <- 75
 # KAAF.df$MaxTemp[KAAF.df$Date == "2007-11-27"] <- 65
@@ -575,7 +559,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-22"] <- 87
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-04-29"] <- 78
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-02"] <- 77
-
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-05"] <- 85
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-07"] <- 81
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-05-12"] <- 81
@@ -624,7 +607,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-23"] <- 62
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-28"] <- 74
 # KAAF.df$MaxTemp[KAAF.df$Date == "2008-11-30"] <- 70
-
 # #Excel file missing all data from Dec 2008
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-03"] <- 70
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-01-05"] <- 72
@@ -651,7 +633,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-24"] <- 80
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-26"] <- 78
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-04-30"] <- 78
-
 # #Excel Missing data: May 2009 - July 2009
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-08-05"] <- 89
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-08-18"] <- 88
@@ -661,7 +642,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-04"] <- 84
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-12"] <- 89
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-10-19"] <- 67
-
 # #October 26th data missing from Weather Underground - normal = 78
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-08"] <- 78
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-11-09"] <- 72
@@ -698,7 +678,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-28"] <- 54
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-29"] <- 55
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-30"] <- 57
-
 # KAAF.df$MaxTemp[KAAF.df$Date == "2009-12-31"] <- 68
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-01"] <- 58
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-01-02"] <- 54
@@ -734,7 +713,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-13"] <- 90
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-07-14"] <- 86
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-04"] <- 91
-
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-17"] <- 91
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-08-30"] <- 84
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-09-23"] <- 87
@@ -758,8 +736,6 @@ x
 # KAAF.df$MaxTemp[KAAF.df$Date == "2010-12-26"] <- 44
 # KAAF.df$MaxTemp[KAAF.df$Date == "2011-10-29"] <- 71
 # #Excel missing all data 4/11/2012 - 6/1/2012
-
-
 sum(is.na(KAAF.df$PRCP))
 nrow(KAAF.df)
 sum(is.na(KAAF.df$PRCP)) / nrow(KAAF.df) * 100  #105 missing precip days
@@ -800,7 +776,6 @@ KAAF.df$MaxTemp <- AllTemps
 Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
 ```{r}
 library(ggplot2)
-
 ggplot(KAAF.df, aes(x = Date, y = Qlm, color = Qlm)) +
   geom_line() +
   scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
@@ -813,7 +788,6 @@ ggplot(KAAF.df, aes(x = Date, y = Qlm, color = Qlm)) +
   labs(title = "Daily soil moisture deficit (mm), Apalachicola, FL", 
        subtitle = "Amount of water needed to bring soil moisture to full capacity",
        caption = "Based on data from the NWSFO, Apalachicola, FL (1940-2012)") 
-
 KAAF.df %>%
   dplyr::group_by(month, Year) %>%
   dplyr::summarise(Avg = mean(Qlm)) %>%
