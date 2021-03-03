@@ -57,19 +57,19 @@ KAAF.df <- read_csv(file = 'Data/KAAF_Daily1940.csv') %>%
          Rainfall24mm = Rainfall24 * 25.4)
 ```
 
-Filter KAAF.df to the longest period of no missing data
-Oct. 9 2002 - Jan. 30 2005
+Filter KAAF.df to the longest matching period of no missing data
+Oct. 9 2002 - Mar. 2 2004
 
 ```{r}
 KAAFcompare.df <- KAAF.df %>%
-  filter(KAAF.df$Date >= "2002-10-09" & KAAF.df$Date <= "2005-01-30")
+  filter(KAAF.df$Date >= "2002-10-09" & KAAF.df$Date <= "2004-03-01")
 ```
 
-Filter TLH.df to match time perid of KAAFcompare.df
+Filter TLH.df to match time period of KAAFcompare.df
 
 ```{r}
 TLHcompare.df <- TLH.df %>%
-  filter(TLH.df$Date >= "2002-10-09" & TLH.df$Date <= "2005-01-30")
+  filter(TLH.df$Date >= "2002-10-09" & TLH.df$Date <= "2004-03-01")
 ```
 
 
