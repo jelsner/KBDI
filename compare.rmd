@@ -58,7 +58,7 @@ KAAF.df <- read_csv(file = 'Data/KAAF_Daily1940.csv') %>%
 ```
 
 Filter KAAF.df to the longest matching period of no missing data
-Oct. 9 2002 - Mar. 2 2004
+Oct. 9 2002 - Mar. 1 2004
 
 ```{r}
 KAAFcompare.df <- KAAF.df %>%
@@ -83,10 +83,8 @@ sum(is.na(KAAFcompare.df$TMAX))
 sum(is.na(KAAFcompare.df$PRCP))
 nrow(KAAFcompare.df)
 ```
-For TLHcompare
 
-*Note, 3 missing precip days
-Is this acceptable? Dates defined as 
+For TLHcompare
 ```{r}
 sum(is.na(TLHcompare.df$TMAX))
 sum(is.na(TLHcompare.df$PRCP))
@@ -96,10 +94,10 @@ nrow(TLHcompare.df)
 
 
 
-## Compute daily values of the KBDI For TLH
+## Compute daily values of the KBDI For TLHcompare
 
 ```{r}
-Rainfall24 <- TLH.df$Rainfall24
+Rainfall24 <- TLHcompare.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
 PR[1] <- 0
 CumR <- 0
@@ -127,10 +125,10 @@ for(i in 1:length(Rainfall24)) {
       }
   }
 }
-TLH.df$NetR <- NetR
+TLHcompare.df$NetR <- NetR
 Q <- 269  
 R <- 59.23
-MaxTemp <- TLH.df$MaxTemp
+MaxTemp <- TLHcompare.df$MaxTemp
 Ql <- numeric()
 DeltaQl <- numeric()
 for(i in 1:length(Rainfall24)){
@@ -140,20 +138,16 @@ for(i in 1:length(Rainfall24)){
   Ql <- c(Ql, Q)
   DeltaQl <- c(DeltaQl, DeltaQ)
 }
-TLH.df$Ql <- Ql
-TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
-TLH.df$DeltaQl <- DeltaQl
-TLH.df$DroughtIndex <- floor(Ql/100)
-TLHcompare.df <- TLH.df %>%
- dplyr::filter(Date >= "2002-10-09" & Date <= "2005-01-30") #Create common Period with KAAF
+TLHcompare.df$Ql <- Ql
+TLHcompare.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLHcompare.df$DeltaQl <- DeltaQl
+TLHcompare.df$DroughtIndex <- floor(Ql/100)
 range(TLHcompare.df$Ql)
 ```
 
-### Compute daily values of the KBDI For KAAF
+### Compute daily values of the KBDI For KAAFcompare
 
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
 
-Step one: Compute net rainfall on each day.
 ```{r}
 Rainfall24 <- KAAFcompare.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -213,6 +207,8 @@ Perform left join to merge data frames.
 .x = KAAF Station Data
 .y = TLH Station Data
 
+*note in ByMonth, 2003 is the only full year
+
 ```{r}
 library(tidyverse)
 KAAFcompare.df <- KAAFcompare.df %>%
@@ -231,6 +227,7 @@ ByMonth <- CompareWide.df %>%
   summarise(cc = cor(Qlm.x, Qlm.y))
 ```
 
+
 Make plots
 ```{r}
 library(ggplot2)
@@ -239,27 +236,6 @@ ggplot(data = CompareLong.df, aes(x = Date, y = Qlm, color = NAME)) +
 ```
 
 
-
-
-```{r}
-joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date")
-joineddata.df %>% dplyr::select(Date, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
-cor(KAAFcompare.df$DroughtIndex,TLHcompare.df$DroughtIndex)
-cor(KAAFcompare.df$Ql,TLHcompare.df$Ql)
-joineddata.df %>%
-  group_by(month.x) %>%
-  summarise(cc = cor(Ql.x,Ql.y))
-joineddata.df %>%
-  group_by(Year.x) %>%
-  summarise(cc = cor(Ql.x,Ql.y))
-```
-```{r}
-joineddata.df %>%
-  filter(month.x =='Apr')%>%
-  group_by(Year.x) %>%
-  summarise(cc = cor(Ql.x,Ql.y)) %>%
-  pull(cc)
-```
 
 ###Plots comparing Ql for TLH and APL
 
@@ -766,7 +742,28 @@ AllTemps[is.na(AllTemps)] <- OrderMissingT
 KAAF.df$MaxTemp <- AllTemps
 ```
 
+Comparing values
 
+
+```{r}
+joineddata.df <- left_join(KAAFcompare.df, TLHcompare.df, by = "Date")
+joineddata.df %>% dplyr::select(Date, NAME.x, DroughtIndex.x, NAME.y, DroughtIndex.y)
+cor(KAAFcompare.df$DroughtIndex,TLHcompare.df$DroughtIndex)
+cor(KAAFcompare.df$Ql,TLHcompare.df$Ql)
+joineddata.df %>%
+  group_by(month.x) %>%
+  summarise(cc = cor(Ql.x,Ql.y))
+joineddata.df %>%
+  group_by(Year.x) %>%
+  summarise(cc = cor(Ql.x,Ql.y))
+```
+```{r}
+joineddata.df %>%
+  filter(month.x =='Apr')%>%
+  group_by(Year.x) %>%
+  summarise(cc = cor(Ql.x,Ql.y)) %>%
+  pull(cc)
+```
 
 
 
