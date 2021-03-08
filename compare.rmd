@@ -297,7 +297,7 @@ CompareLong.df %>%
 ggplot(mapping = aes(x = Date, y = Qlm, color = NAME)) +
   geom_line() 
 ```
-Plot net rainfall for August 2003 - Febuary 2004
+Plot net rainfall for August 2003 - February 2004
 ```{r}
 CompareLong.df %>%
   filter(Date >= '2003-08-01') %>%
@@ -306,7 +306,7 @@ ggplot(mapping = aes(x = Date, y = NetR, color = NAME)) +
 ```
 
 
-plot max temp for Augst 2003 - Febuary 2004
+plot max temp for August 2003 - February 2004
 ```{r}
 CompareLong.df %>%
   filter(Date >= '2003-08-01') %>%
@@ -319,12 +319,20 @@ TKAAFplot <- ggplot(CompareWide.df %>%
   filter(year(Date) == '2003'))
 
 TKAAFplot + 
-  geom_line(mapping = aes(x = Date, y = Qlm.x)) +
-  geom_bar(mapping = aes(x = Date, y = NetR.x), stat = "identity")
+  geom_line(mapping = aes(x = Date, y = Qlm.x), color = "darkblue") +
+  geom_bar(mapping = aes(x = Date, y = Rainfall24mm.x), stat = "identity", color = "firebrick1")
 ```
 
+TLH
 
+```{r}
+TKAAFplot <- ggplot(CompareWide.df %>%
+  filter(year(Date) == '2003'))
 
+TKAAFplot + 
+  geom_line(mapping = aes(x = Date, y = Qlm.y), color = "darkblue") +
+  geom_bar(mapping = aes(x = Date, y = Rainfall24mm.y), stat = "identity", color = "firebrick1")
+```
 
 
 ###Notes/ Extra Code Chunks
