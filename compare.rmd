@@ -238,11 +238,21 @@ ggplot(data = CompareLong.df, aes(x = Date, y = Qlm, color = NAME)) +
 2003 is the only full year on record in our compare data frames. Make plot Qlm for 2003
 
 ```{r}
-CompareLong.df %>%
+CompareWide.df %>%
   filter(year(Date) == '2003') %>%
-ggplot(mapping = aes(x = Date, y = Qlm, color = NAME)) +
+  mutate(QlmD = Qlm.x - Qlm.y) %>%
+ggplot(mapping = aes(x = Date, y = QlmD)) +
   geom_line() 
 ```
+```{r}
+CompareLong.df %>%
+  filter(year(Date) == '2003') %>%
+ggplot(mapping = aes(x = Date, y = Qlm)) +
+  geom_line() 
+```
+
+
+
 Find correlation coefficients for just 2003 by month
 
 ```{r}
@@ -275,8 +285,8 @@ Plot net rainfall for august and september
 CompareLong.df %>%
   filter(year(Date) == '2003') %>%
   filter(month(Date) == '8' | month(Date) == '9') %>%
-ggplot(mapping = aes(x = Date, y = NetR, color = NAME)) +
-  geom_bar(position= "stack", stat= "identity")
+ggplot(mapping = aes(x = Date, y = NetR, fill = NAME)) +
+  geom_bar(.xstat= "identity")
 ```
 
 plot max temp for august and september
