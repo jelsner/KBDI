@@ -1,0 +1,39 @@
+---
+title: "Zach_Fires"
+author: "Zach Law"
+date: "3/15/2021"
+output: html_document
+---
+
+This file will be used to further analyze fire data bounded by the Apalachicola National Forest.
+
+
+##Importing/creating boundaries of Apalachicola National Forest
+
+Link to National Forest Boundary File: https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=National+Forest+System+Land+Units
+
+*Note: This link provides boundaries for every national forest boundary in the U.S.
+Because we only want the boundary for the Apalachicola National Forest, the file was edited in esri arcpro and a shapefile containing only the Apalachicola National Forest boundaries was exported for use here.
+
+```{r}
+library(tidyverse)
+library(sf)
+
+anfbounds <- read_sf(dsn = "forest boundaries",
+                     layer = "ANFboundaries")
+#Set Coordinate Reference System
+  
+```
+
+
+```{r}
+library(spatstat)
+library(maptools)
+
+anf.win <- anfbounds %>%
+  as_Spatial() %>%
+  as.owin()
+
+plot(anf.win)
+```
+
