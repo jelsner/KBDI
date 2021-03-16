@@ -20,8 +20,8 @@ library(tidyverse)
 library(sf)
 
 anfbounds <- read_sf(dsn = "forest boundaries",
-                     layer = "ANFboundaries")
-#Set Coordinate Reference System
+                     layer = "ANFboundaries") %>%
+  st_transform(crs = 3086)
   
 ```
 
@@ -36,4 +36,43 @@ anf.win <- anfbounds %>%
 
 plot(anf.win)
 ```
+
+##Importing Fire Data
+
+```{r}
+if(!"FL_Fires" %in% list.files()){
+download.file("http://myweb.fsu.edu/jelsner/temp/data/FL_Fires.zip",
+"FL_Fires.zip")
+unzip("FL_Fires.zip")
+}
+FL_Fires.sf <- st_read(dsn = "FL_Fires") %>%
+st_transform(crs = 3086)
+```
+
+Create fire data into ppp object
+```{r}
+fires.ppp <- FL_Fires.sf %>%
+  as_Spatial() %>%
+  as.ppp() %>%
+  unmark()
+```
+
+
+Filter for fires only in the Apalachicola National Forest Boundary
+```{r}
+anf_fires <- fires.ppp[anf.win]
+
+plot(anf_fires)
+```
+
+
+
+
+
+
+
+
+
+
+
 
