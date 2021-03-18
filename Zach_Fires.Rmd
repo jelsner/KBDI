@@ -61,7 +61,7 @@ plot(nf.win)
 
 
 
-
+Create window for apalacicola national forest boundary
 
 ```{r}
 library(spatstat)
@@ -103,6 +103,12 @@ plot(anf_fires)
 ```
 
 
+Filter FL_Fires simple feature dataframe for only fires bounded by anf
+```{r}
+anf_fires.sf <- st_join(FL_Fires.sf, anfbounds, join = st_within) %>%
+  filter(NFSLANDU_2 == 'Apalachicola National Forest')
+  
+```
 
 
 
