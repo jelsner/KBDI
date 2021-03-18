@@ -107,7 +107,6 @@ Filter FL_Fires simple feature dataframe for only fires bounded by anf
 ```{r}
 anf_fires.sf <- st_join(FL_Fires.sf, anfbounds, join = st_within) %>%
   filter(NFSLANDU_2 == 'Apalachicola National Forest')
-  
 ```
 
 
