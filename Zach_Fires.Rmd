@@ -97,7 +97,7 @@ fires.ppp <- FL_Fires.sf %>%
 
 Filter for fires only in the Apalachicola National Forest Boundary
 ```{r}
-anf_fires <- fires.ppp[anf.win]
+anf_fires.ppp <- fires.ppp[anf.win]
 
 plot(anf_fires)
 ```
@@ -110,8 +110,33 @@ anf_fires.sf <- st_join(FL_Fires.sf, anfbounds, join = st_within) %>%
 ```
 
 
+```{r}
+library(lubridate)
+library(ggplot2)
 
+anf_fires.sf %>% 
+  ggplot(mapping = aes(x = month(DISCOVERY_))) +
+    geom_bar() +
+    facet_wrap(~ FIRE_Y)
+```
 
+Running this code we see that fires are most active during May and June and least active during December
+```{r}
+anf_fires.sf %>% 
+  ggplot(mapping = aes(x = month(DISCOVERY_))) +
+    geom_bar()
+```
+
+```{r}
+FL_Fires.sf %>%
+  filter(month(DISCOVERY_) == '05') %>%
+  as_Spatial() %>%
+  as.ppp() %>%
+  unmark()
+  
+#FL_Fires.sf[anf.win]   
+#plot(FL_Fires.sf)
+```
 
 
 
