@@ -128,14 +128,28 @@ anf_fires.sf %>%
 ```
 
 ```{r}
-FL_Fires.sf %>%
-  filter(month(DISCOVERY_) == '05') %>%
+may_fires <- anf_fires.sf %>%
+  filter(month(DISCOVERY_) == '05')
+  
+may_fires.ppp <- anf_fires.sf %>%
   as_Spatial() %>%
   as.ppp() %>%
   unmark()
-  
-#FL_Fires.sf[anf.win]   
-#plot(FL_Fires.sf)
+
+may_fires.ppp <- may_fires.ppp[anf.win]
+
+plot(may_fires.ppp)
+
+```
+
+
+
+
+```{r}
+anf_fires.sf %>% 
+  ggplot(mapping = aes(x = FIRE_SIZE_)) +
+    geom_bar() +
+    facet_wrap(~ FIRE_Y)
 ```
 
 
