@@ -12,6 +12,8 @@ This file will be used to further analyze fire data bounded by the Apalachicola 
 
 Link to National Forest Boundary File: https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=National+Forest+System+Land+Units
 
+Link to zipfile containing a shapefile for all forest boundaries: https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip 
+
 *Note: This link provides boundaries for every national forest boundary in the U.S.
 Because we only want the boundary for the Apalachicola National Forest, the file was edited in esri arcpro and a shapefile containing only the Apalachicola National Forest boundaries was exported for use here.
 
@@ -19,13 +21,24 @@ Because we only want the boundary for the Apalachicola National Forest, the file
 library(tidyverse)
 library(sf)
 
-anfbounds <- read_sf(dsn = "forest boundaries",
+anfbounds.sf <- read_sf(dsn = "forest boundaries",
                      layer = "ANFboundaries") %>%
   st_transform(crs = 3086)
   
 ```
 
+Create window for apalacicola national forest boundary
 
+```{r}
+library(spatstat)
+library(maptools)
+
+anf.win <- anfbounds.sf %>%
+  as_Spatial() %>%
+  as.owin()
+
+plot(anf.win)
+```
 
 Alternative method for importing forest shapefile using only R.
 
@@ -58,22 +71,6 @@ nf.win <- NF_Bounds.sf %>%
 plot(nf.win)
 ```
 
-
-
-
-Create window for apalacicola national forest boundary
-
-```{r}
-library(spatstat)
-library(maptools)
-
-anf.win <- anfbounds %>%
-  as_Spatial() %>%
-  as.owin()
-
-plot(anf.win)
-```
-
 ##Importing Fire Data
 
 ```{r}
@@ -86,9 +83,16 @@ FL_Fires.sf <- st_read(dsn = "FL_Fires") %>%
 st_transform(crs = 3086)
 ```
 
+Filter FL_Fires simple feature dataframe for only fires bounded by anf
+```{r}
+anf_fires.sf <- st_join(FL_Fires.sf, anfbounds.sf, join = st_within) %>%
+  filter(NFSLANDU_2 == 'Apalachicola National Forest')
+```
+
+
 Create fire data into ppp object
 ```{r}
-fires.ppp <- FL_Fires.sf %>%
+FL_fires.ppp <- FL_Fires.sf %>%
   as_Spatial() %>%
   as.ppp() %>%
   unmark()
@@ -97,19 +101,25 @@ fires.ppp <- FL_Fires.sf %>%
 
 Filter for fires only in the Apalachicola National Forest Boundary
 ```{r}
-anf_fires.ppp <- fires.ppp[anf.win]
+anf_fires.ppp <- FL_fires.ppp[anf.win]
 
-plot(anf_fires)
+plot(anf_fires.ppp)
 ```
+It is noted that a large amount of fires are clustered in the northeast boundary of the forest.
 
+Note: We want to rescale the ppp object find the units.
 
-Filter FL_Fires simple feature dataframe for only fires bounded by anf
 ```{r}
-anf_fires.sf <- st_join(FL_Fires.sf, anfbounds, join = st_within) %>%
-  filter(NFSLANDU_2 == 'Apalachicola National Forest')
+intensity(anf_fires.ppp)
+
+anf_fires.ppp %>%
+  density() %>%
+  plot()
 ```
 
 
+
+Look at fire data for the apalachicola national forest by month and year
 ```{r}
 library(lubridate)
 library(ggplot2)
@@ -118,8 +128,9 @@ anf_fires.sf %>%
   ggplot(mapping = aes(x = month(DISCOVERY_))) +
     geom_bar() +
     facet_wrap(~ FIRE_Y)
-```
+``` 
 
+View all apalachicola fires by month
 Running this code we see that fires are most active during May and June and least active during December
 ```{r}
 anf_fires.sf %>% 
@@ -127,11 +138,12 @@ anf_fires.sf %>%
     geom_bar()
 ```
 
+plot all may fires in the apalachicola boundary
 ```{r}
 may_fires <- anf_fires.sf %>%
-  filter(month(DISCOVERY_) == '05')
+  filter(month(DISCOVERY_) == '5')
   
-may_fires.ppp <- anf_fires.sf %>%
+may_fires.ppp <- may_fires %>%
   as_Spatial() %>%
   as.ppp() %>%
   unmark()
@@ -142,9 +154,27 @@ plot(may_fires.ppp)
 
 ```
 
+plot apalachicola fires for the active fire period of June 2011
+
+```{r}
+june2011fire <- anf_fires.sf %>%
+  filter(FIRE_Y == "2011") %>%
+  filter(month(DISCOVERY_) == "6")
+
+june2011fire.ppp <- june2011fire %>%
+  as_Spatial() %>%
+  as.ppp() %>%
+  unmark()
+
+june2011fire.ppp <- june2011fire.ppp[anf.win]
+
+plot(june2011fire.ppp)
+
+```
 
 
 
+Plots based on fire size to note any trends
 ```{r}
 anf_fires.sf %>% 
   ggplot(mapping = aes(x = FIRE_SIZE_)) +
@@ -152,6 +182,85 @@ anf_fires.sf %>%
     facet_wrap(~ FIRE_Y)
 ```
 
+
+
+All Florida fires visualized by year
+```{r}
+FL_Fires.sf %>% 
+  ggplot(mapping = aes(x = month(DISCOVERY_))) +
+    geom_bar() +
+    facet_wrap(~ FIRE_Y)
+```
+
+##Plot Florida fires and drought for June 2011
+
+
+Create window for Florida
+
+```{r}
+library(USAboundaries)
+
+FL.sf <- us_states(states = "Florida") %>%
+  st_transform(crs = st_crs(FL_Fires.sf))
+
+FL.win <- FL.sf %>%
+  as_Spatial() %>%
+  as.owin()
+```
+
+
+
+All Florida Fires June 2011
+
+https://droughtmonitor.unl.edu/Data/GISData.aspx
+
+```{r}
+june2011.sf <- FL_Fires.sf %>%
+  filter(FIRE_Y == '2011') %>%
+  filter(month(DISCOVERY_) == '6')
+
+june2011.ppp <- june2011.sf %>%
+  as_Spatial() %>%
+  as.ppp() %>%
+  unmark()
+
+june2011.ppp <- june2011.ppp[FL.win]
+
+plot(june2011.ppp)
+```
+
+Download drought shapefile for june
+US Drought Monitor link to a list of shape files https://droughtmonitor.unl.edu/Data/GISData.aspx
+
+Here the shape file for May 31, 2011 was used to represent drought for the period of June 2011
+
+```{r}
+if(!"USDM_20110531" %in% list.files()){
+download.file("https://droughtmonitor.unl.edu/data/shapefiles_m/USDM_20110531_M.zip",
+"USDM_20110531_M.zip")
+unzip("USDM_20110531_M.zip")
+}
+drought062011.sf <- st_read(dsn = "USDM_20110531.shp") %>%
+st_transform(crs = st_crs(FL_Fires.sf))
+```
+
+
+plot fires within the drought shapefile
+why aren't colors showing up?
+
+```{r}
+drought062011.ppp <- drought062011.sf %>%
+  as_Spatial() %>%
+  as.owin()
+
+drought062011.ppp <- drought062011.ppp[FL.win]
+
+plot(june2011.ppp[drought062011.ppp])
+
+```
+```{r}
+plot(drought062011.sf)
+```
 
 
 
