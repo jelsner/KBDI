@@ -3,6 +3,8 @@ title: "Zach_Fires"
 author: "Zach Law"
 date: "3/15/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 This file will be used to further analyze fire data bounded by the Apalachicola National Forest.
@@ -244,6 +246,25 @@ unzip("USDM_20110531_M.zip")
 }
 drought062011.sf <- st_read(dsn = "USDM_20110531.shp") %>%
 st_transform(crs = st_crs(FL_Fires.sf))
+```
+
+Subset on the FL polygons
+```{r}
+FL_Fires2.sf <- june2011.sf %>%
+  st_intersection(FL.sf)
+
+drought062011.sf <- drought062011.sf %>%
+    st_intersection(FL.sf)
+```
+
+
+```{r}
+library(tmap)
+
+tm_shape(drought062011.sf) +
+  tm_fill(col = "DM") +
+  tm_shape(june2011.sf) +
+  tm_dots()
 ```
 
 
