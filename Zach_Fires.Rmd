@@ -140,17 +140,17 @@ anf_fires.sf %>%
 
 plot all may fires in the apalachicola boundary
 ```{r}
-may_fires <- anf_fires.sf %>%
-  filter(month(DISCOVERY_) == '5')
+june_fires <- anf_fires.sf %>%
+  filter(month(DISCOVERY_) == '6')
   
-may_fires.ppp <- may_fires %>%
+june_fires.ppp <- june_fires %>%
   as_Spatial() %>%
   as.ppp() %>%
   unmark()
 
-may_fires.ppp <- may_fires.ppp[anf.win]
+june_fires.ppp <- june_fires.ppp[anf.win]
 
-plot(may_fires.ppp)
+plot(june_fires.ppp)
 
 ```
 
@@ -185,6 +185,8 @@ anf_fires.sf %>%
 
 
 All Florida fires visualized by year
+
+Was 1996 a la nina year? Was 2010 an el nino year? 
 ```{r}
 FL_Fires.sf %>% 
   ggplot(mapping = aes(x = month(DISCOVERY_))) +
