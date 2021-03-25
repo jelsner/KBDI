@@ -3,6 +3,8 @@ title: "Zach_Fires"
 author: "Zach Law"
 date: "3/15/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 This file will be used to further analyze fire data bounded by the Apalachicola National Forest.
@@ -24,8 +26,21 @@ library(sf)
 anfbounds.sf <- read_sf(dsn = "forest boundaries",
                      layer = "ANFboundaries") %>%
   st_transform(crs = 3086)
+
+st_crs(anfbounds.sf)
   
 ```
+create a zoomable map
+```{r}
+library(tmap)
+
+tmap_mode("view")
+
+tm_shape(anfbounds.sf) +
+  tm_borders()
+
+```
+
 
 Create window for apalacicola national forest boundary
 
@@ -103,16 +118,21 @@ Filter for fires only in the Apalachicola National Forest Boundary
 ```{r}
 anf_fires.ppp <- FL_fires.ppp[anf.win]
 
-plot(anf_fires.ppp)
+anf_fires.ppp
+
+anf_firesS.ppp <- rescale(anf_fires.ppp, s = 1000, unitname = "kilometer")
+
+summary(anf_firesS.ppp)
+plot(anf_firesS.ppp)
 ```
 It is noted that a large amount of fires are clustered in the northeast boundary of the forest.
 
 Note: We want to rescale the ppp object find the units.
 
 ```{r}
-intensity(anf_fires.ppp)
+intensity(anf_firesS.ppp)
 
-anf_fires.ppp %>%
+anf_firesS.ppp %>%
   density() %>%
   plot()
 ```
