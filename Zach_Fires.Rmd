@@ -137,6 +137,18 @@ anf_firesS.ppp %>%
   plot()
 ```
 
+```{r}
+library(tmap)
+
+tmap_mode("view")
+
+tm_shape(anfbounds.sf) +
+  tm_borders()
+
+tm_shape(anf_fires.sf) +
+  tm_dots(col = "orange")
+
+```
 
 
 Look at fire data for the apalachicola national forest by month and year
