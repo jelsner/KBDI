@@ -12,7 +12,7 @@ https://www.cpc.ncep.noaa.gov/products/predictions/90day/
 
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
-The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. 
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indexes specifically developed to equate the effects of drought with potential fire behavior. 
 
 For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to greater difficulty in fire suppression.
 
@@ -29,8 +29,8 @@ AWND = Average daily wind speed (tenths of meters per second)
 Assign no rainfall on days with missing values.
 ```{r}
 library(lubridate)
-library(dplyr)
-library(tidyr)
+library(tidyverse)
+library(ggplot2)
 
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
@@ -119,14 +119,28 @@ TLH.df <- TLH.df %>%
 range(TLH.df$Ql)
 ```
 
-Note: There is a package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for PDSI.
+Note: There is a package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for the Palmer Drought Severity Index (PDSI).
+
+Monthly average soil moisture deficit.
+```{r}
+TLH.df %>%
+  group_by(month) %>%
+  summarise(Avg = mean(Qlm)) %>%
+  ggplot(aes(x = month, y = Avg, fill = Avg)) +
+  geom_col() +  
+  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
+  ylab("") + xlab("") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Monthly average soil moisture deficit (mm), Tallahassee, FL", 
+       subtitle = "Amount of water needed to bring soil moisture to full capacity",
+       caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
+```
 
 ### Trends
 
 Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
 ```{r}
-library(ggplot2)
-
 ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   geom_line() +
   scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
@@ -172,7 +186,7 @@ TLH.df %>%
   theme_minimal()
 ```
 
-Repeat for using data from Apalachacola. https://www.ncdc.noaa.gov/  > I want to search for data at a particular location > DATA TOOLS > Final a Station
+Repeat using data from Apalachacola (see `compare.rmd`). https://www.ncdc.noaa.gov/  > I want to search for data at a particular location > DATA TOOLS > Final a Station
 
 Linear trend model.
 ```{r}
@@ -218,9 +232,32 @@ TLH.df %>%
             rTAVG = cor(Qlm, TAVG, use = "complete"))
 ```
 
-## To do
-Seasonal (fire season) temperature vs precipitation scatter plot. See TempVsPrecipSeasonal.jpeg
-Create a character variable called `FireSeason`. Then group by that variable computing the average temp and total precipitation. 
+Seasonal (fire season) temperature vs KDBI scatter plot. See TempVsPrecipSeasonal.jpeg
+Create a character variable called `FireSeason` (April, May, June). Then group by that variable computing the average temp and total precipitation (or avg KDBI).
+```{r}
+df <- TLH.df %>%
+  mutate(FireSeason = month %in% c("May", "Jun", "Jul")) %>%
+  filter(FireSeason) %>%
+  group_by(Year) %>%
+  summarize(AvgHiTemp = mean(MaxTemp),
+            AvgLoTemp = mean(MinTemp),
+            TotalPrcp = sum(Rainfall24mm),
+            AvgQlm = mean(Qlm))
+
+library(ggrepel)
+
+ggplot(df, 
+       mapping = aes(y = TotalPrcp, x = AvgHiTemp, label = Year, color = factor(Year))) +
+  geom_point() +
+  geom_label_repel(size = 2.5) +
+  scale_y_continuous(limits = c(0, NA)) +
+  scale_color_grey(start = .8, end = .2, guide = FALSE) +
+#  geom_smooth(method = lm, se = FALSE, col = "black") +
+  ylab("Total Precipitation (mm)") + xlab("Average Daily High Temperature (°F)") +
+  ggtitle(label = "Apalachicola National Forest fire seasons (May-Jul) that are drier tend to be hotter",
+          subtitle = "Dry days are sunnier and thus they tend to get hotter. Later years have darker labels.") +
+  theme_minimal() 
+```
 
 Get SOI data and join with TLH.df.
 ```{r}
@@ -315,23 +352,25 @@ TLH.df %>%
 
 ## Spatial domain
 
-Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10 km^2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not substantially influenced by confounding effects of urbanization, agricultural land or roadways. 
+The ANF contains some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the Southeast United States. 
 
-While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the Southeast United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in Florida. 
-
-The resulting 528,987-hectare landscape footprint is imported as a simple feature data frame and corresponding lightning and wildfire point data are similarly imported from shapefiles uploaded to Dropbox.
-
-Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area. We focus only on the Apalachicola National Forest.
+https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip
 ```{r}
-#download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
-#              destfile = "TempPubLand.zip")
-#unzip("TempPubLand.zip")
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip")
+}
 
 library(sf)
+library(tidyverse)
 
-LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp") %>%
-  dplyr::filter(NAME == "APALACHICOLA")
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+```
 
+Make a map.
+```{r}
 library(tmap)
 
 Airport.sf <- data.frame(Name = c("Regional Airport"), 
@@ -339,13 +378,24 @@ Airport.sf <- data.frame(Name = c("Regional Airport"),
                        Longitude = c(-84.35333)) %>%
   st_as_sf(coords = c("Longitude", "Latitude"),
            crs = 4326) %>%
-  st_transform(crs = st_crs(LandHex.sf))
+  st_transform(crs = st_crs(ANF_Boundary.sf))
 
 tmap_mode("view")
-tm_shape(LandHex.sf) +
+tm_shape(ANF_Boundary.sf) +
   tm_borders() +
 tm_shape(Airport.sf) +
-  tm_dots(size = .1, col = "darkgreen")
+  tm_dots(size = .1, 
+          col = "darkgreen")
+```
+
+Hexagon regions (not used). The resulting 528,987-hectare landscape footprint is imported as a simple feature data frame and corresponding lightning and wildfire point data are similarly imported from shapefiles uploaded to Dropbox. Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area. We focus only on the Apalachicola National Forest.
+```{r, eval=FALSE}
+#download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
+#              destfile = "TempPubLand.zip")
+#unzip("TempPubLand.zip")
+
+LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp") %>%
+  dplyr::filter(NAME == "APALACHICOLA")
 ```
 
 ## Wildfires
@@ -358,11 +408,11 @@ Abstract: This data publication contains a spatial database of wildfires that oc
 ```{r}
 Fires.sf <- st_read(dsn = "Data/FL_Fires",
                     layer = "FL_Fires")  %>%
-  st_transform(crs = st_crs(LandHex.sf)) %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
   dplyr::filter(STAT_CAU_1 == "Lightning") %>%
-  st_intersection(LandHex.sf)
+  st_intersection(ANF_Boundary.sf)
 
-tm_shape(LandHex.sf) +
+tm_shape(ANF_Boundary.sf) +
   tm_borders() +
 tm_shape(Fires.sf) +
   tm_dots(size = .03) +
