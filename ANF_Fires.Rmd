@@ -5,16 +5,130 @@ editor_options:
   chunk_output_type: console
 ---
 
+## Get the required packages
+```{r}
+library(sf)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(ggrepel)
+library(tmap)
+```
+
+## Get a boundary file for the ANF
+
+The ANF contains some of Florida's largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climatic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
+
+https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip
+```{r}
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip")
+}
+
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+
+st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
+```
+
+Make a map.
+```{r}
+Airport.sf <- data.frame(Name = c("Regional Airport"), 
+                       Latitude = c(30.39306),
+                       Longitude = c(-84.35333)) %>%
+  st_as_sf(coords = c("Longitude", "Latitude"),
+           crs = 4326) %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf))
+
+tmap_mode("view")
+tm_shape(ANF_Boundary.sf) +
+  tm_borders() +
+tm_shape(Airport.sf) +
+  tm_dots(size = .1, 
+          col = "darkgreen")
+```
+
+## Get the wildfire data
+
+Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
+
+Short, Karen C. 2017. Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508]. 4th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.4
+
+Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
+```{r}
+Fires.sf <- st_read(dsn = "Data/FL_Fires",
+                    layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
+  dplyr::filter(STAT_CAU_1 == "Lightning") %>%
+  st_intersection(ANF_Boundary.sf)
+
+tm_shape(ANF_Boundary.sf) +
+  tm_borders() +
+tm_shape(Fires.sf) +
+  tm_dots(size = .03) +
+tm_shape(Airport.sf) +
+  tm_dots(size = .1, col = "darkgreen")
+
+Fires.sf <- Fires.sf %>%
+  mutate(Year = year(DISCOVERY_),
+         Month = month(DISCOVERY_),
+         Day = day(DISCOVERY_),
+         YDay = yday(DISCOVERY_),
+         YDayF = factor(YDay, levels = as.character(1:366))) %>%
+  select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, FIRE_SIZE_)
+```
+
+Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
+```{r}
+Fires.sf %>%
+  group_by(FIRE_SIZE_) %>%
+  summarize(nFires = n(),
+            Range1 = range(FIRE_SIZE)[1],
+            Range2 = range(FIRE_SIZE)[2])
+```
+
+```{r}
+Fires.sf %>%
+  as.data.frame() %>%
+  mutate(MonthF = factor(month.name[Month], levels = month.name, ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n()) %>% 
+ggplot(aes(x = MonthF, y = nF)) +
+  geom_col(col = "gray70", fill = "gray70") +
+  coord_flip() + xlab("") + ylab("") +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank()
+    )
+
+Yearly <- 
+  Fires.sf %>%
+  as.data.frame() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n()) %>%
+  mutate(Year = 1992:2015)
+
+ggplot(Yearly, aes(x = YearF, y = nF)) +
+  geom_point()
+```
+
 https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
 https://www.cpc.ncep.noaa.gov/products/predictions/90day/
 
-## Keetch & Byram drought index computed from data collected at the Tallahassee airport
+## Get TLH airport daily weather data and compute the Keetch & Byram drought index
 
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
 The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indexes specifically developed to equate the effects of drought with potential fire behavior. 
 
-For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can lead to greater difficulty in fire suppression.
+For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can make it harder to suppress fires.
 
 High values of the KBDI indicate conditions favorable for the occurrence and spread of wildfires, but drought is not by itself a prerequisite for wildfires. Other weather factors, such as wind, temperature, relative humidity and atmospheric stability, play a major role in determining the actual fire danger.
 
@@ -24,14 +138,8 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-### Import the summary of the day data and add columns to the data frame
-
-Assign no rainfall on days with missing values.
+Import the summary of the day data and add columns to the data frame. Assign no rainfall on days with missing values.
 ```{r}
-library(lubridate)
-library(tidyverse)
-library(ggplot2)
-
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
                    header = TRUE) %>%
@@ -52,9 +160,7 @@ nrow(TLH.df)
 sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of all days]
 ```
 
-### Compute daily values of the KBDI
-
-Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
+Compute daily values of the KBDI. Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with a minor correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
 
 Step one: Compute net rainfall on each day. Units are inches.
 ```{r}
@@ -137,8 +243,6 @@ TLH.df %>%
        caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
 ```
 
-### Trends
-
 Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
 ```{r}
 ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
@@ -155,8 +259,8 @@ ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
        caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
 
 TLH.df %>%
-  dplyr::group_by(month, Year) %>%
-  dplyr::summarise(Avg = mean(Qlm)) %>%
+  group_by(month, Year) %>%
+  summarise(Avg = mean(Qlm)) %>%
   ggplot(aes(x = Year, y = Avg, color = Avg)) +
   geom_point() +  
   scale_color_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
@@ -171,7 +275,6 @@ TLH.df %>%
 ```
 
 Side-by-side daily distribution plots (early vs late) by month. 1943:1980, 1981:2019
-Temperature distributions by epoch for days defined by the hot day/night seasons.
 ```{r}
 TLH.df %>%
   mutate(Epoch = Year > 1980) %>%
@@ -233,7 +336,7 @@ TLH.df %>%
 ```
 
 Seasonal (fire season) temperature vs KDBI scatter plot. See TempVsPrecipSeasonal.jpeg
-Create a character variable called `FireSeason` (April, May, June). Then group by that variable computing the average temp and total precipitation (or avg KDBI).
+Create a character variable called `FireSeason` (May, June, July). Then group by that variable computing the average temp and total precipitation (or avg KDBI).
 ```{r}
 df <- TLH.df %>%
   mutate(FireSeason = month %in% c("May", "Jun", "Jul")) %>%
@@ -243,8 +346,6 @@ df <- TLH.df %>%
             AvgLoTemp = mean(MinTemp),
             TotalPrcp = sum(Rainfall24mm),
             AvgQlm = mean(Qlm))
-
-library(ggrepel)
 
 ggplot(df, 
        mapping = aes(y = TotalPrcp, x = AvgHiTemp, label = Year, color = factor(Year))) +
@@ -350,122 +451,8 @@ TLH.df %>%
               col = "orange") 
 ```
 
-## Spatial domain
-
-The ANF contains some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the Southeast United States. 
-
-https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip
+Combine fires with KDBI.
 ```{r}
-if(!"S_USA.NFSLandUnit" %in% list.files()){
-  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
-                "S_USA.NFSLandUnit.zip")
-unzip("S_USA.NFSLandUnit.zip")
-}
-
-library(sf)
-library(tidyverse)
-
-ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
-  filter(NFSLANDU_2 == "Apalachicola National Forest")
-```
-
-Make a map.
-```{r}
-library(tmap)
-
-Airport.sf <- data.frame(Name = c("Regional Airport"), 
-                       Latitude = c(30.39306),
-                       Longitude = c(-84.35333)) %>%
-  st_as_sf(coords = c("Longitude", "Latitude"),
-           crs = 4326) %>%
-  st_transform(crs = st_crs(ANF_Boundary.sf))
-
-tmap_mode("view")
-tm_shape(ANF_Boundary.sf) +
-  tm_borders() +
-tm_shape(Airport.sf) +
-  tm_dots(size = .1, 
-          col = "darkgreen")
-```
-
-Hexagon regions (not used). The resulting 528,987-hectare landscape footprint is imported as a simple feature data frame and corresponding lightning and wildfire point data are similarly imported from shapefiles uploaded to Dropbox. Public land footprint. Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area. We focus only on the Apalachicola National Forest.
-```{r, eval=FALSE}
-#download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
-#              destfile = "TempPubLand.zip")
-#unzip("TempPubLand.zip")
-
-LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp") %>%
-  dplyr::filter(NAME == "APALACHICOLA")
-```
-
-## Wildfires
-
-Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
-
-Short, Karen C. 2017. Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508]. 4th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.4
-
-Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
-```{r}
-Fires.sf <- st_read(dsn = "Data/FL_Fires",
-                    layer = "FL_Fires")  %>%
-  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
-  dplyr::filter(STAT_CAU_1 == "Lightning") %>%
-  st_intersection(ANF_Boundary.sf)
-
-tm_shape(ANF_Boundary.sf) +
-  tm_borders() +
-tm_shape(Fires.sf) +
-  tm_dots(size = .03) +
-tm_shape(Airport.sf) +
-  tm_dots(size = .1, col = "darkgreen")
-
-Fires.sf <- Fires.sf %>%
-  mutate(Year = year(DISCOVERY_),
-         Month = month(DISCOVERY_),
-         Day = day(DISCOVERY_),
-         YDay = yday(DISCOVERY_),
-         YDayF = factor(YDay, levels = as.character(1:366))) %>%
-  dplyr::select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, FIRE_SIZE_)
-```
-
-Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
-```{r}
-Fires.sf %>%
-  group_by(FIRE_SIZE_) %>%
-  summarize(nFires = n(),
-            Range1 = range(FIRE_SIZE)[1],
-            Range2 = range(FIRE_SIZE)[2])
-```
-
-```{r}
-Fires.sf %>%
-  as.data.frame() %>%
-  mutate(MonthF = factor(month.name[Month], levels = month.name, ordered = TRUE)) %>%
-  group_by(MonthF, .drop = FALSE) %>%
-  summarize(nF = n()) %>% 
-ggplot(aes(x = MonthF, y = nF)) +
-  geom_col(col = "gray70", fill = "gray70") +
-  coord_flip() + xlab("") + ylab("") +
-  theme_minimal() +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border = element_blank(),
-    panel.background = element_blank()
-    )
-
-Yearly <- 
-  Fires.sf %>%
-  as.data.frame() %>%
-  filter(Month %in% c(5, 6, 7)) %>%
-  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
-  group_by(YearF, .drop = FALSE) %>%
-  summarize(nF = n()) %>%
-  mutate(Year = 1992:2015)
-
-ggplot(Yearly, aes(x = YearF, y = nF)) +
-  geom_point()
-
 PSDI <- TLH.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2015) %>%
   dplyr::filter(month == "Apr") %>%
