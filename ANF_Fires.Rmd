@@ -5,6 +5,8 @@ editor_options:
   chunk_output_type: console
 ---
 
+R version 4.0.5 (2021-03-31) -- "Shake and Throw"
+
 ## Get the required packages
 ```{r}
 library(sf)
@@ -13,6 +15,8 @@ library(lubridate)
 library(ggplot2)
 library(ggrepel)
 library(tmap)
+library(scales)
+library(USAboundaries)
 ```
 
 ## Get a boundary file for the ANF
@@ -33,11 +37,11 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
 st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
 ```
 
-Make a map.
+Make a map showing the ANF boundary and the airport location.
 ```{r}
 Airport.sf <- data.frame(Name = c("Regional Airport"), 
-                       Latitude = c(30.39306),
-                       Longitude = c(-84.35333)) %>%
+                         Latitude = c(30.39306),
+                         Longitude = c(-84.35333)) %>%
   st_as_sf(coords = c("Longitude", "Latitude"),
            crs = 4326) %>%
   st_transform(crs = st_crs(ANF_Boundary.sf))
@@ -46,77 +50,241 @@ tmap_mode("view")
 tm_shape(ANF_Boundary.sf) +
   tm_borders() +
 tm_shape(Airport.sf) +
-  tm_dots(size = .1, 
+  tm_dots(size = .03, 
           col = "darkgreen")
 ```
 
 ## Get the wildfire data
 
-Get Florida wildfire data. See `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
+Area burned versus number of fires 
+
+See also `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
 
 Short, Karen C. 2017. Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508]. 4th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.4
+
+From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.4/_metadata_RDS-2013-0009.4.html
+`FIRE_SIZE` = Estimate of acres within the final perimeter of the fire.
+`FIRE_SIZE_CLASS` = Code for fire size based on the number of acres within the final fire perimeter expenditures (A=greater than 0 but less than or equal to 0.25 acres, B=0.26-9.9 acres, C=10.0-99.9 acres, D=100-299 acres, E=300 to 999 acres, F=1000 to 4999 acres, and G=5000+ acres).
 
 Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
 ```{r}
 Fires.sf <- st_read(dsn = "Data/FL_Fires",
                     layer = "FL_Fires")  %>%
   st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
-  dplyr::filter(STAT_CAU_1 == "Lightning") %>%
   st_intersection(ANF_Boundary.sf)
+```
 
+Make a bar chart of frequency by cause.
+```{r}
+table(Fires.sf$STAT_CAU_1)
+
+df <- Fires.sf %>%
+  st_drop_geometry() %>%
+  group_by(STAT_CAU_1) %>%
+  summarize(nF = n(),
+            perF = nF/nrow(Fires.sf))
+
+ggplot(df,
+       mapping = aes(y = reorder(STAT_CAU_1, perF),
+                     x = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  scale_x_continuous(labels = percent) +
+  ylab("") + xlab("") +
+  labs(label = "Lightning is the predominant cause of wildfires in the Apalachicola National Forest",
+       subtitle = "Based on data from 1992-2015",
+       caption = "Data source: Short, Karen (2017)") +
+  theme_minimal()
+```
+
+Map of all locations of all fires over the period.
+```{r}
 tm_shape(ANF_Boundary.sf) +
   tm_borders() +
 tm_shape(Fires.sf) +
-  tm_dots(size = .03) +
+  tm_bubbles(size = "FIRE_SIZE") +
 tm_shape(Airport.sf) +
   tm_dots(size = .1, col = "darkgreen")
+```
 
-Fires.sf <- Fires.sf %>%
+Lightning caused fires.
+```{r}
+LightningFires.sf <- Fires.sf %>%
+  filter(STAT_CAU_1 == "Lightning") %>%
   mutate(Year = year(DISCOVERY_),
          Month = month(DISCOVERY_),
          Day = day(DISCOVERY_),
          YDay = yday(DISCOVERY_),
-         YDayF = factor(YDay, levels = as.character(1:366))) %>%
-  select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, FIRE_SIZE_)
+         YDayF = factor(YDay, levels = as.character(1:366)),
+         SizeF = factor(FIRE_SIZE_, ordered = TRUE)) %>%
+  select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, SizeF)
 ```
 
-Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
+Map of lightning caused fires by size of the area burned.
+```{r}
+FL_Counties.sf <- us_counties(states = "FL",
+                             resolution = "high") %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
+  st_crop(st_bbox(st_buffer(ANF_Boundary.sf, dist = .25)) )
+
+ggplot() +
+  geom_sf(data = FL_Counties.sf, fill = "transparent", col = "gray80") +
+  geom_sf(data = ANF_Boundary.sf, fill = "transparent") +
+  geom_sf(data = LightningFires.sf,
+          mapping = aes(col = SizeF), show.legend = FALSE) +
+  scale_color_brewer(palette = "Oranges",
+                     direction = 1,
+                     guide = FALSE) +
+  theme_bw() +
+  labs(title = "Location of lightning-caused wildfires in the Apalachicola National Forest (1992-2015)",
+       subtitle = "Darker color points indicates the fire resulted in a larger burn area",
+       caption = "Data source: Short, Karen (2017)")
+```
+
+Project: create a {spatstat} object and compute Ripley K using the `Kstat()` function. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
+```{r}
+library(spatstat)
+library(maptools)
+#remotes::install_github("walkerke/crsuggest")
+library(crsuggest)
+
+suggest_crs(ANF_Boundary.sf)
+
+W <- ANF_Boundary.sf %>% 
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.owin()
+
+LF.ppp <- Fires.sf %>% 
+  filter(STAT_CAU_1 == "Lightning") %>%
+  mutate(Month = month(DISCOVERY_)) %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+LF.ppp <- LF.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(LF.ppp)
+
+df <- LF.ppp %>%
+  envelope(fun = Kest,
+           nsim = 100,
+           global = TRUE,
+           nrank = 1) %>%
+  as.data.frame()
+
+#df <- LF.ppp %>%
+#  lohboot(fun = Kest,
+#          block = TRUE,
+#          nx = 10,
+#          global = FALSE) %>%
+#  as.data.frame()
+
+df <- df %>%
+  mutate(theo = theo * intensity(LF.ppp),
+         obs = obs * intensity(LF.ppp),
+         lo = lo * intensity(LF.ppp),
+         hi = hi * intensity(LF.ppp))
+
+ggplot(data = df,
+       mapping = aes(x = r, y = obs)) +
+  geom_ribbon(aes(ymin = lo, 
+                  ymax = hi), fill = "gray80") +
+  geom_line(col = "orange") +
+  geom_line(aes(y = theo), color = "white") +
+  xlab("Distance (km)") + ylab("K(r)") +
+  labs(title = "Locations of lightning-caused wildfires in the ANF are consistent with a random process",
+       subtitle = "Average observed (orange) versus modeled (white) number of additional wildfires within a distance r of a random wildfire.\nThe gray ribbon is the 99% uncertainy band based on 100 simulations from the random process model.") +
+  theme_minimal()
+
+```
+
+Monthly occurrence (relative frequency) of lightning-caused wildfires in the ANF.
+```{r}
+df <- LightningFires.sf %>%
+  st_drop_geometry() %>%
+  mutate(MonthF = factor(month.name[Month], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n(),
+            perF = nF/nrow(LightningFires.sf))
+
+ggplot(data = df,
+       mapping = aes(y = MonthF, 
+                     x = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  scale_x_continuous(labels = percent) +
+  xlab("") + ylab("") +
+  labs(title = "Over 80% of lightning-caused wildfires in the Apalachicola National Forest occur during May-July",
+       subtitle = "Based on data from 1992-2015",
+       caption = "Data source: Short, Karen (2017)") +
+  theme_dark() 
+```
+
+Annual number of lightning-caused fires and annual total amount of acres burned.
+```{r}
+df <- LightningFires.sf %>%
+  st_drop_geometry() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nFires = n(),
+            totalAcresBurned = sum(FIRE_SIZE)) %>%
+  mutate(Year = 1992:2015)
+
+ggplot(data = df,
+       mapping = aes(x = Year, y = nFires, color = totalAcresBurned)) +
+  geom_line(col = "gray80") +
+  geom_point(size = 3) +
+  scale_color_distiller(palette = "Oranges",
+                        direction = 1,
+                        guide = FALSE) +
+  scale_x_continuous(breaks = seq(1992, 2015, by = 3)) +
+  theme_minimal() +
+  labs(x = "", y = "",
+       title = "Large interannual variability in the number of lightning-caused wildfires in the ANF",
+       subtitle = "Darker color points indicates more area burned")
+
+ggplot(data = df,
+       mapping = aes(x = Year, y = totalAcresBurned, color = nFires)) +
+  geom_line(col = "gray80") +
+  geom_point(size = 3) +
+  scale_color_distiller(palette = "Oranges",
+                        direction = 1,
+                        guide = FALSE) +
+  scale_x_continuous(breaks = seq(1992, 2015, by = 3)) +
+  theme_minimal() +
+  labs(x = "", y = "",
+       title = "Large interannual variability in total acres burned from lightning-caused wildfires in the ANF",
+       subtitle = "Darker color points indicates a larger number of fires")
+```
+
+Annual temporal autocorrelation in frequency and total area burned.
+```{r}
+plot(acf(df$nFires))
+plot(acf(df$totalAcresBurned))
+cor.test(df$nFires, df$totalAcresBurned)
+cor.test(df$nFires[-1], df$totalAcresBurned[-24])
+```
+
+Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
 ```{r}
 Fires.sf %>%
   group_by(FIRE_SIZE_) %>%
   summarize(nFires = n(),
             Range1 = range(FIRE_SIZE)[1],
             Range2 = range(FIRE_SIZE)[2])
-```
-
-```{r}
-Fires.sf %>%
-  as.data.frame() %>%
-  mutate(MonthF = factor(month.name[Month], levels = month.name, ordered = TRUE)) %>%
-  group_by(MonthF, .drop = FALSE) %>%
-  summarize(nF = n()) %>% 
-ggplot(aes(x = MonthF, y = nF)) +
-  geom_col(col = "gray70", fill = "gray70") +
-  coord_flip() + xlab("") + ylab("") +
-  theme_minimal() +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.border = element_blank(),
-    panel.background = element_blank()
-    )
-
-Yearly <- 
-  Fires.sf %>%
-  as.data.frame() %>%
-  filter(Month %in% c(5, 6, 7)) %>%
-  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
-  group_by(YearF, .drop = FALSE) %>%
-  summarize(nF = n()) %>%
-  mutate(Year = 1992:2015)
-
-ggplot(Yearly, aes(x = YearF, y = nF)) +
-  geom_point()
 ```
 
 https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
