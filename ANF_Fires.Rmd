@@ -1,5 +1,5 @@
 ---
-title: "Lightning Caused Fires in the ANF"
+title: "Lightning Caused Fires in the Apalachicola National Forest (ANF)"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -28,7 +28,8 @@ https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip
 if(!"S_USA.NFSLandUnit" %in% list.files()){
   download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
                 "S_USA.NFSLandUnit.zip")
-unzip("S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip",
+      files = "S_USA.NFSLandUnit")
 }
 
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
