@@ -1,9 +1,13 @@
 ---
-title: "Lightning Caused Fires in the Apalachicola National Forest (ANF)"
+title: "Lightning-Initiated Fires in the Apalachicola National Forest (ANF)"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
+
+Title: Predicting the frequency and severity of lightning-initiated wildfires in the Apalachicola National Forest
+
+The ANF contains some of Florida's largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climatic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
 
 R version 4.0.5 (2021-03-31) -- "Shake and Throw"
 
@@ -20,8 +24,6 @@ library(USAboundaries)
 ```
 
 ## Get a boundary file for the ANF
-
-The ANF contains some of Florida's largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climatic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
 
 https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip
 ```{r}
@@ -57,7 +59,8 @@ tm_shape(Airport.sf) +
 
 ## Get the wildfire data
 
-Area burned versus number of fires 
+Severity of fires: Area burned 
+Frequency of fires: Number of fires
 
 See also `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
 
@@ -95,20 +98,20 @@ ggplot(df,
                        guide = FALSE) +
   scale_x_continuous(labels = percent) +
   ylab("") + xlab("") +
-  labs(label = "Lightning is the predominant cause of wildfires in the Apalachicola National Forest",
+  labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
        subtitle = "Based on data from 1992-2015",
        caption = "Data source: Short, Karen (2017)") +
   theme_minimal()
 ```
 
-Map of all locations of all fires over the period.
+Locations of all fires over the period of record.
 ```{r}
 tm_shape(ANF_Boundary.sf) +
   tm_borders() +
 tm_shape(Fires.sf) +
-  tm_bubbles(size = "FIRE_SIZE") +
+  tm_bubbles(size = "FIRE_SIZE", col = "orange") +
 tm_shape(Airport.sf) +
-  tm_dots(size = .1, col = "darkgreen")
+  tm_dots(size = .1, col = "black")
 ```
 
 Lightning caused fires.
