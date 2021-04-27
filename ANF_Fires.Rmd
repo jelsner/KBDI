@@ -5,9 +5,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-Title: Predicting the frequency and severity of lightning-initiated wildfires in the Apalachicola National Forest
+Title: Predicting the frequency and severity of lightning-sparked wildfires in the Apalachicola National Forest
 
-The ANF contains some of Florida's largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climatic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
+The ANF contains some of Florida's largest intact natural areas where lightning-sparked fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While this publicly managed natural area deploys various proactive and reactive fire suppression resources, the incidence of large lightning-sparked fires is still largely a climatic and fuels-driven phenomenon. The landscape is among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
 
 R version 4.0.5 (2021-03-31) -- "Shake and Throw"
 
@@ -114,7 +114,7 @@ tm_shape(Airport.sf) +
   tm_dots(size = .1, col = "black")
 ```
 
-Lightning caused fires.
+Lightning sparked fires.
 ```{r}
 LightningFires.sf <- Fires.sf %>%
   filter(STAT_CAU_1 == "Lightning") %>%
@@ -127,7 +127,7 @@ LightningFires.sf <- Fires.sf %>%
   select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, SizeF)
 ```
 
-Map of lightning caused fires by size of the area burned.
+Map of lightning-sparked fires by size of the area burned.
 ```{r}
 FL_Counties.sf <- us_counties(states = "FL",
                              resolution = "high") %>%
