@@ -1,5 +1,5 @@
 ---
-title: "Lightning-Initiated Fires in the Apalachicola National Forest (ANF)"
+title: "Lightning-Sparked Wildfires in the Apalachicola National Forest (ANF)"
 output: html_document
 editor_options: 
   chunk_output_type: console
