@@ -104,7 +104,7 @@ ggplot(df,
   theme_minimal()
 ```
 
-Locations of all fires over the period of record.
+Interactive map showing the locations of all fires over the period of record.
 ```{r}
 tm_shape(ANF_Boundary.sf) +
   tm_borders() +
@@ -114,7 +114,7 @@ tm_shape(Airport.sf) +
   tm_dots(size = .1, col = "black")
 ```
 
-Lightning sparked fires.
+Lightning-sparked fires.
 ```{r}
 LightningFires.sf <- Fires.sf %>%
   filter(STAT_CAU_1 == "Lightning") %>%
@@ -124,10 +124,10 @@ LightningFires.sf <- Fires.sf %>%
          YDay = yday(DISCOVERY_),
          YDayF = factor(YDay, levels = as.character(1:366)),
          SizeF = factor(FIRE_SIZE_, ordered = TRUE)) %>%
-  select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, SizeF)
+  dplyr::select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, SizeF)
 ```
 
-Map of lightning-sparked fires by size of the area burned.
+Static map of lightning-sparked fires by size of the area burned.
 ```{r}
 FL_Counties.sf <- us_counties(states = "FL",
                              resolution = "high") %>%
@@ -143,12 +143,12 @@ ggplot() +
                      direction = 1,
                      guide = FALSE) +
   theme_bw() +
-  labs(title = "Location of lightning-caused wildfires in the Apalachicola National Forest (1992-2015)",
+  labs(title = "Location of lightning-sparked wildfires in the Apalachicola National Forest (1992-2015)",
        subtitle = "Darker color points indicates the fire resulted in a larger burn area",
        caption = "Data source: Short, Karen (2017)")
 ```
 
-Project: create a {spatstat} object and compute Ripley K using the `Kstat()` function. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
+Create a {spatstat} object containing the locations of lightning-sparked fires in the ANF during May-July. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
 ```{r}
 library(spatstat)
 library(maptools)
@@ -175,20 +175,37 @@ LF.ppp <- LF.ppp[W] %>%
   rescale(s = 1000, 
           unitname = "km")
 summary(LF.ppp)
+```
 
+Area is 2,564 square km. There are 337 lightning-sparked wildfires for an average intensity of 13.1 fires per 10 square kilometer during May-July over the 24-year period.
+```{r}
+LF.ppp %>%
+  density() %>%
+  plot()
+
+LF.ppp %>%
+  dirichlet() %>%
+  plot
+
+LF.ppp %>%
+  quadratcount(nx = 20, ny = 15) %>%
+  plot()
+
+LF.ppp %>%
+  quadrat.test(nx = 20, ny = 15,
+               method = "M",
+               nsim = 9999,
+               alternative = "clustered")
+```
+
+Compute Ripley K using the `Kstat()` function
+```{r}
 df <- LF.ppp %>%
   envelope(fun = Kest,
            nsim = 100,
            global = TRUE,
            nrank = 1) %>%
   as.data.frame()
-
-#df <- LF.ppp %>%
-#  lohboot(fun = Kest,
-#          block = TRUE,
-#          nx = 10,
-#          global = FALSE) %>%
-#  as.data.frame()
 
 df <- df %>%
   mutate(theo = theo * intensity(LF.ppp),
@@ -203,10 +220,9 @@ ggplot(data = df,
   geom_line(col = "orange") +
   geom_line(aes(y = theo), color = "white") +
   xlab("Distance (km)") + ylab("K(r)") +
-  labs(title = "Locations of lightning-caused wildfires in the ANF are consistent with a random process",
-       subtitle = "Average observed (orange) versus modeled (white) number of additional wildfires within a distance r of a random wildfire.\nThe gray ribbon is the 99% uncertainy band based on 100 simulations from the random process model.") +
+  labs(title = "Locations of lightning-sparked wildfires in the ANF are inconsistent with a random process",
+       subtitle = "Average observed (orange) versus modeled (white) number of additional wildfires within a distance r of a random wildfire.\nThe gray ribbon is the 99% uncertainy band based on 100 simulations from the spatial random process model.") +
   theme_minimal()
-
 ```
 
 Monthly occurrence (relative frequency) of lightning-caused wildfires in the ANF.
@@ -230,13 +246,13 @@ ggplot(data = df,
                        guide = FALSE) +
   scale_x_continuous(labels = percent) +
   xlab("") + ylab("") +
-  labs(title = "Over 80% of lightning-caused wildfires in the Apalachicola National Forest occur during May-July",
-       subtitle = "Based on data from 1992-2015",
-       caption = "Data source: Short, Karen (2017)") +
-  theme_dark() 
+  labs(title = "Over 80% of lightning-sparked wildfires in the Apalachicola National Forest occur during May-July",
+       subtitle = "Percentage of all lightning-sparked wildfires by month",
+       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+  theme_minimal() 
 ```
 
-Annual number of lightning-caused fires and annual total amount of acres burned.
+Seasonal number of lightning-sparked fires and seasonal total acres burned.
 ```{r}
 df <- LightningFires.sf %>%
   st_drop_geometry() %>%
@@ -257,8 +273,8 @@ ggplot(data = df,
   scale_x_continuous(breaks = seq(1992, 2015, by = 3)) +
   theme_minimal() +
   labs(x = "", y = "",
-       title = "Large interannual variability in the number of lightning-caused wildfires in the ANF",
-       subtitle = "Darker color points indicates more area burned")
+       title = "Large inter-seasonal variability in the number of lightning-sparked wildfires in the ANF",
+       subtitle = "Darker color points indicates larger total burn area")
 
 ggplot(data = df,
        mapping = aes(x = Year, y = totalAcresBurned, color = nFires)) +
@@ -270,11 +286,11 @@ ggplot(data = df,
   scale_x_continuous(breaks = seq(1992, 2015, by = 3)) +
   theme_minimal() +
   labs(x = "", y = "",
-       title = "Large interannual variability in total acres burned from lightning-caused wildfires in the ANF",
-       subtitle = "Darker color points indicates a larger number of fires")
+       title = "Large inter-seasonal variability in acres burned from lightning-sparked wildfires in the ANF",
+       subtitle = "Darker color points indicates more fires")
 ```
 
-Annual temporal autocorrelation in frequency and total area burned.
+Seasonal temporal autocorrelation in frequency and total area burned.
 ```{r}
 plot(acf(df$nFires))
 plot(acf(df$totalAcresBurned))
@@ -282,10 +298,12 @@ cor.test(df$nFires, df$totalAcresBurned)
 cor.test(df$nFires[-1], df$totalAcresBurned[-24])
 ```
 
+No significant inter-seasonal autocorrelation. Significant correlation between number of fires and burned area as expected.
+
 Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
 ```{r}
-Fires.sf %>%
-  group_by(FIRE_SIZE_) %>%
+LightningFires.sf %>%
+  group_by(SizeF) %>%
   summarize(nFires = n(),
             Range1 = range(FIRE_SIZE)[1],
             Range2 = range(FIRE_SIZE)[2])
@@ -293,6 +311,58 @@ Fires.sf %>%
 
 https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
 https://www.cpc.ncep.noaa.gov/products/predictions/90day/
+
+## Get lightning data
+
+Daily county-level counts 1986-2013. Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
+
+First get the Florida fips codes for Liberty, Wakulla, and Franklin counties, then get the data.
+```{r}
+library(tidycensus)
+
+FLfips <- fips_codes %>%
+  filter(state == "FL") %>%
+  filter(county %in% c("Liberty County", "Wakulla County")) %>%
+  pull(county_code)
+
+fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
+
+df <- data.frame()
+for(i in 1:length(fn)){
+  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
+  df <- rbind(df, X)
+}
+
+df <- df %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY))
+```
+
+Seasonal cycle.
+```{r}
+sc <- df %>%
+  mutate(MonthF = factor(month.name[MONTH], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(AvgDailyCount = mean(FCOUNT_NLDN, na.rm = TRUE))
+
+ggplot(data = sc,
+       mapping = aes(y = MonthF, 
+                     x = AvgDailyCount,
+                     fill = AvgDailyCount)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Blues",
+                       direction = 1,
+                       guide = FALSE) +
+  labs(x = "", y = "",
+       title = "Lightning in the Apalachicola National Forest peaks from June-August",
+       subtitle = "Daily average number of cloud-to-ground lightning strikes by month",
+       caption = "Period of record: 1986-2013, Data source: NCEI") +
+  theme_minimal() 
+```
 
 ## Get TLH airport daily weather data and compute the Keetch & Byram drought index
 
@@ -373,7 +443,7 @@ TLH.df$NetR <- NetR
 Step two: Compute daily drought index. Units of temperature are degrees F.
 ```{r}
 Q <- 269  
-R <- 59.23 # average annual rainfall for TLH
+R <- 59.23 # average annual rainfall for TLH in inches
 
 MaxTemp <- TLH.df$MaxTemp
 
@@ -397,22 +467,29 @@ TLH.df <- TLH.df %>%
 range(TLH.df$Ql)
 ```
 
-Note: There is a package to compute the standaridized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for the Palmer Drought Severity Index (PDSI).
+Note: There is a package to compute the standardized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for the Palmer Drought Severity Index (PDSI).
 
 Monthly average soil moisture deficit.
 ```{r}
 TLH.df %>%
-  group_by(month) %>%
-  summarise(Avg = mean(Qlm)) %>%
-  ggplot(aes(x = month, y = Avg, fill = Avg)) +
-  geom_col() +  
-  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
-  ylab("") + xlab("") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Monthly average soil moisture deficit (mm), Tallahassee, FL", 
-       subtitle = "Amount of water needed to bring soil moisture to full capacity",
-       caption = "Based on data from the NWSFO, Tallahassee, FL (1946-2019)") 
+  mutate(MonthF = factor(month.name[month], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(AvgSoilMoistureDeficit = mean(Qlm)) %>%
+ggplot(mapping = aes(y = MonthF, 
+                     x = AvgSoilMoistureDeficit,
+                     fill = AvgSoilMoistureDeficit)) +
+  geom_col() +
+  scale_fill_distiller(palette = "BrBG",
+                       direction = -1,
+                       guide = FALSE) +
+#  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
+  labs(x = "", y = "",
+       title = "Summer is the dry season in the Apalachicola National Forest",
+       subtitle = "Average soil moisture deficit (mm)",
+       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee") +
+  theme_minimal() 
 ```
 
 Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
