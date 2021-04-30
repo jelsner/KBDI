@@ -5,7 +5,14 @@ editor_options:
   chunk_output_type: console
 ---
 
-Title: Predicting the frequency and severity of lightning-sparked wildfires in the Apalachicola National Forest
+1. Writing is thinking, 
+2. 1 article, 1 question, 1 finding, 
+3. it's not a review of the literature, it's an argument about why we need your paper
+
+How much skill is there in a prediction of the seasonal frequency and intensity of lightning-sparked wildfires in the ANF using the KDBI?
+
+
+Title: Predicting the seasonal frequency and severity of lightning-sparked wildfires in the Apalachicola National Forest
 
 The ANF contains some of Florida's largest intact natural areas where lightning-sparked fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While this publicly managed natural area deploys various proactive and reactive fire suppression resources, the incidence of large lightning-sparked fires is still largely a climatic and fuels-driven phenomenon. The landscape is among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
 
