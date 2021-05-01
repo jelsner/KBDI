@@ -9,7 +9,7 @@ editor_options:
 2. 1 article, 1 question, 1 finding, 
 3. it's not a review of the literature, it's an argument about why we need your paper
 
-How much skill is there in a prediction of the seasonal frequency and intensity of lightning-sparked wildfires in the ANF using the KDBI?
+How much skill is there in predicting the seasonal frequency and intensity of lightning-sparked wildfires in the ANF using the KDBI?
 
 
 Title: Predicting the seasonal frequency and severity of lightning-sparked wildfires in the Apalachicola National Forest
