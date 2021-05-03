@@ -804,6 +804,8 @@ ggplot(df, aes(x = QlmLastDay/10, y = nFires)) +
   geom_line(aes(y = fitted(model))) +
   ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
   theme_minimal()
+
+write_csv(df, file = "SeasonalForecastModelData.csv")
 ```
 
 Use the {brms} and {tidybayes} packages to get posterior distributions. See https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
