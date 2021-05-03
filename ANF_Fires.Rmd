@@ -11,6 +11,13 @@ editor_options:
 
 How much skill is there in predicting the seasonal frequency and intensity of lightning-sparked wildfires in the ANF using the KDBI?
 
+https://www.predictiveservices.nifc.gov/outlooks/monthly_seasonal_outlook.pdf
+https://iopscience.iop.org/article/10.1088/1748-9326/ab83a7
+https://www.sciencedirect.com/science/article/abs/pii/S0048969719318315
+
+Brown, Emily K., Wang, Jiali, and Feng, Yan. US wildfire potential: a historical view and future projection using high-resolution climate data. United States: N. p., 2021. Web. doi:10.1088/1748-9326/aba868.
+
+Abatzoglou and Williams (2016) found that the correlation coefficient between KBDI and burned area over the forests of southwestern United States is 0.6–0.8.
 
 Title: Predicting the seasonal frequency and severity of lightning-sparked wildfires in the Apalachicola National Forest
 
@@ -665,7 +672,8 @@ TLH.df %>%
 
 Daily
 ```{r}
-ggplot(TLH.df, aes(x = doy, y = Year, fill = Qlm)) +
+ggplot(data = TLH.df, 
+       mapping = aes(x = doy, y = Year, fill = Qlm)) +
   geom_tile() +
   scale_y_reverse(breaks = seq(1948, 2020, 4)) +
   scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
@@ -678,7 +686,8 @@ ggplot(TLH.df, aes(x = doy, y = Year, fill = Qlm)) +
       subtitle = "Daily soil moisture deficit (mm)",
       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee") 
 
-ggplot(TLH.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
+ggplot(data = TLH.df, 
+       mapping = aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
   geom_tile() +
   scale_y_reverse(breaks = seq(1948, 2019, 4)) +
   scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
@@ -687,8 +696,9 @@ ggplot(TLH.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
   ylab("") + xlab("") +
   theme_minimal() +
   guides(fill = guide_legend(reverse = TRUE)) +
-  ggtitle("Daily drought category, Tallahassee, FL",
-          subtitle = "7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated")
+  labs(title = "Daily KBDI category in the Apalachicola National Forest",
+       subtitle = "KDBI = 7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated",
+       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee")
 ```
 
 Number of days per year with KBDI above 650.
@@ -707,58 +717,89 @@ TLH.df %>%
               col = "orange") 
 ```
 
-Combine fires with KDBI.
+Combine seasonal fire data with drought data.
 ```{r}
-PSDI <- TLH.df %>%
+SeasonalFires <- LightningFires.sf %>%
+  st_drop_geometry() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nFires = n(),
+            totalAcresBurned = sum(FIRE_SIZE)) %>%
+  mutate(Year = 1992:2015)
+
+Drought <- TLH.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2015) %>%
   dplyr::filter(month == "Apr") %>%
   group_by(Year) %>%
-  summarize(KBDI = last(Qlm))
+  summarize(QlmLastDay = last(Qlm),
+            AvgQlm = mean(Qlm))
 
-SOI <- SOI.df %>%
+AprilSOI <- SOI.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2015) %>%
   dplyr::filter(month == "Apr") %>%
   pull(SOI)
 
-df <- data.frame(Year = PSDI$Year, nFires = Yearly$nF, KBDI = PSDI$KBDI, SOI = SOI)
+df <- data.frame(Year = Drought$Year, 
+                 QlmLastDay = Drought$QlmLastDay,
+                 AvgQlm = Drought$AvgQlm,
+                 nFires = SeasonalFires$nFires, 
+                 totalAcresBurned = SeasonalFires$totalAcresBurned,
+                 AprilSOI = AprilSOI)
 ```
 
-Correlation by day of Month during April.
+Correlations and scatter plots.
+```{r}
+cor(df$AvgQlm, df$totalAcresBurned) # .57
+cor(df$QlmLastDay, df$totalAcresBurned) #.52
+cor(df$QlmLastDay, df$nFires) # .63
+cor(df$AvgQlm, df$nFires) # .58
+
+ggplot(data = df,
+       mapping = aes(x = QlmLastDay, y = nFires, label = Year)) +
+  geom_point() +
+  geom_label_repel() +
+  theme_minimal()
+  
+```
+
+Correlation by day of month during April.
 ```{r}
 TLH.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2015) %>%
-#  dplyr::filter(month == "Apr") %>%
-#  mutate(Day = day(Date)) %>%
+  dplyr::filter(month == "Apr") %>%
   group_by(doy, Year) %>%
-  summarize(KBDI = Qlm) %>%
-  dplyr::filter(doy != 366) %>%
+  mutate(Qlm = Qlm) %>%
+  dplyr::select(Year, doy, Qlm) %>%
+  filter(doy != 91 & doy != 121) %>%
   group_by(doy) %>%
-  summarize(r = cor.test(KBDI, Yearly$nF)$estimate,
-            rLo = cor.test(KBDI, Yearly$nF, conf.level = .9)$conf.int[1],
-            rHi = cor.test(KBDI, Yearly$nF, conf.level = .9)$conf.int[2]) %>%
+  summarize(r = cor.test(Qlm, SeasonalFires$nFires)$estimate,
+            rLo = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[1],
+            rHi = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[2]) %>%
   ggplot(aes(x = doy, y = r)) +
   geom_ribbon(aes(ymin = rLo, ymax = rHi), fill = "gray90") +
   geom_point() +
   geom_line() +
-  geom_segment(lineend = "round", aes(x = 121, xend = 213, y = .9, yend = .9), size = 3, col = "red") +
   scale_y_continuous(limits = c(-1, 1)) +
-  scale_x_continuous(breaks = c(1,	32,	60,	91, 121, 152, 182, 213, 244, 274, 305, 335),
-                     labels = month.abb, position = "top") +
+#  scale_x_continuous(breaks = c(1,	32,	60,	91, 121, 152, 182, 213, 244, 274, 305, 335),
+#                     labels = month.abb, position = "top") +
   theme_minimal()
 ```
+
+A slight upward trend in the correlation from early to late April but no significant difference.
 
 Negative binomial regression.
 ```{r}
 library(MASS)
 
-var(df$nFires)/mean(df$nFires)
+var(df$nFires)/mean(df$nFires) #14.2
 exp(coef(glm.nb(nFires ~ 1, data = df)))
-exp(coef(glm.nb(nFires ~ KBDI + SOI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
+exp(coef(glm.nb(nFires ~ I(QlmLastDay / 10) + SOI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
 
 
-model <- glm.nb(nFires ~ KBDI, data = df)
+model <- glm.nb(nFires ~ I(QlmLastDay / 10), data = df)
 
-ggplot(df, aes(x = KBDI, y = nFires)) +
+ggplot(df, aes(x = QlmLastDay/10, y = nFires)) +
   geom_point() + 
   geom_line(aes(y = fitted(model))) +
   ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
