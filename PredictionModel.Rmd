@@ -1,0 +1,54 @@
+---
+title: "Seasonal prediction of lightning-sparked wildfires in the Apalachicola National Forest (ANF)"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Get the required packages
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(MASS)
+library(brms)
+library(tidybayes)
+```
+
+## Get the data
+
+The data are organized and merged in the file `ANF_Fires.Rmd`. 
+```{r}
+SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
+  mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
+```
+
+Negative binomial regression.
+```{r}
+var(df$nFires)/mean(df$nFires) #14.2
+
+model0 <- glm.nb(nFires ~ 1,
+                 data = SeasonalData.df)
+summary(model0)
+
+model1 <- glm.nb(nFires ~ QlmLastDay + SOI,
+                 data = SeasonalData.df)
+summary(model1)
+
+exp(coef(glm.nb(nFires ~ QlmLastDay + SOI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
+
+
+model <- glm.nb(nFires ~ I(QlmLastDay / 10), data = df)
+
+ggplot(df, aes(x = QlmLastDay/10, y = nFires)) +
+  geom_point() + 
+  geom_line(aes(y = fitted(model))) +
+  ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
+  theme_minimal()
+
+write_csv(df, file = "SeasonalForecastModelData.csv")
+```
+
+Use the {brms} and {tidybayes} packages to get posterior distributions. See https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
+
+Also hot-days.Rmd, PredictTorFreqByEF.Rmd
