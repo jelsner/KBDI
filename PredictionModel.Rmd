@@ -13,6 +13,7 @@ library(ggplot2)
 library(MASS)
 library(brms)
 library(tidybayes)
+library(modelr)
 ```
 
 ## Get the data
@@ -47,7 +48,7 @@ ggplot(data = SeasonalData.df,
   theme_minimal()
 ```
 
-Use the {brms} and {tidybayes} packages to get posterior distributions. For visualizing uncertain see https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
+Use the {brms} and {tidybayes} packages to get posterior distributions.
 
 Also hot-days.Rmd, PredictTorFreqByEF.Rmd
 
@@ -67,4 +68,21 @@ fit1 <- brm(nFires ~ QlmLastDay,
 prior_summary(fit1)
 
 plot(fit1, pars = "QlmLastDay")
+```
+
+For visualizing uncertain see https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
+
+```{r}
+out <- SeasonalData.df %>%
+  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
+  tidybayes::add_fitted_draws(fit1) %>% #CONDITION
+  tidybayes::median_qi(.value, .width = c(.66, .95)) # MUNGE
+
+ggplot(data = out,
+       mapping = aes(x = QlmLastDay,
+                     y = .value,
+                     ymin = .lower,
+                     ymax = .upper)) +
+  geom_lineribbon()
+                     
 ```
