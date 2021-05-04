@@ -25,30 +25,46 @@ SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
 
 Negative binomial regression.
 ```{r}
-var(df$nFires)/mean(df$nFires) #14.2
+var(SeasonalData.df$nFires)/mean(SeasonalData.df$nFires) #14.2
 
 model0 <- glm.nb(nFires ~ 1,
                  data = SeasonalData.df)
 summary(model0)
 
-model1 <- glm.nb(nFires ~ QlmLastDay + SOI,
+model1 <- glm.nb(nFires ~ QlmLastDay + AprilSOI,
                  data = SeasonalData.df)
 summary(model1)
 
-exp(coef(glm.nb(nFires ~ QlmLastDay + SOI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
+model2 <- glm.nb(nFires ~ QlmLastDay,
+                 data = SeasonalData.df)
+summary(model2)
 
-
-model <- glm.nb(nFires ~ I(QlmLastDay / 10), data = df)
-
-ggplot(df, aes(x = QlmLastDay/10, y = nFires)) +
+ggplot(data = SeasonalData.df, 
+       mapping = aes(x = QlmLastDay, y = nFires)) +
   geom_point() + 
-  geom_line(aes(y = fitted(model))) +
+  geom_line(aes(y = fitted(model2))) +
   ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
   theme_minimal()
-
-write_csv(df, file = "SeasonalForecastModelData.csv")
 ```
 
-Use the {brms} and {tidybayes} packages to get posterior distributions. See https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
+Use the {brms} and {tidybayes} packages to get posterior distributions. For visualizing uncertain see https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
 
 Also hot-days.Rmd, PredictTorFreqByEF.Rmd
+
+When using brms, please cite one or more of the following publications:
+
+Bürkner P. C. (2017). brms: An R Package for Bayesian Multilevel Models using Stan. Journal of Statistical Software. 80(1), 1-28. doi.org/10.18637/jss.v080.i01
+Bürkner P. C. (2018). Advanced Bayesian Multilevel Modeling with the R Package brms. The R Journal. 10(1), 395-411. doi.org/10.32614/RJ-2018-017
+As brms is a high-level interface to Stan, please additionally cite Stan:
+
+Carpenter B., Gelman A., Hoffman M. D., Lee D., Goodrich B., Betancourt M., Brubaker M., Guo J., Li P., and Riddell A. (2017). Stan: A probabilistic programming language. Journal of Statistical Software. 76(1). 10.18637/jss.v076.i01
+
+```{r}
+fit1 <- brm(nFires ~ QlmLastDay,
+            family = "negbinomial",
+            data = SeasonalData.df)
+
+prior_summary(fit1)
+
+plot(fit1, pars = "QlmLastDay")
+```
