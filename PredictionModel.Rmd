@@ -84,5 +84,13 @@ ggplot(data = out,
                      ymin = .lower,
                      ymax = .upper)) +
   geom_lineribbon()
+
+SeasonalData.df %>%
+  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
+  tidybayes::add_fitted_draws(fit1) %>% #CONDITION
+  ggplot(mapping = aes(x = QlmLastDay,
+                     y = .value)) +
+  tidybayes::stat_lineribbon(.width = c(.66, .95))
+
                      
 ```
