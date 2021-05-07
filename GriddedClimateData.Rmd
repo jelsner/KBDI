@@ -1,0 +1,96 @@
+---
+title: "Gridded Climate Data"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Watch: https://youtu.be/OhxAISoi2zE
+
+```{r}
+# remotes::install_github("mikejohnson51/AOI")
+# remotes::install_github("mikejohnson51/climateR")
+
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(raster)
+library(AOI)
+library(climateR)
+select <- dplyr::select  # make sure that the select you want is from {dplyr} (not the one in {raster})
+```
+```{r}
+country_of_interest <- "Bulgaria"
+AOI <- aoi_get(country = country_of_interest)
+plot(AOI$geometry)
+```
+
+See `ClimateR.Rmd` also http://www.climatologylab.org/gridmet.html
+
+What variables are available relevant to wildfires.
+```{r}
+param_meta$gridmet
+```
+
+Get the boundary file.
+```{r}
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip",
+      files = "S_USA.NFSLandUnit")
+}
+
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+
+st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
+```
+
+Get a the pentad (5-day) PDSI from 1980 to 2019.
+```{r}
+data <- getGridMET(ANF_Boundary.sf, 
+                   param = "palmer", 
+                   startDate = "1979-01-01",
+                   endDate = "2020-01-02")
+class(data$gridmet_palmer)
+
+# Check that we get the correct region
+Y <- mean(data$gridmet_palmer)
+plot(Y)
+plot(ANF_Boundary.sf$geometry, add = TRUE)
+
+regionalAvgPDSI <- cellStats(data$gridmet_palmer, stat = 'mean')
+pentadDates <- seq(from = as.Date("1980/1/3"), 
+                   to = as.Date("2019/12/28"), 
+                   by = "5 day")
+PDSI.df <- data.frame(pentadDates, regionalAvgPDSI) %>%
+  mutate(Month = month(pentadDates),
+         Year = year(pentadDates))
+```
+
+Get the KDBI data. The data are organized and merged in the file `ANF_Fires.Rmd`. 
+```{r}
+SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
+  mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
+```
+
+Attach the PDSI data.
+```{r}
+df <- PDSI.df %>%
+  group_by(Month, Year) %>%
+  summarize(AvgPDSI = mean(regionalAvgPDSI),
+            lastPentad = last(regionalAvgPDSI)) %>%
+  filter(Month == 4,
+         Year >= 1992 & Year <= 2015)
+
+SeasonalData.df$AvgPDSI = df$AvgPDSI
+SeasonalData.df$lastPentad = df$lastPentad
+
+model1 <- glm.nb(nFires ~ QlmLastDay,
+                 data = SeasonalData.df)
+summary(model1)
+```
+
+This answers the question: Is PDSI a better predictor of fire season activity than the KDBI? 
+The model shows that the drier it is during the last pentad in April, the more fires but the AIC is 177.88 compared with 167.27 when using the last day of April's KDBI. 
