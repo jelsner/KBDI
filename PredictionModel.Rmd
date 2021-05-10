@@ -148,6 +148,11 @@ prior_summary(fit2)
 
 plot(fit2, pars = "QlmLastDay")
 
+fit2 %>%
+  spread_draws(b_QlmLastDay) %>%
+  ggplot(mapping = aes(b_QlmLastDay)) +
+    stat_dotsinterval()
+
 SeasonalData.df %>%
   tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
   tidybayes::add_fitted_draws(fit2) %>% #CONDITION
