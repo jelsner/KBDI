@@ -72,6 +72,23 @@ plot(fit1, pars = "QlmLastDay")
 
 For visualizing uncertain see https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
 
+https://mjskay.github.io/ggdist/articles/slabinterval.html
+```{r}
+get_variables(fit1)
+
+fit1 %>%
+  spread_draws(b_QlmLastDay) %>%
+  head(15)
+
+fit1 %>%
+  spread_draws(b_QlmLastDay) %>%
+  ggplot(mapping = aes(b_QlmLastDay)) +
+#    stat_halfeye()
+#  stat_gradientinterval()
+#  stat_dotsinterval(quantiles = 100, scale = .25)
+    stat_dotsinterval()
+```
+
 ```{r}
 out <- SeasonalData.df %>%
   tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
@@ -83,14 +100,61 @@ ggplot(data = out,
                      y = .value,
                      ymin = .lower,
                      ymax = .upper)) +
-  geom_lineribbon()
+  geom_lineribbon() +
+  scale_fill_brewer()
 
 SeasonalData.df %>%
   tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
   tidybayes::add_fitted_draws(fit1) %>% #CONDITION
   ggplot(mapping = aes(x = QlmLastDay,
                      y = .value)) +
-  tidybayes::stat_lineribbon(.width = c(.66, .95))
+  tidybayes::stat_lineribbon(.width = c(.5, .8, .95)) +
+  geom_point(mapping = aes(y = nFires),
+             data = SeasonalData.df) +
+  scale_fill_brewer()
 
-                     
+SeasonalData.df %>%
+  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
+  tidybayes::add_fitted_draws(fit1, n = 20) %>% #CONDITION
+  ggplot(mapping = aes(x = QlmLastDay,
+                       y = .value, 
+                       group = .draw)) +
+  geom_line() +
+  scale_fill_brewer()
+
+SeasonalData.df %>%
+  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
+  tidybayes::add_predicted_draws(fit1) %>% #CONDITION
+  ggplot(mapping = aes(x = QlmLastDay,
+                     y = .prediction)) +
+  tidybayes::stat_lineribbon(.width = c(.5, .8, .95)) +
+  geom_point(mapping = aes(y = nFires),
+             data = SeasonalData.df) +
+  scale_fill_brewer()
+```
+
+Total acres burned
+```{r}
+ggplot(data = SeasonalData.df,
+       mapping = aes(x = totalAcresBurned)) +
+  geom_density() +
+  geom_rug() 
+
+fit2 <- brm(I(totalAcresBurned + .01) ~ QlmLastDay,
+            family = "exponential",
+            data = SeasonalData.df)
+
+prior_summary(fit2)
+
+plot(fit2, pars = "QlmLastDay")
+
+SeasonalData.df %>%
+  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
+  tidybayes::add_fitted_draws(fit2) %>% #CONDITION
+  ggplot(mapping = aes(x = QlmLastDay,
+                     y = .value)) +
+  tidybayes::stat_lineribbon(.width = c(.5, .8, .95)) +
+  geom_point(mapping = aes(y = totalAcresBurned),
+             data = SeasonalData.df) +
+  scale_fill_brewer()
 ```
