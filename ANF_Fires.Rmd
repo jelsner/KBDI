@@ -93,6 +93,7 @@ Fires.sf <- st_read(dsn = "Data/FL_Fires",
 
 #https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Fire_History_Locations_Public/FeatureServer/0/query?outFields=*&where=1%3D1
 
+
 #Fires2.sf <- st_read("NIFC_Fires_ANF.shp")
 ```
 
