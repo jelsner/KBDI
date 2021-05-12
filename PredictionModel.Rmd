@@ -89,6 +89,8 @@ fit1 %>%
     stat_dotsinterval()
 ```
 
+
+
 ```{r}
 out <- SeasonalData.df %>%
   tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
