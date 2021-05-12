@@ -90,6 +90,10 @@ Fires.sf <- st_read(dsn = "Data/FL_Fires",
                     layer = "FL_Fires")  %>%
   st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
   st_intersection(ANF_Boundary.sf)
+
+#https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Fire_History_Locations_Public/FeatureServer/0/query?outFields=*&where=1%3D1
+
+#Fires2.sf <- st_read("NIFC_Fires_ANF.shp")
 ```
 
 Make a bar chart of frequency by cause.
