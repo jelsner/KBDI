@@ -17,6 +17,24 @@ library(tidybayes)
 library(modelr)
 ```
 
+```{r}
+loc <- "https://www.wpc.ncep.noaa.gov/archives/web_pages/discussions/archive_nathilo.php?adate=05/11/2021&sdate=20210511"
+X <- readLines(loc)
+hi <- X[376]
+lo <- X[377]
+
+X <- xml2::read_html(loc, encoding = "ISO-8601")
+X %>%
+  xml2::xml_structure()
+X %>%
+  rvest::html_nodes("div")
+
+as.numeric(gsub(".*?([0-9]+).*", "\\1", hi))
+
+x_numbers <- regmatches(hi, gregexpr("[[:digit:]]+", hi))  # Apply gregexpr & regmatches
+as.numeric(unlist(x_numbers))[6]
+```
+
 ## Get the data
 
 The data are organized and merged in the file `ANF_Fires.Rmd`. 
