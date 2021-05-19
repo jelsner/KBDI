@@ -1,11 +1,11 @@
 ---
-title: "Gridded Climate Data"
+title: "Gridded daily weather data"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
-Watch: https://youtu.be/OhxAISoi2zE
+Can we do better than the KBDI computed at TLH using daily gridMET data (burn index, 1000 hr moist) over the ANF when predicting seasonal lightning-sparked wildfires?
 
 ```{r}
 # remotes::install_github("mikejohnson51/AOI")
@@ -13,14 +13,15 @@ Watch: https://youtu.be/OhxAISoi2zE
 
 library(tidyverse)
 library(lubridate)
+library(rgdal)
 library(sf)
-library(terra)
+library(raster)
 library(AOI)
 library(climateR)
 select <- dplyr::select  # make sure that the select you want is from {dplyr} (not the one in {raster})
 ```
 
-See `ClimateR.Rmd` also http://www.climatologylab.org/gridmet.html
+See `ClimateR.Rmd` and http://www.climatologylab.org/gridmet.html and https://youtu.be/OhxAISoi2zE
 
 What variables are available relevant to wildfires.
 ```{r}
@@ -41,6 +42,100 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
 
 st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
 ```
+
+Get daily variables as `RasterStack`s from 1992-2015. About 12 seconds for 4 variables.
+```{r}
+t0 <- Sys.time()
+data <- getGridMET(ANF_Boundary.sf, 
+                   param = c("tmax", "prcp", "fmoist_1000", "burn_index"), 
+                   startDate = "1992-01-01",
+                   endDate = "2015-12-31")
+Sys.time() - t0
+class(data$gridmet_fmoist_1000)
+nlayers(data$gridmet_fmoist_1000) # should equal number of days between start & end dates
+```
+
+Check to see if we have the correct region.
+```{r}
+plot(mean(data$gridmet_burn_index))
+plot(ANF_Boundary.sf$geometry, add = TRUE)
+```
+
+Compute regional averages by date.
+```{r}
+regionalAvgFmoist <- cellStats(data$gridmet_fmoist_1000, stat = 'mean')
+regionalAvgBurnIndex <- cellStats(data$gridmet_burn_index, stat = 'mean')
+dailyDates <- seq(from = as.Date("1992/1/1"), 
+                   to = as.Date("2015/12/31"), 
+                   by = "day")
+regional.df <- data.frame(dailyDates, 
+                          regionalAvgFmoist,
+                          regionalAvgBurnIndex) %>%
+  mutate(Month = month(dailyDates),
+         Year = year(dailyDates))
+```
+
+Get the KDBI data. The data are organized and merged in the file `ANF_Fires.Rmd`. 
+```{r}
+SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
+  mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
+```
+
+Attach the regional data.
+```{r}
+df <- regional.df %>%
+  group_by(Month, Year) %>%
+  summarize(monthlyAvgFmoist = mean(regionalAvgFmoist),
+            monthlyAvgBurnIndex = mean(regionalAvgBurnIndex),
+            lastDayAvgFmoist = last(regionalAvgFmoist),
+            lastDayAvgBurnIndex = last(regionalAvgBurnIndex)) %>%
+  filter(Month == 4)
+
+SeasonalData.df$monthlyAvgFmoist = df$monthlyAvgFmoist
+SeasonalData.df$monthlyAvgBurnIndex = df$monthlyAvgBurnIndex
+SeasonalData.df$lastDayAvgFmoist = df$lastDayAvgFmoist
+SeasonalData.df$lastDayAvgBurnIndex = df$lastDayAvgBurnIndex
+```
+
+```{r}
+cor(SeasonalData.df$nFires, SeasonalData.df$QlmLastDay)
+# 0.6315948
+cor(SeasonalData.df$nFires, SeasonalData.df$lastDayAvgFmoist)
+#-0.6225665
+cor(SeasonalData.df$nFires, SeasonalData.df$lastDayAvgBurnIndex)
+# 0.2888821
+
+cor(SeasonalData.df$nFires, SeasonalData.df$AvgQlm)
+# 0.5821398
+cor(SeasonalData.df$nFires, SeasonalData.df$monthlyAvgFmoist)
+# -0.5238168
+cor(SeasonalData.df$nFires, SeasonalData.df$monthlyAvgBurnIndex)
+# 0.6597644
+
+cor(SeasonalData.df$totalAcresBurned, SeasonalData.df$QlmLastDay)
+cor(SeasonalData.df$totalAcresBurned, SeasonalData.df$lastDayAvgFmoist)
+cor(SeasonalData.df$totalAcresBurned, SeasonalData.df$lastDayAvgBurnIndex)
+cor(SeasonalData.df$totalAcresBurned, SeasonalData.df$AvgQlm)
+cor(SeasonalData.df$totalAcresBurned, SeasonalData.df$monthlyAvgFmoist)
+cor(SeasonalData.df$totalAcresBurned, SeasonalData.df$monthlyAvgBurnIndex)
+
+# -0.4611462
+# 0.3721229
+# 0.5695327
+# -0.5783408
+# 0.6733335
+
+library(MASS)
+
+model5 <- glm.nb(nFires ~ monthlyAvgFmoist,
+                 data = SeasonalData.df)
+summary(model5)
+```
+
+KBDI computed from data at TLH is highly correlated with area-averaged Fmoist and burn index.
+
+
+
 
 Get a the pentad (5-day) PDSI from 1980 to 2019.
 ```{r}
@@ -64,28 +159,3 @@ PDSI.df <- data.frame(pentadDates, regionalAvgPDSI) %>%
          Year = year(pentadDates))
 ```
 
-Get the KDBI data. The data are organized and merged in the file `ANF_Fires.Rmd`. 
-```{r}
-SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
-  mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
-```
-
-Attach the PDSI data.
-```{r}
-df <- PDSI.df %>%
-  group_by(Month, Year) %>%
-  summarize(AvgPDSI = mean(regionalAvgPDSI),
-            lastPentad = last(regionalAvgPDSI)) %>%
-  filter(Month == 4,
-         Year >= 1992 & Year <= 2015)
-
-SeasonalData.df$AvgPDSI = df$AvgPDSI
-SeasonalData.df$lastPentad = df$lastPentad
-
-model1 <- glm.nb(nFires ~ QlmLastDay,
-                 data = SeasonalData.df)
-summary(model1)
-```
-
-This answers the question: Is PDSI a better predictor of fire season activity than the KDBI? 
-The model shows that the drier it is during the last pentad in April, the more fires but the AIC is 177.88 compared with 167.27 when using the last day of April's KDBI. 
