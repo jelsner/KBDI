@@ -5,7 +5,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-
 ## Get the required packages
 ```{r}
 library(tidyverse)

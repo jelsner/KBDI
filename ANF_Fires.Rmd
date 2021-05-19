@@ -9,7 +9,9 @@ editor_options:
 2. 1 article, 1 question, 1 finding, 
 3. it's not a review of the literature, it's an argument about why we need your paper
 
-How much skill is there in predicting the seasonal frequency and intensity of lightning-sparked wildfires in the ANF using the KDBI?
+What is the relationship between dryness of the soil and lightning-sparked wildfire activity in the ANF on the seasonal time scale?
+
+What climate factors are associated with soil dryness during the dry season?
 
 https://www.predictiveservices.nifc.gov/outlooks/monthly_seasonal_outlook.pdf
 https://iopscience.iop.org/article/10.1088/1748-9326/ab83a7
@@ -19,7 +21,7 @@ Brown, Emily K., Wang, Jiali, and Feng, Yan. US wildfire potential: a historical
 
 Abatzoglou and Williams (2016) found that the correlation coefficient between KBDI and burned area over the forests of southwestern United States is 0.6–0.8.
 
-Title: Predicting the seasonal frequency and severity of lightning-sparked wildfires in the Apalachicola National Forest
+Title: Frequency and severity of lightning-sparked wildfires and their relationship to soil dryness in the Apalachicola National Forest
 
 The ANF contains some of Florida's largest intact natural areas where lightning-sparked fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While this publicly managed natural area deploys various proactive and reactive fire suppression resources, the incidence of large lightning-sparked fires is still largely a climatic and fuels-driven phenomenon. The landscape is among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
 
@@ -794,24 +796,4 @@ TLH.df %>%
 
 A slight upward trend in the correlation from early to late April but no significant difference.
 
-Negative binomial regression.
-```{r}
-library(MASS)
-
-var(df$nFires)/mean(df$nFires) #14.2
-exp(coef(glm.nb(nFires ~ 1, data = df)))
-exp(coef(glm.nb(nFires ~ I(QlmLastDay / 10) + SOI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
-
-
-model <- glm.nb(nFires ~ I(QlmLastDay / 10), data = df)
-
-ggplot(df, aes(x = QlmLastDay/10, y = nFires)) +
-  geom_point() + 
-  geom_line(aes(y = fitted(model))) +
-  ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
-  theme_minimal()
-```
-
-Use the {brms} and {tidybayes} packages to get posterior distributions. See https://www.youtube.com/watch?v=wbzfqh_3LyM&list=PLCrWEzJgSUqzI3goQEAKkDsHg72inmqbe&index=20&t=0s
-
-Also hot-days.Rmd, PredictTorFreqByEF.Rmd
+Continue with `PredictionModel.Rmd` and `GriddedClimateData.Rmd`.

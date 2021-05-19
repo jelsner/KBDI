@@ -14,15 +14,10 @@ Watch: https://youtu.be/OhxAISoi2zE
 library(tidyverse)
 library(lubridate)
 library(sf)
-library(raster)
+library(terra)
 library(AOI)
 library(climateR)
 select <- dplyr::select  # make sure that the select you want is from {dplyr} (not the one in {raster})
-```
-```{r}
-country_of_interest <- "Bulgaria"
-AOI <- aoi_get(country = country_of_interest)
-plot(AOI$geometry)
 ```
 
 See `ClimateR.Rmd` also http://www.climatologylab.org/gridmet.html
