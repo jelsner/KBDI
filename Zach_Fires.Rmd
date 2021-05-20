@@ -590,12 +590,6 @@ ggplot(mapping = aes(y = MonthF,
 ```
 
 
-```{r}
-TLH.df %>%
-  filter(year(Date) == '2003') %>%
-ggplot(mapping = aes(x = Date, y = Qlm)) +
-  geom_line() 
-```
 
 Interactive map showing the locations of all fires over the period of record.
 ```{r}
@@ -606,3 +600,80 @@ tm_shape(LightningFires.sf) +
 #tm_shape(Airport.sf) +
   #tm_dots(size = .1, col = "black")
 ```
+
+
+
+lightning wildfires by year
+
+```{r}
+df.year <- LightningFires.sf %>%
+  st_drop_geometry() %>%
+  mutate(YearF = factor(Year, 
+                        ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n())
+```
+
+```{r}
+ggplot(data = df.year, 
+       mapping = aes(x = YearF,
+                     y = nF,
+                     fill = nF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  xlab("Year") + ylab("Number of Fires") +
+  labs(title = "Number of Lighting-Sparked Wildfires in the Apalachicola National Forest",
+       subtitle = "Could years of with high fire counts correspond to La Nina events?",
+       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+  theme_minimal()
+  
+
+```
+
+
+KBDI for year 2000
+```{r}
+TLH.df %>%
+  filter(year(Date) == '2000') %>%
+ggplot(mapping = aes(x = Date, y = Ql)) +
+  geom_line() +
+  xlab("Date") + ylab("KBDI") +
+  labs(title = "In 2000, wildfire occurance peaked with high values of KDBI",
+       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee")
+  
+```
+
+
+Fires in year 2000
+
+
+```{r}
+df2000 <- LightningFires.sf %>%
+  filter(Year == '2000') %>%
+  st_drop_geometry() %>%
+  mutate(MonthF = factor(month.name[Month], 
+                         levels = month.name, 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n())
+```
+
+```{r}
+
+ggplot(data = df2000, 
+       mapping = aes(x = MonthF,
+                     y = nF,
+                     fill = nF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  xlab("Month") + ylab("Number of Fires") +
+  labs(title = "The 2000 fire season peaked in July",
+       subtitle = "How does this correspond to KDBI values?",
+       caption = "Period of record: 2000, Data source: Short, Karen (2017)") +
+  theme_minimal()
+```
+
