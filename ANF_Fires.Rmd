@@ -27,6 +27,8 @@ The ANF contains some of Florida's largest intact natural areas where lightning-
 
 R version 4.0.5 (2021-03-31) -- "Shake and Throw"
 
+Fire is controlled by two things: ignition and fuel. Climate change impacts both by increasing flammability (the likelihood something will burn) and the availability of dead, dry stuff on the landscape to burn. People and lightning are ignitors. 
+
 ## Get the required packages
 ```{r}
 library(sf)
