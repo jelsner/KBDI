@@ -640,7 +640,7 @@ TLH.df %>%
 ggplot(mapping = aes(x = Date, y = Ql)) +
   geom_line() +
   xlab("Date") + ylab("KBDI") +
-  labs(title = "In 2000, wildfire occurance peaked with high values of KDBI",
+  labs(title = "In 2000, wildfire occurance peaked with high values of KBDI",
        caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee")
   
 ```
@@ -672,7 +672,7 @@ ggplot(data = df2000,
                        guide = FALSE) +
   xlab("Month") + ylab("Number of Fires") +
   labs(title = "The 2000 fire season peaked in July",
-       subtitle = "How does this correspond to KDBI values?",
+       subtitle = "How does this correspond to KBDI values?",
        caption = "Period of record: 2000, Data source: Short, Karen (2017)") +
   theme_minimal()
 ```
