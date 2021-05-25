@@ -317,5 +317,363 @@ plot(drought062011.sf)
 
 
 
+###Copied Code from ANF_Fires.Rmd
 
+
+## Get the required packages
+```{r}
+library(sf)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(ggrepel)
+library(tmap)
+library(scales)
+library(USAboundaries)
+```
+
+## Get a boundary file for the ANF
+
+https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip
+```{r}
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip",
+      files = "S_USA.NFSLandUnit.shp")
+}
+
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit.shp") %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+
+st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
+```
+
+Make a map showing the ANF boundary and the airport location.
+```{r}
+Airport.sf <- data.frame(Name = c("Regional Airport"), 
+                         Latitude = c(30.39306),
+                         Longitude = c(-84.35333)) %>%
+  st_as_sf(coords = c("Longitude", "Latitude"),
+           crs = 4326) %>%
+  st_transform(crs = st_crs(anfbounds.sf))
+
+tmap_mode("view")
+tm_shape(anfbounds.sf) +
+  tm_borders() +
+tm_shape(Airport.sf) +
+  tm_dots(size = .03, 
+          col = "darkgreen")
+```
+
+
+
+Make a bar chart of frequency by cause.
+
+Cause of Fires in the Apalachicola National Forest
+```{r}
+#table(Fires.sf$STAT_CAU_1)
+table(anf_fires.sf$STAT_CAU_1)
+
+df <- anf_fires.sf %>%
+  st_drop_geometry() %>%
+  group_by(STAT_CAU_1) %>%
+  summarize(nF = n(),
+            perF = nF/nrow(anf_fires.sf))
+
+ggplot(df,
+       mapping = aes(y = reorder(STAT_CAU_1, perF),
+                     x = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  scale_x_continuous(labels = percent) +
+  ylab("") + xlab("") +
+  labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
+       subtitle = "Based on data from 1992-2015",
+       caption = "Data source: Short, Karen (2017)") +
+  theme_minimal()
+```
+
+
+Lightning-sparked fires.
+```{r}
+LightningFires.sf <- anf_fires.sf %>%
+  filter(STAT_CAU_1 == "Lightning") %>%
+  mutate(Year = year(DISCOVERY_),
+         Month = month(DISCOVERY_),
+         Day = day(DISCOVERY_),
+         YDay = yday(DISCOVERY_),
+         YDayF = factor(YDay, levels = as.character(1:366)),
+         SizeF = factor(FIRE_SIZE_, ordered = TRUE)) %>%
+  dplyr::select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, SizeF)
+```
+
+Static map of lightning-sparked fires by size of the area burned.
+```{r}
+FL_Counties.sf <- us_counties(states = "FL",
+                             resolution = "high") %>%
+  st_transform(crs = st_crs(anfbounds.sf)) %>%
+  st_crop(st_bbox(st_buffer(anfbounds.sf, dist = .25)) )
+
+ggplot() +
+  geom_sf(data = FL_Counties.sf, fill = "transparent", col = "gray80") +
+  geom_sf(data = anfbounds.sf, fill = "transparent") +
+  geom_sf(data = LightningFires.sf,
+          mapping = aes(col = SizeF), show.legend = FALSE) +
+  scale_color_brewer(palette = "Oranges",
+                     direction = 1,
+                     guide = FALSE) +
+  theme_bw() +
+  labs(title = "Location of lightning-sparked wildfires in the Apalachicola National Forest (1992-2015)",
+       subtitle = "Darker color points indicates the fire resulted in a larger burn area",
+       caption = "Data source: Short, Karen (2017)")
+```
+
+Monthly occurrence (relative frequency) of lightning-caused wildfires in the ANF.
+```{r}
+df <- LightningFires.sf %>%
+  st_drop_geometry() %>%
+  mutate(MonthF = factor(month.name[Month], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n(),
+            perF = nF/nrow(LightningFires.sf))
+
+ggplot(data = df,
+       mapping = aes(y = MonthF, 
+                     x = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  scale_x_continuous(labels = percent) +
+  xlab("") + ylab("") +
+  labs(title = "Over 80% of lightning-sparked wildfires in the Apalachicola National Forest occur during May-July",
+       subtitle = "Percentage of all lightning-sparked wildfires by month",
+       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+  theme_minimal() 
+```
+
+## Get TLH airport daily weather data and compute the Keetch & Byram drought index
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indexes specifically developed to equate the effects of drought with potential fire behavior. 
+
+For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can make it harder to suppress fires.
+
+High values of the KBDI indicate conditions favorable for the occurrence and spread of wildfires, but drought is not by itself a prerequisite for wildfires. Other weather factors, such as wind, temperature, relative humidity and atmospheric stability, play a major role in determining the actual fire danger.
+
+NWS Tallahassee daily weather data:
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
+AWND = Average daily wind speed (tenths of meters per second) 
+
+Import the summary of the day data and add columns to the data frame. Assign no rainfall on days with missing values.
+```{r}
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+  mutate(Date = as.Date(DATE)) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96 # missing max temperature. Filled from weather underground data
+
+sum(is.na(TLH.df$PRCP))
+nrow(TLH.df)
+sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of all days]
+```
+
+Compute daily values of the KBDI. Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with a minor correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
+
+Step one: Compute net rainfall on each day. Units are inches.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+```
+
+Step two: Compute daily drought index. Units of temperature are degrees F.
+```{r}
+Q <- 269  
+R <- 59.23 # average annual rainfall for TLH in inches
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+
+TLH.df <- TLH.df %>%
+ dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
+range(TLH.df$Ql)
+```
+
+Note: There is a package to compute the standardized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for the Palmer Drought Severity Index (PDSI).
+
+Monthly average soil moisture deficit.
+```{r}
+TLH.df %>%
+  mutate(MonthF = factor(month.name[month], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(AvgSoilMoistureDeficit = mean(Qlm)) %>%
+ggplot(mapping = aes(y = MonthF, 
+                     x = AvgSoilMoistureDeficit,
+                     fill = AvgSoilMoistureDeficit)) +
+  geom_col() +
+#  scale_fill_distiller(palette = "BrBG",
+#                       direction = -1,
+#                       guide = FALSE) +
+  scale_fill_gradientn(colors = terrain.colors(5),
+                       guide = FALSE) +
+#  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = FALSE) +
+  labs(x = "", y = "",
+       title = "May through November is the dry season in the Apalachicola National Forest",
+       subtitle = "Average soil moisture deficit (mm)",
+       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee") +
+  theme_minimal() 
+```
+
+
+
+Interactive map showing the locations of all fires over the period of record.
+```{r}
+tm_shape(anfbounds.sf) +
+  tm_borders() +
+tm_shape(LightningFires.sf) +
+  tm_bubbles(size = .1, col = "Month")
+#tm_shape(Airport.sf) +
+  #tm_dots(size = .1, col = "black")
+```
+
+
+
+lightning wildfires by year
+
+```{r}
+df.year <- LightningFires.sf %>%
+  st_drop_geometry() %>%
+  mutate(YearF = factor(Year, 
+                        ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n())
+```
+
+```{r}
+ggplot(data = df.year, 
+       mapping = aes(x = YearF,
+                     y = nF,
+                     fill = nF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  xlab("Year") + ylab("Number of Fires") +
+  labs(title = "Number of Lighting-Sparked Wildfires in the Apalachicola National Forest",
+       subtitle = "Could years of with high fire counts correspond to La Nina events?",
+       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+  theme_minimal()
+  
+
+```
+
+
+KBDI for year 2000
+```{r}
+TLH.df %>%
+  filter(year(Date) == '2000') %>%
+ggplot(mapping = aes(x = Date, y = Ql)) +
+  geom_line() +
+  xlab("Date") + ylab("KBDI") +
+  labs(title = "In 2000, wildfire occurance peaked with high values of KBDI",
+       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee")
+  
+```
+
+
+Fires in year 2000
+
+
+```{r}
+df2000 <- LightningFires.sf %>%
+  filter(Year == '2000') %>%
+  st_drop_geometry() %>%
+  mutate(MonthF = factor(month.name[Month], 
+                         levels = month.name, 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n())
+```
+
+```{r}
+
+ggplot(data = df2000, 
+       mapping = aes(x = MonthF,
+                     y = nF,
+                     fill = nF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  xlab("Month") + ylab("Number of Fires") +
+  labs(title = "The 2000 fire season peaked in July",
+       subtitle = "How does this correspond to KBDI values?",
+       caption = "Period of record: 2000, Data source: Short, Karen (2017)") +
+  theme_minimal()
+```
 
