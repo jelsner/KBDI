@@ -1,0 +1,148 @@
+---
+title: "KBDI using PRISM temperature and precipitation"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Compute KBDI using PRISM temp/precip data.
+1. Read PRISM .bil files as {stars} objects (see `stars.Rmd`)
+2. Filter on ANF boundary
+3. Loop over all grid points (e.g., tp.stars["tmax", 1, 1, ] is the time series of the high temperature for grid location 1, 1).
+4. Save Qlm as a variable in the tp.stars object.
+5. Map correlations between gridded Qlm and TLH_Qlm 
+6. Use Jakub Nowosad @jakub_nowosad May 21 to create superpixels of the correlation.
+
+
+
+```{r}
+library(stars)
+library(tidyverse)
+library(lubridate)
+library(rgdal) # before library(sf)
+library(sf)
+library(here)
+library(prism)
+library(ggthemes)
+```
+
+Start with one year. 2019.
+
+## PRISM data
+
+Get daily PRISM data with functions from the {prism} package for a single year. About 25 seconds per year per variable of daily data. Temperatures are in C and precipitation is in mm.
+
+Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
+```{r}
+j <- 2019
+dates <- seq(as_date(paste0(j, "-01-01")), 
+             as_date(paste0(j, "-12-31")), 
+             by = "day")
+
+file_days <- gsub("-", "", dates)
+
+yearC <- paste0(as.character(year(dates)), "/")
+
+folder_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil/")
+file_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil.bil")
+file_list <- paste0("Data/", "PRISM/", yearC, folder_names, file_names)
+
+folder_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil/")
+file_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil.bil")
+file_list2 <- paste0("Data/", "PRISM/", yearC, folder_names2, file_names2)
+
+t0 <- proc.time()
+tmax <- read_stars(file_list, along = list(time = dates)) %>%
+  setNames("Tmax_C")
+ppt <- read_stars(file_list2, along = list(time = dates)) %>%
+  setNames("Precip_mm")
+TP.st <- c(tmax, ppt)
+proc.time() - t0
+
+TP.st
+```
+
+Crop to ANF boundary
+```{r}
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest") %>%
+  st_transform(crs = st_crs(TP.st))
+
+ANF_BBox.sfc <- 
+  ANF_Boundary.sf %>%
+  st_bbox() %>%
+  st_as_sfc()
+
+TP.st <- TP.st %>%
+  st_crop(ANF_BBox.sfc,
+          crop = TRUE)
+```
+
+Check with plot
+```{r}
+X <- filter(TP.st, time >= ymd("2019-01-01"), time <= ymd("2019-01-31"))
+
+ggplot() +  
+  geom_stars(data = X[4], alpha = .8, downsample = c(1, 1, 1)) + 
+  facet_wrap("time") +
+  scale_fill_distiller(palette = "RdBu") +
+  coord_equal() +
+  theme_map() +
+  theme(legend.position = "bottom") +
+  theme(legend.key.width = unit(2, "cm"))
+```
+
+Compute KBDI at each grid location. Start by converting temperature to F and precip to inches
+```{r}
+TP.st <- TP.st %>%
+  mutate(MaxTemp = Tmax_C * 1.8 + 32,
+         MaxTemp = replace_na(MaxTemp, mean(MaxTemp)),
+         Rainfall24 = Precip_mm * .03937,
+         Rainfall24 = replace_na(Rainfall24, 0))
+```
+
+Compute net rainfall on each at each grid point.
+```{r}
+NetRa <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
+
+for(i in 1:dim(TP.st)[1]){
+  print(i)
+  for(j in 1:dim(TP.st)[2]){
+Rainfall24 <- TP.st$Rainfall24[i, j, ]
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(t in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[t]
+  if (R24 == 0) {
+    NetR[t] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[t] > .2 | CumR > .2) NetR[t] <- R24
+      else if (CumR > .2) NetR[t] <- CumR - .2
+      else NetR[t] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[t] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[t] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+NetRa[i, j, ] <- NetR
+}
+}
+
+TP.st$NetR <- NetRa
+```
+
