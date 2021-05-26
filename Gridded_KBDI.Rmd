@@ -92,7 +92,7 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
-Compute KBDI at each grid location. Start by converting temperature to F and precip to inches
+Compute KBDI at each grid location. Start by converting temperature to F and precipitation to inches
 ```{r}
 TP.st <- TP.st %>%
   mutate(MaxTemp = Tmax_C * 1.8 + 32,
@@ -106,7 +106,6 @@ Compute net rainfall on each at each grid point.
 NetRa <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
 
 for(i in 1:dim(TP.st)[1]){
-  print(i)
   for(j in 1:dim(TP.st)[2]){
 Rainfall24 <- TP.st$Rainfall24[i, j, ]
 PR <- dplyr::lag(Rainfall24)
