@@ -185,6 +185,3 @@ range(TLH.df$Ql)
 ```
 
 
-
-
->>>>>>> 73009e6a2699ad28af08adb0bd25ef5027b49c54
