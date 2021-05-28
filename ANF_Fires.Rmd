@@ -21,7 +21,7 @@ Brown, Emily K., Wang, Jiali, and Feng, Yan. US wildfire potential: a historical
 
 Abatzoglou and Williams (2016) found that the correlation coefficient between KBDI and burned area over the forests of southwestern United States is 0.6–0.8.
 
-Title: Frequency and severity of lightning-sparked wildfires and their relationship to soil dryness in the Apalachicola National Forest
+Title: Frequency and severity of lightning-sparked wildfires and their relationship to soil dryness and climate variability in the Apalachicola National Forest
 
 The ANF contains some of Florida's largest intact natural areas where lightning-sparked fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While this publicly managed natural area deploys various proactive and reactive fire suppression resources, the incidence of large lightning-sparked fires is still largely a climatic and fuels-driven phenomenon. The landscape is among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
 

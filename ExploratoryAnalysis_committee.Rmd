@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: "ExploratoryAnalysis_Committee"
 author: "Zach"
@@ -91,3 +92,99 @@ range(TLH.df$Ql)
 
  
 
+=======
+---
+title: "ExploratoryAnalysis_Committee"
+author: "Zach"
+date: "5/27/2021"
+output: html_document
+---
+
+This file will explore ideas proposed by the committee during the prospectus defense on 5/25/2021
+
+
+### Checking Value of Q
+
+It is expected that with time KBDI plots will become equal regardless of the initial value of Q
+
+
+Copy and paste KBDI code
+
+## Import the summary of the day data and add columns to the data frame
+
+Assign no rainfall on days with missing values.
+
+For Tallahassee Station TLH
+```{r}
+library(lubridate)
+library(tidyverse)
+TLH.df <- read_csv(file = 'Data/TLH_Daily1940.csv') %>%
+  rename(Date = DATE) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
+```
+
+Fill in the missing temperature data.
+```{r}
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+```
+
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+CumR <- 0
+NetR <- numeric()
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+TLH.df$NetR <- NetR
+Q <- 269  
+R <- 59.23
+MaxTemp <- TLH.df$MaxTemp
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+range(TLH.df$Ql)
+```
+
+
+ 
+
+>>>>>>> 73009e6a2699ad28af08adb0bd25ef5027b49c54
