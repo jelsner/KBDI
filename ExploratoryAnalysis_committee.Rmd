@@ -90,8 +90,8 @@ TLH.df$DroughtIndex <- floor(Ql/100)
 range(TLH.df$Ql)
 ```
 
- 
 
+ 
 =======
 ---
 title: "ExploratoryAnalysis_Committee"
@@ -185,6 +185,6 @@ range(TLH.df$Ql)
 ```
 
 
- 
+
 
 >>>>>>> 73009e6a2699ad28af08adb0bd25ef5027b49c54
