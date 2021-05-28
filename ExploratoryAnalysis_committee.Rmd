@@ -183,5 +183,3 @@ TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 range(TLH.df$Ql)
 ```
-
-
