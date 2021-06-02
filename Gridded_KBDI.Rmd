@@ -7,13 +7,11 @@ editor_options:
 
 Compute KBDI using PRISM temp/precip data.
 1. Read PRISM .bil files as {stars} objects (see `stars.Rmd`)
-2. Filter on ANF boundary
+2. Filter on the ANF boundary
 3. Loop over all grid points (e.g., tp.stars["tmax", 1, 1, ] is the time series of the high temperature for grid location 1, 1).
-4. Save Qlm as a variable in the tp.stars object.
+4. Save computed Qlm as a variable in the `tp.stars` object.
 5. Map correlations between gridded Qlm and TLH_Qlm 
-6. Use Jakub Nowosad @jakub_nowosad May 21 to create superpixels of the correlation.
-
-
+6. Use Jakub Nowosad @jakub_nowosad May 21 to create super-pixels of the correlation.
 
 ```{r}
 library(stars)
@@ -31,6 +29,13 @@ Start with one year. 2019.
 ## PRISM data
 
 Get daily PRISM data with functions from the {prism} package for a single year. About 25 seconds per year per variable of daily data. Temperatures are in C and precipitation is in mm.
+```{r}
+prism_set_dl_dir("Data/PRISM/")
+
+get_prism_dailys(type = "ppt",
+                 minDate = "2019-01-01",
+                 maxDate = "2019-12-31")
+```
 
 Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
 ```{r}
@@ -45,11 +50,11 @@ yearC <- paste0(as.character(year(dates)), "/")
 
 folder_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil/")
 file_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil.bil")
-file_list <- paste0("Data/", "PRISM/", yearC, folder_names, file_names)
+file_list <- paste0("Data/", "PRISM/", folder_names, file_names)
 
 folder_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil/")
 file_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil.bil")
-file_list2 <- paste0("Data/", "PRISM/", yearC, folder_names2, file_names2)
+file_list2 <- paste0("Data/", "PRISM/", folder_names2, file_names2)
 
 t0 <- proc.time()
 tmax <- read_stars(file_list, along = list(time = dates)) %>%
@@ -83,7 +88,7 @@ Check with plot
 X <- filter(TP.st, time >= ymd("2019-01-01"), time <= ymd("2019-01-31"))
 
 ggplot() +  
-  geom_stars(data = X[4], alpha = .8, downsample = c(1, 1, 1)) + 
+  geom_stars(data = X[1], alpha = .8, downsample = c(1, 1, 1)) + 
   facet_wrap("time") +
   scale_fill_distiller(palette = "RdBu") +
   coord_equal() +
