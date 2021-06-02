@@ -70,7 +70,7 @@ for(i in 1:length(Rainfall24)) {
   }
 }
 TLH.df$NetR <- NetR
-Q <- 269  
+Q <- 269
 R <- 59.23
 MaxTemp <- TLH.df$MaxTemp
 Ql <- numeric()
@@ -88,3 +88,84 @@ TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 range(TLH.df$Ql)
 ```
+
+Q is representative of the starting value of KBDI. Here a column of several Q values is created to be used and compared among multiple plots. This is testing the theory that with enough time elapsed, the initial value of Q does not matter.
+
+```{r}
+rangeQ.df <- TLH.df %>%
+  select(Date, Rainfall24, MaxTemp, NetR, Ql)
+  #mutate(Ql0 = NULL, Ql1 = NULL)
+```
+
+
+```{r}
+rangeQ.df$test <- 0
+```
+
+
+
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+CumR <- 0
+NetR <- numeric()
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+#Q = 269
+Q <- c(0,100,200,300,400,500,600,700,800)
+R <- 59.23
+
+for(i in 1:length(Q)){
+  #new <- rep(i, nrow(rangeQ.df))
+    #Q <- 269  
+    #R <- 59.23
+    MaxTemp <- TLH.df$MaxTemp
+    Ql <- numeric()
+    DeltaQl <- numeric()
+    for(i in 1:length(Rainfall24)){
+      DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+      Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+      Q <- ifelse(Q < 0, 0, Q) 
+      Ql <- c(Ql, Q)
+    }
+  rangeQ.df[, ncol(rangeQ.df)+1] <- Ql
+  colnames(rangeQ.df)[ncol(data)] <- paste0("new",i)
+      #DeltaQl <- c(DeltaQl, DeltaQ)
+    }
+    #for(i in 1:nrow(rangeQ.df)){
+      #rangeQ.df$newcolumn[i] <- Ql
+      #}
+#}
+#TLH.df$Ql <- Ql
+#TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+#TLH.df$DeltaQl <- DeltaQl
+#TLH.df$DroughtIndex <- floor(Ql/100)
+#range(TLH.df$Ql)
+```
+
+
+
