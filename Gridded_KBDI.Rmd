@@ -28,25 +28,25 @@ Start with one year. 2019.
 
 ## PRISM data
 
-Get daily PRISM data with functions from the {prism} package for a single year. About 25 seconds per year per variable of daily data. Temperatures are in C and precipitation is in mm.
+Download daily PRISM data using functions from the {prism} package. About 35 minutes per year per variable of daily data at home internet speeds. Temperatures are in C and precipitation is in mm.
 ```{r}
 prism_set_dl_dir("Data/PRISM/")
 
+t0 <- proc.time()
 get_prism_dailys(type = "ppt",
-                 minDate = "2019-01-01",
-                 maxDate = "2019-12-31")
+                 minDate = "2018-01-01",
+                 maxDate = "2018-12-31")
+proc.time() - t0
 ```
 
 Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
 ```{r}
-j <- 2019
-dates <- seq(as_date(paste0(j, "-01-01")), 
-             as_date(paste0(j, "-12-31")), 
+t <- 2019
+dates <- seq(as_date(paste0(t, "-01-01")), 
+             as_date(paste0(t, "-12-31")), 
              by = "day")
 
 file_days <- gsub("-", "", dates)
-
-yearC <- paste0(as.character(year(dates)), "/")
 
 folder_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil/")
 file_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil.bil")
@@ -56,13 +56,11 @@ folder_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil/")
 file_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil.bil")
 file_list2 <- paste0("Data/", "PRISM/", folder_names2, file_names2)
 
-t0 <- proc.time()
 tmax <- read_stars(file_list, along = list(time = dates)) %>%
   setNames("Tmax_C")
 ppt <- read_stars(file_list2, along = list(time = dates)) %>%
   setNames("Precip_mm")
 TP.st <- c(tmax, ppt)
-proc.time() - t0
 
 TP.st
 ```
@@ -78,7 +76,8 @@ ANF_BBox.sfc <-
   st_bbox() %>%
   st_as_sfc()
 
-TP.st <- TP.st %>%
+TP.st <- 
+  TP.st %>%
   st_crop(ANF_BBox.sfc,
           crop = TRUE)
 ```
@@ -97,9 +96,10 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
-Compute KBDI at each grid location. Start by converting temperature to F and precipitation to inches
+Compute KBDI at each grid location. Start by converting temperatures in C to F and precipitation in mm to inches
 ```{r}
-TP.st <- TP.st %>%
+TP.st <- 
+  TP.st %>%
   mutate(MaxTemp = Tmax_C * 1.8 + 32,
          MaxTemp = replace_na(MaxTemp, mean(MaxTemp)),
          Rainfall24 = Precip_mm * .03937,
@@ -108,7 +108,7 @@ TP.st <- TP.st %>%
 
 Compute net rainfall on each at each grid point.
 ```{r}
-NetRa <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
+NetR.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
 
 for(i in 1:dim(TP.st)[1]){
   for(j in 1:dim(TP.st)[2]){
@@ -143,10 +143,43 @@ for(t in 1:length(Rainfall24)) {
   }
 }
 
-NetRa[i, j, ] <- NetR
+NetR.a[i, j, ] <- NetR
 }
 }
 
-TP.st$NetR <- NetRa
+TP.st$NetR <- NetR.a
 ```
+
+Compute daily drought index.
+```{r}
+R <- 59.23 # average annual rainfall for TLH in inches
+
+Ql.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
+
+for(i in 1:dim(TP.st)[1]){
+  for(j in 1:dim(TP.st)[2]){
+Q <- 269  
+NetR <- TP.st$NetR[i, j,  ]
+MaxTemp <- TP.st$MaxTemp[i, j, ]
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(t in 1:length(NetR)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[t]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[t] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[t] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+Ql.a[i, j, ] <- Ql
+}
+}
+
+TP.st$Ql <- Ql.a
+TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
+TP.st$DroughtIndex <- floor(TP.st$Ql/100)
+```
+
+Compute Qlm using the TLH data. See `ANF_Fires.Rmd`. Then loop over all grid locations computing the correlation between the Qlm computed using TLH data and the Qlm's computed using PRISM data.
 
