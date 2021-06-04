@@ -41,9 +41,10 @@ proc.time() - t0
 
 Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
 ```{r}
-t <- 2019
-dates <- seq(as_date(paste0(t, "-01-01")), 
-             as_date(paste0(t, "-12-31")), 
+t0 <- 2017
+t1 <- 2019
+dates <- seq(as_date(paste0(t0, "-01-01")), 
+             as_date(paste0(t1, "-12-31")), 
              by = "day")
 
 file_days <- gsub("-", "", dates)
@@ -195,7 +196,7 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
-Compute Qlm using the TLH data. See `ANF_Fires.Rmd`. 
+Compute Qlm using the TLH data. 
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
@@ -209,7 +210,7 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4) %>%
-  filter(Year == 2019)
+  filter(Year >= 2017 & Year <= 2019)
 
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -286,11 +287,13 @@ attr(R.st, "dimensions")$y$delta = -1
 
 ggplot() +  
   geom_stars(data = R.st[1], alpha = .8, downsample = c(1, 1, 1)) + 
-  scale_fill_distiller(palette = "Blues") +
+  scale_fill_distiller(limits = c(0, 1), palette = "Blues", direction = 1) +
   coord_equal() +
   theme_map() +
   theme(legend.position = "bottom") +
   theme(legend.key.width = unit(2, "cm"))
 ```
+
+Redimension the correlation data and create a proper map.
 
 
