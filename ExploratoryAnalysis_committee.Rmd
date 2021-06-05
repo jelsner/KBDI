@@ -124,9 +124,33 @@ rangeQ.df %>%
 ``` 
 
 
-Explore lightning data and concerns mentioned by committee.
 
-## Get lightning data
+
+
+
+##Explore lightning data and concerns mentioned by committee.
+
+Import Forest Boundaries to explore lightning data across ANF
+
+```{r}
+library(tidyverse)
+library(sf)
+
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip")
+}
+
+NF_Bounds.sf <- st_read(dsn = "s_USA.NFSLandUnit.shp") %>%
+  st_transform(crs = 3086)
+
+anfbounds.sf <- NF_Bounds.sf %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+```
+
+
+Get lightning data
 
 Daily county-level counts 1986-2013. Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
 
@@ -154,8 +178,25 @@ df <- df %>%
          YEAR = year(SEQDAY))
 ```
 
-```{r}
+Get lightning data for state of Florida
 
+```{r}
+FLfips <- fips_codes %>%
+  filter(state == "FL")
+
+fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
+
+lightningdata <- data.frame()
+for(i in 1:length(fn)){
+  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
+  lightningdata <- rbind(lightningdata, X)
+}
+
+lightningdata <- lightningdata %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY))
 ```
 
 
