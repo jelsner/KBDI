@@ -130,8 +130,46 @@ rangeQ.df %>%
 
 ##Explore lightning data and concerns mentioned by committee.
 
-Import Forest Boundaries to explore lightning data across ANF
+Get lightning data
 
+Daily county-level counts 1986-2013. Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
+Note: this data is not spatial and cannot be bounded by the ANF.For exploratory analysis purposes, this data will be explored across counties that the ANF is within. These counties are Liberty, Wakulla, Franklin, and Leon.
+
+First get the Florida fips codes for Liberty, Wakulla, Franklin and Leon counties, then get the data.
+```{r}
+library(tidycensus)
+
+FLfips <- fips_codes %>%
+  filter(state == "FL") %>%
+  filter(county %in% c("Liberty County", "Wakulla County", "Franklin County", "Leon County")) %>%
+  pull(county_code)
+
+fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
+
+lightningdata.df <- data.frame()
+for(i in 1:length(fn)){
+  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
+  lightningdata.df <- rbind(lightningdata.df, X)
+}
+
+lightningdata.df <- lightningdata.df %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY))
+```
+
+lightningdata.df gives lighting data for each individual county based on fips code. Combine total lightning strikes in ANF counties by date.
+```{r}
+countlightning.df <- lightningdata.df %>%
+  group_by(SEQDAY) %>%
+  summarise(FCOUNT_NLDN = sum(FCOUNT_NLDN)) %>%
+  rename(ANFcountiesCount = FCOUNT_NLDN)
+```
+
+Explore relationship between high lightning count days and number of lightning sparked wildfires in the ANF
+
+Import Forest Boundaries to explore lightning firedata in ANF
 ```{r}
 library(tidyverse)
 library(sf)
@@ -149,56 +187,41 @@ anfbounds.sf <- NF_Bounds.sf %>%
   filter(NFSLANDU_2 == "Apalachicola National Forest")
 ```
 
-
-Get lightning data
-
-Daily county-level counts 1986-2013. Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
-
-First get the Florida fips codes for Liberty, Wakulla, and Franklin counties, then get the data.
+Import fire data
 ```{r}
-library(tidycensus)
-
-FLfips <- fips_codes %>%
-  filter(state == "FL") %>%
-  filter(county %in% c("Liberty County", "Wakulla County")) %>%
-  pull(county_code)
-
-fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
-
-df <- data.frame()
-for(i in 1:length(fn)){
-  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
-  df <- rbind(df, X)
+if(!"FL_Fires" %in% list.files()){
+download.file("http://myweb.fsu.edu/jelsner/temp/data/FL_Fires.zip",
+"FL_Fires.zip")
+unzip("FL_Fires.zip")
 }
+FL_Fires.sf <- st_read(dsn = "FL_Fires") %>%
+st_transform(crs = 3086)
 
-df <- df %>%
-  mutate(SEQDAY = as.Date(SEQDAY),
-         DAY = day(SEQDAY),
-         MONTH = month(SEQDAY),
-         YEAR = year(SEQDAY))
+anf_fires.sf <- st_join(FL_Fires.sf, anfbounds.sf, join = st_within) %>%
+  filter(NFSLANDU_2 == 'Apalachicola National Forest')
 ```
 
-Get lightning data for state of Florida
-
+Filtered for Lightning
 ```{r}
-FLfips <- fips_codes %>%
-  filter(state == "FL")
-
-fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
-
-lightningdata <- data.frame()
-for(i in 1:length(fn)){
-  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
-  lightningdata <- rbind(lightningdata, X)
-}
-
-lightningdata <- lightningdata %>%
-  mutate(SEQDAY = as.Date(SEQDAY),
-         DAY = day(SEQDAY),
-         MONTH = month(SEQDAY),
-         YEAR = year(SEQDAY))
+anf_LF.sf <- anf_fires.sf %>%
+  filter(STAT_CAU_1 == "Lightning")
 ```
 
+create data set containing fires and lightning counts. Match yaers for data sets (2005 - 2013)
+```{r}
+exploreLF <- anf_LF.sf %>%
+  filter(FIRE_Y <= 2013)
+exploreCount <- countlightning.df %>%
+  filter(year(SEQDAY) >= 1992)
+
+
+exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
+```
+
+Explore if high lightning count days have fires.
+```{r}
+
+```
 
 
 
