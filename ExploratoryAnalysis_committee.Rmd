@@ -220,11 +220,32 @@ exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"
 
 Explore if high lightning count days have fires.
 ```{r}
-exploratory <- exploratory %>%
-  select("DISCOVERY_", "FOD_I", "ANFcountiesCount") %>%
-  group_by(DISCOVERY_)
-  #summarise(firecount = count(FOD_I), n())
+datefirecounts <- exploratory %>%
+  count(DISCOVERY_, ANFcountiesCount) %>%
+  rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
+  group_by()
 ```
+
+
+A linear regression model shows a p-value > 0.05 and suggests the number of lightning strikes does not have a significant roll in the outcome of if a lightning strike creating a fire.
+```{r}
+datefirecounts.lm <- lm(FireCount ~ LightningCount, data = datefirecounts)
+summary(datefirecounts.lm)
+```
+
+Plotting the data suggest that the number of lighting strikes does not have a significant impact on the likelihood of a fire occuring.
+```{r}
+datefirecounts %>%
+ggplot(mapping = aes(x = LightningCount, y = FireCount)) +
+  geom_point()
+```
+```{r}
+datefirecounts %>%
+  filter(LightningCount <= 1000) %>%
+  ggplot(mapping = aes(x = LightningCount, y = FireCount)) +
+  geom_point()
+```
+
 
 
 
