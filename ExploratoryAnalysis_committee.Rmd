@@ -43,7 +43,7 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 
 A new data frame is created to compare initial Q values. Q is representative of the starting value of KBDI. Here a column of several Q values is created to be used and compared among multiple plots. Daily KBDI is calculated for each initial Q value. This is testing the theory that with enough time elapsed, the initial value of Q does not matter.
 
-
+Could drought index be made a function to make this easier?
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -94,6 +94,11 @@ for(i in 1:9){
   colnames(rangeQ.df) <- c("Date", "Rainfall24", "MaxTemp", "NetR", "Q0", "Q100", "Q200", "Q300", "Q400", "Q500", "Q600", "Q700", "Q800")
 }
 ```
+
+```{r}
+head(rangeQ.df)
+```
+
 
 
 ```{r}
@@ -246,6 +251,143 @@ datefirecounts %>%
   geom_point()
 ```
 
+
+Does a higher lightning count correspond to more rainfall? Would high rainfall values help to saturate the fuel and limit the spread/ ignition of lightning cause wildfires? Plots and a p-value greater than 0.05 suggest there is no relationship between the number of lightning strikes and the amount of rainfall on a given day.
+```{r}
+lightningRainfall <- merge(x = TLH.df, y = exploreCount, by.x = c("Date"), by.y = c("SEQDAY"))
+
+lightningRainfall<- lightningRainfall %>%
+  select("Date", "PRCP", "ANFcountiesCount") %>%
+  rename(LightningCount = ANFcountiesCount) %>%
+  filter(LightningCount > 0)
+```
+
+```{r}
+lightningRainfall %>%
+  ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
+  geom_point()
+```
+
+```{r}
+lightningRainfall.lm <- lm(PRCP ~ LightningCount, data = lightningRainfall)
+summary(datefirecounts.lm)
+```
+
+Does this relationship exist during the convective months of our statistically defined fire season?
+```{r}
+lightningRainfall %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
+  ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
+  geom_point()
+```
+
+Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.Studying this question finds inconclusive results. The fires in this data set are not large enough, and no fires intercept areas that were previously burned  by large fires.
+
+There are 6 fires larger than 600 acres (~2.5 km^2) in this data set
+```{r}
+anf_LF.sf %>%
+  count(FIRE_SIZE >= 600) %>%
+  head()
+```
+
+```{r}
+library(tmap)
+library(rgeos)
+
+buffer <- anf_LF.sf %>%
+  filter(FIRE_SIZE >= 600) %>%
+  st_buffer(2.5)
+
+tmap_mode("view")
+
+tm_shape(anfbounds.sf) +
+  tm_borders() +
+
+anf_LF.sf %>%
+  filter(FIRE_SIZE >= 600) %>%
+  tm_shape() +
+  tm_dots( "red") +
+
+anf_LF.sf %>% 
+  filter(FIRE_SIZE < 600) %>%
+  tm_shape() +
+  tm_dots("yellow") +
+  
+buffer %>%
+  tm_shape() +
+  tm_borders(col = "black")
+
+```
+
+
+
+Further exploring fire and drought data before starting larger regression models:
+Plot data and explore trends.
+
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+
+Q <- 269  
+R <- 59.23 # average annual rainfall for TLH in inches
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+
+TLH.df <- TLH.df %>%
+ dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
+```
+
+```{r}
+droughtFire <- merge(x = anf_LF.sf, y = TLH.df, by.x = c("DISCOVERY_"), by.y = c("Date"))
+
+droughtFire <- droughtFire %>%
+  select("Date", "Qlm", "FIRE_SIZE")
+```
 
 
 
