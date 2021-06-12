@@ -3,6 +3,8 @@ title: "ExploratoryAnalysis_Committee"
 author: "Zach"
 date: "5/27/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 This file will explore ideas proposed by the committee during the prospectus defense on 5/25/2021
@@ -212,7 +214,7 @@ anf_LF.sf <- anf_fires.sf %>%
   filter(STAT_CAU_1 == "Lightning")
 ```
 
-create data set containing fires and lightning counts. Match yaers for data sets (2005 - 2013)
+create data set containing fires and lightning counts. Match years for data sets (2005 - 2013)
 ```{r}
 exploreLF <- anf_LF.sf %>%
   filter(FIRE_Y <= 2013)
@@ -294,11 +296,12 @@ anf_LF.sf %>%
 library(tmap)
 library(rgeos)
 
+tmap_mode("view")
+
 buffer <- anf_LF.sf %>%
   filter(FIRE_SIZE >= 600) %>%
-  st_buffer(2.5)
-
-tmap_mode("view")
+  #buffer defaults to meters?
+  st_buffer(2500)
 
 tm_shape(anfbounds.sf) +
   tm_borders() +
@@ -317,6 +320,12 @@ buffer %>%
   tm_shape() +
   tm_borders(col = "black")
 
+```
+
+```{r}
+bufferContains <- st_join(anf_LF.sf, buffer, join = st_within) %>%
+  filter(FOD_I.y != "NA") %>%
+  group_by(FOD_I.y)
 ```
 
 
