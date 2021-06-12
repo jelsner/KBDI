@@ -325,7 +325,18 @@ buffer %>%
 ```{r}
 bufferContains <- st_join(anf_LF.sf, buffer, join = st_within) %>%
   filter(FOD_I.y != "NA") %>%
-  group_by(FOD_I.y)
+  select("FOD_I.y", "FOD_I.x", "DISCOVERY_.y", "DISCOVERY_.x", "FIRE_SIZE.x") %>%
+  filter(FOD_I.x != FOD_I.y) %>%
+  rename(FOD_I.buffer = FOD_I.y, FOD_I = FOD_I.x, DISCOVERY_.buffer = DISCOVERY_.y, DISCOVERY_ = DISCOVERY_.x, FIRE_SIZE = FIRE_SIZE.x) %>%
+  group_by(FOD_I.buffer) %>%
+  #fires in the 117094 were all reported on the same date. Assumed to be same event.Filter out
+  filter(FOD_I.buffer != 117094)
+
+bufferContains$diff_in_days<- difftime(bufferContains$DISCOVERY_.buffer ,bufferContains$DISCOVERY_ , units = c("days"))
+
+#If diff_in_days is negative, fire occurred before large fire
+bufferContains <- bufferContains %>%
+  filter(diff_in_days > 0) 
 ```
 
 
