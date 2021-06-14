@@ -83,7 +83,8 @@ rangeQ.df <- TLH.df %>%
   select(Date, Rainfall24, MaxTemp, NetR)
 
 for(i in 1:9){
-  Q <- i*100
+  Q2 <- i-1
+  Q <- Q2*100
   MaxTemp <- TLH.df$MaxTemp
   Ql <- numeric()
   for(i in 1:length(Rainfall24)){
@@ -226,6 +227,7 @@ exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"
 #exploratorytest <- merge(x = exploreLF, y = exploreCount, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 ```
 
+
 Explore if high lightning count days have fires.
 ```{r}
 datefirecounts <- exploratory %>%
@@ -241,12 +243,13 @@ datefirecounts.lm <- lm(FireCount ~ LightningCount, data = datefirecounts)
 summary(datefirecounts.lm)
 ```
 
-Plotting the data suggest that the number of lighting strikes does not have a significant impact on the likelihood of a fire occurring.
+Plotting the data suggest that the number of lighting strikes does not have a significant impact on the frequency of a fire that occur.
 ```{r}
 datefirecounts %>%
 ggplot(mapping = aes(x = LightningCount, y = FireCount)) +
   geom_point()
 ```
+
 ```{r}
 datefirecounts %>%
   filter(LightningCount <= 1000) %>%
@@ -265,6 +268,8 @@ lightningRainfall<- lightningRainfall %>%
   filter(LightningCount > 0)
 ```
 
+
+plot lightning to precip
 ```{r}
 lightningRainfall %>%
   ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
@@ -283,6 +288,8 @@ lightningRainfall %>%
   ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
   geom_point()
 ```
+
+
 
 
 of 2898 days with lightning in this data set, fires occurred on 235 of those days. 8.12% of days with lightning sparked a wildfire
@@ -360,6 +367,53 @@ ggplot(data = LightningStats,
        subtitle = "Filtered by # of Lightning Strikes increasing by 250") +
   theme_minimal() 
 ```
+
+
+Explore Lightning Statistics for fire season months
+```{r}
+LightningStatsFS <- data.frame(Filter = integer(0), LightningDays = integer(0), FireDays = double(0), Percent = double(0))
+#LightningStats[1,] <- 1:4
+LightningStatsFS[nrow(LightningStatsFS)+1,] <- NA
+
+forBoolFS <- forBool %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
+
+LightningStatsFS$Filter <- 0
+LightningStatsFS$LightningDays <- as.double(length(forBoolFS$fireBool))
+LightningStatsFS$FireDays <- sum(forBoolFS$fireBool)
+LightningStatsFS$Percent <- (LightningStatsFS$FireDays / LightningStatsFS$LightningDays) * 100
+
+for (i in 1:20){
+  LightningStatsFS[nrow(LightningStatsFS)+1,] <- NA
+  x <- i*250
+  LightningStatsFS$Filter[i] <- x
+  filterLoop <- forBoolFS %>%
+    filter(LCount >= x)
+  LightningStatsFS$LightningDays[i] <-  as.double(length(filterLoop$fireBool))
+  LightningStatsFS$FireDays[i] <- sum(filterLoop$fireBool)
+  LightningStatsFS$Percent[i] <- (LightningStatsFS$FireDays[i] / LightningStatsFS$LightningDays[i]) * 100
+}
+```
+
+
+
+Plot for fire season months.
+```{r}
+ggplot(data = LightningStatsFS,
+      mapping = aes(y = Percent, 
+                   x = Filter,
+                   fill = Percent)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                      direction = 1,
+                       guide = FALSE) +
+  #xlab("") + ylab("") +
+  labs(title = "Likelihood a Lightning Stike Starts a Wildfire (May - July)",
+       subtitle = "Filtered by # of Lightning Strikes increasing by 250") +
+  theme_minimal() 
+```
+
+
 
 
 
