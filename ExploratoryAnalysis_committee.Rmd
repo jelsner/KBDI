@@ -228,7 +228,7 @@ exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"
 ```
 
 
-Explore if high lightning count days have fires.
+Explore the frequency of fires for high lightning count days.
 ```{r}
 datefirecounts <- exploratory %>%
   count(DISCOVERY_, ANFcountiesCount) %>%
