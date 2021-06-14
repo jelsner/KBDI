@@ -286,7 +286,8 @@ Does this relationship exist during the convective months of our statistically d
 lightningRainfall %>%
   filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
   ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = lm)
 ```
 
 
@@ -367,6 +368,8 @@ ggplot(data = LightningStats,
        subtitle = "Filtered by # of Lightning Strikes increasing by 250") +
   theme_minimal() 
 ```
+
+
 
 
 Explore Lightning Statistics for fire season months
