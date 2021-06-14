@@ -223,6 +223,7 @@ exploreCount <- countlightning.df %>%
 
 
 exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
+#exploratorytest <- merge(x = exploreLF, y = exploreCount, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 ```
 
 Explore if high lightning count days have fires.
@@ -240,7 +241,7 @@ datefirecounts.lm <- lm(FireCount ~ LightningCount, data = datefirecounts)
 summary(datefirecounts.lm)
 ```
 
-Plotting the data suggest that the number of lighting strikes does not have a significant impact on the likelihood of a fire occuring.
+Plotting the data suggest that the number of lighting strikes does not have a significant impact on the likelihood of a fire occurring.
 ```{r}
 datefirecounts %>%
 ggplot(mapping = aes(x = LightningCount, y = FireCount)) +
@@ -283,7 +284,88 @@ lightningRainfall %>%
   geom_point()
 ```
 
-Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.Studying this question finds inconclusive results. The fires in this data set are not large enough, and no fires intercept areas that were previously burned  by large fires.
+
+of 2898 days with lightning in this data set, fires occurred on 235 of those days. 8.12% of days with lightning sparked a wildfire
+```{r}
+forBool <- left_join(x = exploreCount, y = exploreLF, by = c("SEQDAY" = "DISCOVERY_")) %>%
+  select("SEQDAY", "ANFcountiesCount", "FOD_I") %>%
+  rename(Date = SEQDAY, LCount = ANFcountiesCount) %>%
+  #a lightning fire cannot occur on a day without lighting
+  filter(LCount >0) %>%
+  #multiple fires occurring on one day will count as one event
+  distinct(Date, .keep_all = TRUE)
+
+forBool %>%
+  count("Date")
+
+forBool %>%
+  count(FOD_I != "NA")
+
+forBool$fireBool <- !is.na(forBool$FOD_I)
+
+sum(forBool$fireBool) / as.double(length(forBool$fireBool)) * 100
+```
+
+There are 561 days with a lightning count greater than or equal to 500. Lightning sparked wildfires on 97 of those days (17.29%)
+```{r}
+Lcount200 <- forBool %>%
+  filter(LCount >= 200)
+
+Lcount200 %>%
+  count("Date")
+
+Lcount1500 <- forBool %>%
+  filter(LCount >= 1500)
+```
+
+
+Find the percent likelihood a fire occurs based on the number of lightning strikes on a given day.
+The most lightning strikes in a day is 5588
+```{r}
+LightningStats <- data.frame(Filter = integer(0), LightningDays = integer(0), FireDays = double(0), Percent = double(0))
+#LightningStats[1,] <- 1:4
+LightningStats[nrow(LightningStats)+1,] <- NA
+
+LightningStats$Filter <- 0
+LightningStats$LightningDays <- as.double(length(forBool$fireBool))
+LightningStats$FireDays <- sum(forBool$fireBool)
+LightningStats$Percent <- (LightningStats$FireDays / LightningStats$LightningDays) * 100
+
+for (i in 1:22){
+  LightningStats[nrow(LightningStats)+1,] <- NA
+  x <- i*250
+  LightningStats$Filter[i] <- x
+  filterLoop <- forBool %>%
+    filter(LCount >= x)
+  LightningStats$LightningDays[i] <-  as.double(length(filterLoop$fireBool))
+  LightningStats$FireDays[i] <- sum(filterLoop$fireBool)
+  LightningStats$Percent[i] <- (LightningStats$FireDays[i] / LightningStats$LightningDays[i]) * 100
+}
+
+#LightningStats <- LightningStats[-c(23)]
+```
+
+Plot the likelihood of a fire occurring based on the amount of lighting in a storm
+```{r}
+ggplot(data = LightningStats,
+       mapping = aes(y = Percent, 
+                     x = Filter,
+                     fill = Percent)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                      direction = 1,
+                       guide = FALSE) +
+  #xlab("") + ylab("") +
+  labs(title = "Likelihood a Lightning Stike Starts a Wildfire",
+       subtitle = "Filtered by # of Lightning Strikes increasing by 250") +
+  theme_minimal() 
+```
+
+
+
+
+
+Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.Studying this question finds inconclusive results. The fires in this data set are not large enough, and only 2 fires occur within the burned area.
 
 There are 6 fires larger than 600 acres (~2.5 km^2) in this data set
 ```{r}
@@ -332,7 +414,7 @@ bufferContains <- st_join(anf_LF.sf, buffer, join = st_within) %>%
   #fires in the 117094 were all reported on the same date. Assumed to be same event.Filter out
   filter(FOD_I.buffer != 117094)
 
-bufferContains$diff_in_days<- difftime(bufferContains$DISCOVERY_.buffer ,bufferContains$DISCOVERY_ , units = c("days"))
+bufferContains$diff_in_days<- difftime(bufferContains$DISCOVERY_ ,bufferContains$DISCOVERY_.buffer , units = c("days"))
 
 #If diff_in_days is negative, fire occurred before large fire
 bufferContains <- bufferContains %>%
@@ -341,6 +423,8 @@ bufferContains <- bufferContains %>%
 
 
 
+
+###Still Working on this
 Further exploring fire and drought data before starting larger regression models:
 Plot data and explore trends.
 
