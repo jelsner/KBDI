@@ -45,7 +45,7 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 
 A new data frame is created to compare initial Q values. Q is representative of the starting value of KBDI. Here a column of several Q values is created to be used and compared among multiple plots. Daily KBDI is calculated for each initial Q value. This is testing the theory that with enough time elapsed, the initial value of Q does not matter.
 
-Could drought index be made a function to make this easier?
+rangeQ.df data frame is initialized at start of TLH.df data frame. (March 1940)
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
 PR <- dplyr::lag(Rainfall24)
@@ -103,37 +103,155 @@ head(rangeQ.df)
 ```
 
 
-
+Plot Q values for first year of data period (1940)
 ```{r}
 library(lubridate)
 library(ggplot2)
+library(patchwork)
 
-rangeQ.df %>% 
+p1_1940 <- rangeQ.df %>% 
   filter(year(Date) == 1940) %>%
   ggplot(mapping = aes(x = Date)) +
-    geom_line(aes(y = Q0), colour = "red") +
-    geom_line(aes(y = Q400), colour = "blue") + 
-    geom_line(aes(y = Q800))
-``` 
+    geom_line(aes(y = Q0, color = "0")) +
+    geom_line(aes(y = Q400, color = "400")) + 
+    geom_line(aes(y = Q800, color = "800")) +
+    scale_color_manual("Initial Q-values",
+                       breaks = c("0", "400", "800"),
+                       values = c("red", "blue", "black")) +
+  ylab("KBDI") +
+  theme(legend.position = "bottom")
+  #theme(legend.position = c(0.8,0.3)
+
+p2_1940 <- rangeQ.df %>% 
+  filter(year(Date) == 1940) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(mapping = aes(y = Rainfall24)) +
+  ylab("24Hr Net Rainfall")
+
+p1_1940 + p2_1940 +
+  plot_annotation(
+    title = "KBDI values merge with time regardless of initial Q-values",
+    subtitle = "Q-values intialized at 0, 400, and 800",
+    caption = "Period of Record: March 1940 - December 1940") 
+```
 
 
-
+Filtering TLH data frame to start in 1991. This is one year prior to the fire data obtained from the Forest Service Research Data Archive
 ```{r}
-library(lubridate)
-library(ggplot2)
+TLH1991.df <- TLH.df %>%
+  filter(year(Date) >= 1991)
+```
 
-rangeQ.df %>% 
-  filter(year(Date) == 1940) %>%
-  filter(month(Date) == '6' | month(Date) == '7' | month(Date) == '8') %>%
+Initialize different Q values starting in 1991 and create rangeQ1991.df
+```{r}
+Rainfall24 <- TLH1991.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+CumR <- 0
+NetR <- numeric()
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH1991.df$NetR <- NetR
+R <- 59.23
+
+rangeQ1991.df <- TLH1991.df %>%
+  select(Date, Rainfall24, MaxTemp, NetR)
+
+for(i in 1:9){
+  Q2 <- i-1
+  Q <- Q2*100
+  MaxTemp <- TLH1991.df$MaxTemp
+  Ql <- numeric()
+  for(i in 1:length(Rainfall24)){
+    DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+    Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+    Q <- ifelse(Q < 0, 0, Q) 
+    Ql <- c(Ql, Q)
+  }
+  rangeQ1991.df[, ncol(rangeQ1991.df)+1] <- Ql
+  colnames(rangeQ1991.df) <- c("Date", "Rainfall24", "MaxTemp", "NetR", "Q0", "Q100", "Q200", "Q300", "Q400", "Q500", "Q600", "Q700", "Q800")
+}
+```
+
+Plot 1991, year before fire data starts
+```{r}
+p1_1991 <- rangeQ1991.df %>% 
+  filter(year(Date) == 1991) %>%
   ggplot(mapping = aes(x = Date)) +
-    geom_line(aes(y = Q0), colour = "red") +
-    geom_line(aes(y = Q400), colour = "blue") + 
-    geom_line(aes(y = Q800))
-``` 
+    geom_line(aes(y = Q0, color = "0")) +
+    geom_line(aes(y = Q400, color = "400")) + 
+    geom_line(aes(y = Q800, color = "800")) +
+    scale_color_manual("Initial Q-values",
+                       breaks = c("0", "400", "800"),
+                       values = c("red", "blue", "black")) +
+  ylab("KBDI") +
+  theme(legend.position = "bottom")
+  #theme(legend.position = c(0.8,0.3)
 
+p2_1991 <- rangeQ1991.df %>% 
+  filter(year(Date) == 1991) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(mapping = aes(y = Rainfall24)) +
+  ylab("24Hr Net Rainfall")
 
+p1_1991 + p2_1991 +
+  plot_annotation(
+    title = "KBDI values merge with time regardless of initial Q-values",
+    subtitle = "Q-values intialized at 0, 400, and 800",
+    caption = "Period of Record: 1991") 
+```
 
+focus plot on first month
+```{r}
+p1_1991 <- rangeQ1991.df %>% 
+  filter(year(Date) == 1991) %>%
+  filter(month(Date) == 1) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(aes(y = Q0, color = "0")) +
+    geom_line(aes(y = Q400, color = "400")) + 
+    geom_line(aes(y = Q800, color = "800")) +
+    scale_color_manual("Initial Q-values",
+                       breaks = c("0", "400", "800"),
+                       values = c("red", "blue", "black")) +
+  ylab("KBDI") +
+  theme(legend.position = "bottom")
+  #theme(legend.position = c(0.8,0.3)
 
+p2_1991 <- rangeQ1991.df %>% 
+  filter(year(Date) == 1991) %>%
+  filter(month(Date) == 1) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(mapping = aes(y = Rainfall24)) +
+  ylab("24Hr Net Rainfall")
+
+p1_1991 + p2_1991 +
+  plot_annotation(
+    title = "KBDI values merge with time regardless of initial Q-values",
+    subtitle = "Q-values intialized at 0, 400, and 800",
+    caption = "Period of Record: January 1991") 
+```
 
 
 ##Explore lightning data and concerns mentioned by committee.
