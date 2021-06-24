@@ -340,8 +340,8 @@ exploreLF <- anf_LF.sf %>%
 exploreCount <- countlightning.df %>%
   filter(year(SEQDAY) >= 1992)
 
-
-exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
+exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_"))
+#exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 #exploratorytest <- merge(x = exploreLF, y = exploreCount, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 ```
 
@@ -349,10 +349,24 @@ exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"
 Explore the frequency of fires for high lightning count days.
 ```{r}
 datefirecounts <- exploratory %>%
-  count(DISCOVERY_, ANFcountiesCount) %>%
+  filter(year(SEQDAY) >= 1992) %>%
+  count(SEQDAY, ANFcountiesCount) %>%
+  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
   rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
   group_by()
 ```
+
+```{r}
+datefirecounts <- exploratory %>%
+  filter(year(SEQDAY) >= 1992) %>%
+  group_by(FIRE_Y, DISCOVER_1) %>%
+  tally()
+  #count(SEQDAY, FIRE_Y, DISCOVER_1) %>%
+  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
+  #rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
+  #group_by()
+```
+
 
 
 A linear regression model shows a p-value > 0.05 and suggests the number of lightning strikes does not have a significant roll in the outcome of if a lightning strike creating a fire.
