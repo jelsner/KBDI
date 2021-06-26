@@ -340,13 +340,37 @@ exploreLF <- anf_LF.sf %>%
 exploreCount <- countlightning.df %>%
   filter(year(SEQDAY) >= 1992)
 
-exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_"))
+exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_")) %>%
+  filter(year(SEQDAY) >= 1992)
 #exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 #exploratorytest <- merge(x = exploreLF, y = exploreCount, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
+
+#Create concatenated column to make it easier to count number of fires
+exploratory$Y_DOY <- paste(exploratory$FIRE_Y,exploratory$DISCOVER_1)
 ```
 
 
 Explore the frequency of fires for high lightning count days.
+```{r}
+datefirecounts <- exploratory %>%
+  #filter(year(SEQDAY) >= 1992) %>%
+  #mutate(Y_DOY = na_if(Y_DOY, "NA NA")) %>%
+  count(SEQDAY, ANFcountiesCount) %>%
+  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
+  rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
+  group_by()
+  
+  #count(Y_DOY, .drop = FALSE, SEQDAY) %>%
+  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
+  #rename(FireCount = n)
+  #mutate(Y_DOY = na_if(Y_DOY, "NA NA"))
+
+#ifelse(is.na(datefirecounts$FOD_I),
+       #datefirecounts$FireCount <- 0,
+       #datefirecounts$FireCount <- datefirecounts$FireCount)
+  #group_by()
+```
+
 ```{r}
 datefirecounts <- exploratory %>%
   filter(year(SEQDAY) >= 1992) %>%
