@@ -337,17 +337,93 @@ create data set containing fires and lightning counts. Match years for data sets
 ```{r}
 exploreLF <- anf_LF.sf %>%
   filter(FIRE_Y <= 2013)
-exploreCount <- countlightning.df %>%
+
+countfires.df <- exploreLF %>%
+  count(DISCOVERY_) %>%
+  rename(FireCount = n, Date = DISCOVERY_)
+
+countlightning.df <- countlightning.df %>%
   filter(year(SEQDAY) >= 1992)
 
-exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_")) %>%
-  filter(year(SEQDAY) >= 1992)
+merge1.df <- left_join(x = countlightning.df, y = countfires.df, by = c("SEQDAY" = "Date")) %>%
+  rename(Date = SEQDAY, LightningCount = ANFcountiesCount, FireGeom = geometry)
+
+
+##exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_")) %>%
+  #filter(year(SEQDAY) >= 1992)
 #exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 #exploratorytest <- merge(x = exploreLF, y = exploreCount, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
 
 #Create concatenated column to make it easier to count number of fires
-exploratory$Y_DOY <- paste(exploratory$FIRE_Y,exploratory$DISCOVER_1)
+#exploratory$Y_DOY <- paste(exploratory$FIRE_Y,exploratory$DISCOVER_1)
 ```
+
+Recalculate QLm for intital Q value of 269. Create new data frame (TLH1.df) to be merged with lightningcount/firecount dataframe (merge1)
+```{r}
+TLH1.df <- TLH.df %>%
+  filter(year(Date) >= 1992) %>%
+  filter(Date <= "2013-05-25")
+  
+Rainfall24 <- TLH1.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH1.df$NetR <- NetR
+
+Q <- 269  
+R <- 59.23 # average annual rainfall for TLH in inches
+
+MaxTemp <- TLH1.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH1.df$Ql <- Ql
+TLH1.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH1.df$DeltaQl <- DeltaQl
+TLH1.df$DroughtIndex <- floor(Ql/100)
+```
+
+Merge dataframes to have lightning strike count, fire count and Qlm all in one dataframe
+```{r}
+merge2.df <- left_join(x = merge1.df, y = TLH1.df, by = c("Date")) %>%
+  select(Date, LightningCount, FireCount, Qlm)
+```
+
 
 
 Explore the frequency of fires for high lightning count days.
