@@ -264,6 +264,7 @@ Note: this data is not spatial and cannot be bounded by the ANF.For exploratory 
 First get the Florida fips codes for Liberty, Wakulla, Franklin and Leon counties, then get the data.
 ```{r}
 library(tidycensus)
+library(dplyr)
 
 FLfips <- fips_codes %>%
   filter(state == "FL") %>%
@@ -285,12 +286,42 @@ lightningdata.df <- lightningdata.df %>%
          YEAR = year(SEQDAY))
 ```
 
+Attempt to read files from each downloaded csv because website import is not reliable and does not always open
+```{r}
+library(dplyr)
+#library(plyr)
+library(readr)
+
+lightningdata1.df <- list.files(path = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/FIPS_LightningData",
+                  pattern = "*.csv", full.names = TRUE) %>%
+  lapply(read_csv) %>%
+  bind_rows
+
+lightningdata1.df <- lightningdata1.df %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY))
+
+```
+
+
+
+
+
 lightningdata.df gives lighting data for each individual county based on fips code. Combine total lightning strikes in ANF counties by date.
 ```{r}
 countlightning.df <- lightningdata.df %>%
   group_by(SEQDAY) %>%
   summarise(FCOUNT_NLDN = sum(FCOUNT_NLDN)) %>%
   rename(ANFcountiesCount = FCOUNT_NLDN)
+```
+
+```{r}
+countlightning.df <- lightningdata1.df %>%
+  group_by(SEQDAY) %>%
+  summarise(FCOUNT_NLDN = sum(FCOUNT_NLDN))
+  #rename(ANFcountiesCount = FCOUNT_NLDN)
 ```
 
 Explore relationship between high lightning count days and number of lightning sparked wildfires in the ANF
