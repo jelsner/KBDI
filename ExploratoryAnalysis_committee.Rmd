@@ -374,10 +374,12 @@ countfires.df <- exploreLF %>%
   rename(FireCount = n, Date = DISCOVERY_)
 
 countlightning.df <- countlightning.df %>%
-  filter(year(SEQDAY) >= 1992)
+  filter(year(SEQDAY) >= 1992) %>%
+  rename(LightningCount = FCOUNT_NLDN)
 
 merge1.df <- left_join(x = countlightning.df, y = countfires.df, by = c("SEQDAY" = "Date")) %>%
-  rename(Date = SEQDAY, LightningCount = ANFcountiesCount, FireGeom = geometry)
+  rename(Date = SEQDAY) %>%
+  select(Date, LightningCount, FireCount)
 
 
 ##exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_")) %>%
@@ -449,11 +451,23 @@ TLH1.df$DeltaQl <- DeltaQl
 TLH1.df$DroughtIndex <- floor(Ql/100)
 ```
 
-Merge dataframes to have lightning strike count, fire count and Qlm all in one dataframe
+Merge data frames to have lightning strike count, fire count and Qlm all in one dataframe
 ```{r}
 merge2.df <- left_join(x = merge1.df, y = TLH1.df, by = c("Date")) %>%
   select(Date, LightningCount, FireCount, Qlm)
+
+merge2.df$FireBool <- !is.na(merge2.df$FireCount)
 ```
+
+Run general linear regression. The number of lightning strikes and the saturation of the soil are both statistically significant.
+```{r}
+GLM <- glm(formula = FireBool ~ LightningCount + Qlm, family = binomial, data = merge2.df)
+
+GLM
+summary(GLM)
+exp(GLM$coefficients)
+```
+
 
 
 
