@@ -301,8 +301,9 @@ lightningdata1.df <- lightningdata1.df %>%
   mutate(SEQDAY = as.Date(SEQDAY),
          DAY = day(SEQDAY),
          MONTH = month(SEQDAY),
-         YEAR = year(SEQDAY))
-
+         YEAR = year(SEQDAY)) %>%
+#missing data beyond 5/20/2013. Remove last 5 rows from data set. This addresses the parsing failure as well
+  filter(SEQDAY <=  "2013-05-20")
 ```
 
 
@@ -459,13 +460,64 @@ merge2.df <- left_join(x = merge1.df, y = TLH1.df, by = c("Date")) %>%
 merge2.df$FireBool <- !is.na(merge2.df$FireCount)
 ```
 
+General linear regression - Study how lightning influences the probability of fire occurrence 
+Predict the occurrence of a fire for each day in the data set based on lightning count.
+Note: This plot includes days with zero lightning strikes and concludes that on days with zero lightning strikes there is a 2% chance of a lightning ignited wildfire occurring. A lightning fire cannot occur without lighting. Should be zero percent.
+```{r}
+library(ggplot2)
+
+#general linear regression
+glmLightning <- glm(formula = FireBool ~ LightningCount, family = binomial, data = merge2.df)
+
+#probabilities based on glm
+pred_glmLightning <- predict(object = glmLightning,
+                             type = "response",
+                             se.fit = TRUE)
+#creating confidence interval
+lowerLightning <- pred_glmLightning$fit - (1.96*pred_glmLightning$se.fit)
+upperLightning <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
+
+ggplot(mapping = aes(x = merge2.df$LightningCount, y = pred_glmLightning$fit)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Number of Lightning Strikes") +
+  labs(
+    title = "Predicted Probability of Fire Occurance Based on the Number of Lightning Strikes in a Day",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Period of Record: 1-1-1992 to 5-20-2012")
+```
+
+General linear regression - Study how Qlm impacts lightning wildfire occurrence.
+```{r}
+glmQlm <- glm(formula = FireBool ~ Qlm, family = binomial, data = merge2.df)
+
+pred_glmQlm <- predict(object = glmQlm,
+                      type = "response",
+                      se.fit = TRUE)
+
+lowerQlm <- pred_glmQlm$fit - (1.96*pred_glmQlm$se.fit)
+upperQlm <- pred_glmQlm$fit + (1.96*pred_glmQlm$se.fit)
+
+ggplot(mapping = aes(x = merge2.df$Qlm, y = pred_glmQlm$fit)) +
+  #geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Daily Qlm") +
+  labs(
+    title = "Predicted Probability of Fire Occurance Based on Daily Qlm Values",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Period of Record: 1-1-1992 to 5-20-2012")
+```
+
+
 Run general linear regression. The number of lightning strikes and the saturation of the soil are both statistically significant.
 ```{r}
 GLM <- glm(formula = FireBool ~ LightningCount + Qlm, family = binomial, data = merge2.df)
 
-GLM
+#GLM
 summary(GLM)
-exp(GLM$coefficients)
+#exp(GLM$coefficients)
 ```
 
 
