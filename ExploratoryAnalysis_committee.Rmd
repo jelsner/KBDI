@@ -478,15 +478,46 @@ lowerLightning <- pred_glmLightning$fit - (1.96*pred_glmLightning$se.fit)
 upperLightning <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
 
 ggplot(mapping = aes(x = merge2.df$LightningCount, y = pred_glmLightning$fit)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey") +
+  geom_ribbon(aes(ymin = lowerLightning, ymax = upperLightning), fill = "grey") +
   geom_line(color = "blue") +
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
   labs(
     title = "Predicted Probability of Fire Occurance Based on the Number of Lightning Strikes in a Day",
     subtitle = "With 95% Confidence Interval",
-    caption = "Period of Record: 1-1-1992 to 5-20-2012")
+    caption = "Period of Record: 1-1-1992 to 5-20-2013")
 ```
+
+Filter data for only fire season before running glm.
+
+When filtering to only the fire season, there is more uncertianty, and the model is closer to linear.
+```{r}
+fireSeasondates.df <- merge2.df %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
+
+#general linear regression
+glmLightningFS <- glm(formula = FireBool ~ LightningCount, family = binomial, data = fireSeasondates.df)
+
+#probabilities based on glm
+pred_glmLightningFS <- predict(object = glmLightningFS,
+                             type = "response",
+                             se.fit = TRUE)
+#creating confidence interval
+lowerLightningFS <- pred_glmLightningFS$fit - (1.96*pred_glmLightningFS$se.fit)
+upperLightningFS <- pred_glmLightningFS$fit + (1.96*pred_glmLightningFS$se.fit)
+
+ggplot(mapping = aes(x = fireSeasondates.df$LightningCount, y = pred_glmLightningFS$fit)) +
+  geom_ribbon(aes(ymin = lowerLightningFS, ymax = upperLightningFS), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Number of Lightning Strikes") +
+  labs(
+    title = "Predicted Probability of Fire Occurance Based on the Number of Lightning Strikes in a Day",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Fire Season Months (May - July) 1992 - 2013")
+```
+
+
 
 General linear regression - Study how Qlm impacts lightning wildfire occurrence.
 ```{r}
@@ -878,6 +909,31 @@ droughtFire <- merge(x = anf_LF.sf, y = TLH.df, by.x = c("DISCOVERY_"), by.y = c
 droughtFire <- droughtFire %>%
   select("Date", "Qlm", "FIRE_SIZE")
 ```
+
+
+###
+Explore relationship between the number of fires and fire size.
+
+```{r}
+seasonFires <- anf_LF.sf %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  count(FIRE_Y) %>%
+  rename(Year = FIRE_Y, nFIRES = n) %>%
+  st_set_geometry(NULL)
+
+LargestFires <- anf_LF.sf %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  group_by(FIRE_Y) %>%
+  summarise(LargestFire = max(FIRE_SIZE)) %>%
+  rename(Year = FIRE_Y) %>%
+  st_set_geometry(NULL)
+
+seasonSummary <- merge(x = seasonFires, y = LargestFires, by = c("Year"))
+
+cor(seasonSummary$nFIRES, seasonSummary$LargestFire)
+```
+
+
 
 
 
