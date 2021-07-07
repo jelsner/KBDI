@@ -33,6 +33,7 @@ Fire is controlled by two things: ignition and fuel. Climate change impacts both
 ```{r}
 library(sf)
 library(tidyverse)
+library(tidycensus)
 library(lubridate)
 library(ggplot2)
 library(ggrepel)
@@ -55,7 +56,7 @@ unzip("S_USA.NFSLandUnit.zip",
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
   filter(NFSLANDU_2 == "Apalachicola National Forest")
 
-st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
+st_area(ANF_Boundary.sf) # 2,567 sq. km (634,000 acre)
 ```
 
 Make a map showing the ANF boundary and the airport location.
@@ -80,21 +81,30 @@ tm_shape(Airport.sf) +
 Severity of fires: Area burned 
 Frequency of fires: Number of fires
 
-See also `Get_Wildfires.Rmd` on Dropbox. These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
+```{r}
+#unzip("RDS-2013-0009.5_GPKG.zip")
+#st_layers(dsn = "Data/FPA_FOD_20210617.gpkg")
 
-Short, Karen C. 2017. Spatial wildfire occurrence data for the United States, 1992-2015 [FPA_FOD_20170508]. 4th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.4
+Fires.sf <- st_read(dsn = "Data/FPA_FOD_20210617.gpkg",
+                    layer = "Fires") %>%
+  filter(STATE == "FL") %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
+  st_intersection(ANF_Boundary.sf)
+```
 
-From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.4/_metadata_RDS-2013-0009.4.html
+These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
+
+Short, Karen C. 2021. Spatial wildfire occurrence data for the United States, 1992-2018 [FPA_FOD_20170508]. 5th Edition. Fort Collins, CO: Forest Service Research Data Archive.
+https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.5
+
+From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/_metadata_RDS-2013-0009.5.html
 `FIRE_SIZE` = Estimate of acres within the final perimeter of the fire.
 `FIRE_SIZE_CLASS` = Code for fire size based on the number of acres within the final fire perimeter expenditures (A=greater than 0 but less than or equal to 0.25 acres, B=0.26-9.9 acres, C=10.0-99.9 acres, D=100-299 acres, E=300 to 999 acres, F=1000 to 4999 acres, and G=5000+ acres).
 
-Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2015. It is the third update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 1.88 million geo-referenced wildfire records, representing a total of 140 million acres burned during the 24-year period.
-```{r}
-Fires.sf <- st_read(dsn = "Data/FL_Fires",
-                    layer = "FL_Fires")  %>%
-  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
-  st_intersection(ANF_Boundary.sf)
+Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2018. It is the fourth update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as a Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG), including an updated wildfire-cause standard (approved August 2020). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. In addition to incorporating data for 2016-2018, some previously unavailable nonfederal wildfire records for the period 1999-2015 were acquired either directly from the state fire services (NH, NJ) or indirectly from an updated National Association of State Foresters database (AR, AZ, CA, CO, FL, HI, ID, IL, OK, SD) and added. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 2.17 million geo-referenced wildfire records, representing a total of 165 million acres burned during the 27-year period. Identifiers necessary to link the point-based, final-fire-reporting information to published large-fire-perimeter and operational-situation-reporting datasets are included.
 
+See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/
+```{r}
 Fires2.sf <- st_read(dsn = "NIFC_ANF_firesshapefile",
                      layer = "NIFCboundedfires")
 
@@ -103,27 +113,27 @@ table(year(Fires2.sf$FireDiscov))
 
 Make a bar chart of frequency by cause.
 ```{r}
-table(Fires.sf$STAT_CAU_1)
+table(Fires.sf$NWCG_GENERAL_CAUSE)
 
 df <- Fires.sf %>%
   st_drop_geometry() %>%
-  group_by(STAT_CAU_1) %>%
+  group_by(NWCG_GENERAL_CAUSE) %>%
   summarize(nF = n(),
             perF = nF/nrow(Fires.sf))
 
 ggplot(df,
-       mapping = aes(y = reorder(STAT_CAU_1, perF),
+       mapping = aes(y = reorder(NWCG_GENERAL_CAUSE, perF),
                      x = perF,
                      fill = perF)) +
   geom_col() +
   scale_fill_distiller(palette = "Oranges",
                        direction = 1,
-                       guide = FALSE) +
+                       guide = "none") +
   scale_x_continuous(labels = percent) +
   ylab("") + xlab("") +
   labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
-       subtitle = "Based on data from 1992-2015",
-       caption = "Data source: Short, Karen (2017)") +
+       subtitle = "Based on data from 1992-2018",
+       caption = "Data source: Short, Karen (2021)") +
   theme_minimal()
 ```
 
@@ -137,38 +147,38 @@ tm_shape(Airport.sf) +
   tm_dots(size = .1, col = "black")
 ```
 
-Lightning-sparked fires.
+Natural fires.
 ```{r}
-LightningFires.sf <- Fires.sf %>%
-  filter(STAT_CAU_1 == "Lightning") %>%
-  mutate(Year = year(DISCOVERY_),
-         Month = month(DISCOVERY_),
-         Day = day(DISCOVERY_),
-         YDay = yday(DISCOVERY_),
+NaturalFires.sf <- Fires.sf %>%
+  filter(NWCG_GENERAL_CAUSE == "Natural") %>%
+  mutate(Year = year(DISCOVERY_DATE),
+         Month = month(DISCOVERY_DATE),
+         Day = day(DISCOVERY_DATE),
+         YDay = yday(DISCOVERY_DATE),
          YDayF = factor(YDay, levels = as.character(1:366)),
-         SizeF = factor(FIRE_SIZE_, ordered = TRUE)) %>%
-  dplyr::select(Year, Month, Day, YDay, YDayF, FIRE_SIZE, SizeF)
+         SizeF = factor(FIRE_SIZE_CLASS, ordered = TRUE)) %>%
+  dplyr::select(Year, Month, Day, YDay, YDayF, Size = FIRE_SIZE, SizeF)
 ```
 
-Static map of lightning-sparked fires by size of the area burned.
+Static map of natural fires by size of the area burned.
 ```{r}
 FL_Counties.sf <- us_counties(states = "FL",
-                             resolution = "high") %>%
+                              resolution = "high") %>%
   st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
   st_crop(st_bbox(st_buffer(ANF_Boundary.sf, dist = .25)) )
 
 ggplot() +
   geom_sf(data = FL_Counties.sf, fill = "transparent", col = "gray80") +
   geom_sf(data = ANF_Boundary.sf, fill = "transparent") +
-  geom_sf(data = LightningFires.sf,
-          mapping = aes(col = SizeF), show.legend = FALSE) +
+  geom_sf(data = NaturalFires.sf,
+          mapping = aes(col = SizeF)) +
   scale_color_brewer(palette = "Oranges",
                      direction = 1,
-                     guide = FALSE) +
+                     name = "Size Class") +
   theme_bw() +
-  labs(title = "Location of lightning-sparked wildfires in the Apalachicola National Forest (1992-2015)",
+  labs(title = "Location of natural wildfires in the Apalachicola National Forest (1992-2018)",
        subtitle = "Darker color points indicates the fire resulted in a larger burn area",
-       caption = "Data source: Short, Karen (2017)")
+       caption = "Data source: Short, Karen (2021)")
 ```
 
 Create a {spatstat} object containing the locations of lightning-sparked fires in the ANF during May-July. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
@@ -185,45 +195,47 @@ W <- ANF_Boundary.sf %>%
   as_Spatial() %>% 
   as.owin()
 
-LF.ppp <- Fires.sf %>% 
-  filter(STAT_CAU_1 == "Lightning") %>%
-  mutate(Month = month(DISCOVERY_)) %>%
+NF.ppp <- Fires.sf %>% 
+  filter(NWCG_GENERAL_CAUSE == "Natural") %>%
+  mutate(Month = month(DISCOVERY_DATE)) %>%
   filter(Month %in% c(5, 6, 7)) %>%
   st_geometry() %>%
   st_transform(crs = 2779) %>%
   as_Spatial() %>% 
   as.ppp()
 
-LF.ppp <- LF.ppp[W] %>%
+NF.ppp <- NF.ppp[W] %>%
   rescale(s = 1000, 
           unitname = "km")
-summary(LF.ppp)
+summary(NF.ppp)
 ```
 
-Area is 2,564 square km. There are 337 lightning-sparked wildfires for an average intensity of 13.1 fires per 10 square kilometer during May-July over the 24-year period.
+Area is 2,564 square km. There are 357 natural wildfires for an average intensity of 13.9 fires per 10 square kilometer during May-July over the 27-year period.
 ```{r}
-LF.ppp %>%
+NF.ppp %>%
   density() %>%
   plot()
 
-LF.ppp %>%
+NF.ppp %>%
   dirichlet() %>%
-  plot
+  plot()
 
-LF.ppp %>%
+NF.ppp %>%
   quadratcount(nx = 20, ny = 15) %>%
   plot()
 
-LF.ppp %>%
+NF.ppp %>%
   quadrat.test(nx = 20, ny = 15,
                method = "M",
                nsim = 9999,
                alternative = "clustered")
 ```
 
+There is some weak evidence of clustering. It is not significant.
+
 Compute Ripley K using the `Kstat()` function
 ```{r}
-df <- LF.ppp %>%
+df <- NF.ppp %>%
   envelope(fun = Kest,
            nsim = 100,
            global = TRUE,
@@ -231,10 +243,10 @@ df <- LF.ppp %>%
   as.data.frame()
 
 df <- df %>%
-  mutate(theo = theo * intensity(LF.ppp),
-         obs = obs * intensity(LF.ppp),
-         lo = lo * intensity(LF.ppp),
-         hi = hi * intensity(LF.ppp))
+  mutate(theo = theo * intensity(NF.ppp),
+         obs = obs * intensity(NF.ppp),
+         lo = lo * intensity(NF.ppp),
+         hi = hi * intensity(NF.ppp))
 
 ggplot(data = df,
        mapping = aes(x = r, y = obs)) +
@@ -243,21 +255,23 @@ ggplot(data = df,
   geom_line(col = "orange") +
   geom_line(aes(y = theo), color = "white") +
   xlab("Distance (km)") + ylab("K(r)") +
-  labs(title = "Locations of lightning-sparked wildfires in the ANF are inconsistent with a random process",
+  labs(title = "Locations of natural wildfires in the ANF are inconsistent with a random process",
        subtitle = "Average observed (orange) versus modeled (white) number of additional wildfires within a distance r of a random wildfire.\nThe gray ribbon is the 99% uncertainy band based on 100 simulations from the spatial random process model.") +
   theme_minimal()
 ```
 
-Monthly occurrence (relative frequency) of lightning-caused wildfires in the ANF.
+At larger scales there are features that make natural fires somewhat more or less likely (e.g., Bradwell Bay Wilderness--swamp) 
+
+Monthly occurrence (relative frequency) of natural wildfires in the ANF.
 ```{r}
-df <- LightningFires.sf %>%
+df <- NaturalFires.sf %>%
   st_drop_geometry() %>%
   mutate(MonthF = factor(month.name[Month], 
                          levels = rev(month.name), 
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
   summarize(nF = n(),
-            perF = nF/nrow(LightningFires.sf))
+            perF = nF/nrow(NaturalFires.sf))
 
 ggplot(data = df,
        mapping = aes(y = MonthF, 
@@ -266,51 +280,53 @@ ggplot(data = df,
   geom_col() +
   scale_fill_distiller(palette = "Oranges",
                        direction = 1,
-                       guide = FALSE) +
+                       guide = "none") +
   scale_x_continuous(labels = percent) +
   xlab("") + ylab("") +
-  labs(title = "Over 80% of lightning-sparked wildfires in the Apalachicola National Forest occur during May-July",
-       subtitle = "Percentage of all lightning-sparked wildfires by month",
-       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+  labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest occur during May-July",
+       subtitle = "Percentage of all natural wildfires by month",
+       caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
   theme_minimal() 
 ```
 
-Seasonal number of lightning-sparked fires and seasonal total acres burned.
+Seasonal number of natural fires and seasonal total acres burned.
 ```{r}
-df <- LightningFires.sf %>%
+df <- NaturalFires.sf %>%
   st_drop_geometry() %>%
   filter(Month %in% c(5, 6, 7)) %>%
-  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2018), ordered = TRUE)) %>%
   group_by(YearF, .drop = FALSE) %>%
   summarize(nFires = n(),
-            totalAcresBurned = sum(FIRE_SIZE)) %>%
-  mutate(Year = 1992:2015)
+            totalAcresBurned = sum(Size)) %>%
+  mutate(Year = 1992:2018)
 
 ggplot(data = df,
        mapping = aes(x = Year, y = nFires, color = totalAcresBurned)) +
   geom_line(col = "gray80") +
-  geom_point(size = 3) +
+  geom_point(mapping = aes(size = totalAcresBurned)) +
+  scale_size_continuous(guide = "none") +
   scale_color_distiller(palette = "Oranges",
                         direction = 1,
-                        guide = FALSE) +
-  scale_x_continuous(breaks = seq(1992, 2015, by = 3)) +
+                        guide = "none") +
+  scale_x_continuous(breaks = seq(1992, 2018, by = 3)) +
   theme_minimal() +
   labs(x = "", y = "",
-       title = "Large inter-seasonal variability in the number of lightning-sparked wildfires in the ANF",
-       subtitle = "Darker color points indicates larger total burn area")
+       title = "Large inter-seasonal variability in the number of natural wildfires in the ANF",
+       subtitle = "Larger and darker points indicate larger burn area")
 
 ggplot(data = df,
        mapping = aes(x = Year, y = totalAcresBurned, color = nFires)) +
   geom_line(col = "gray80") +
-  geom_point(size = 3) +
+  geom_point(mapping = aes(size = nFires)) +
+  scale_size_continuous(guide = "none") +
   scale_color_distiller(palette = "Oranges",
                         direction = 1,
-                        guide = FALSE) +
-  scale_x_continuous(breaks = seq(1992, 2015, by = 3)) +
+                        guide = "none") +
+  scale_x_continuous(breaks = seq(1992, 2018, by = 3)) +
   theme_minimal() +
   labs(x = "", y = "",
-       title = "Large inter-seasonal variability in acres burned from lightning-sparked wildfires in the ANF",
-       subtitle = "Darker color points indicates more fires")
+       title = "Large inter-seasonal variability in acres burned from natural wildfires in the ANF",
+       subtitle = "Larger and darker color points indicate more fires")
 ```
 
 Seasonal temporal autocorrelation in frequency and total area burned.
@@ -325,11 +341,11 @@ No significant inter-seasonal autocorrelation. Significant correlation between n
 
 Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
 ```{r}
-LightningFires.sf %>%
+NaturalFires.sf %>%
   group_by(SizeF) %>%
   summarize(nFires = n(),
-            Range1 = range(FIRE_SIZE)[1],
-            Range2 = range(FIRE_SIZE)[2])
+            Range1 = range(Size)[1],
+            Range2 = range(Size)[2])
 ```
 
 https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
@@ -339,10 +355,8 @@ https://www.cpc.ncep.noaa.gov/products/predictions/90day/
 
 Daily county-level counts 1986-2013. Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
 
-First get the Florida fips codes for Liberty, Wakulla, and Franklin counties, then get the data.
+First get the Florida FIPS codes for Liberty, Wakulla, and Franklin counties, then get the data.
 ```{r}
-library(tidycensus)
-
 FLfips <- fips_codes %>%
   filter(state == "FL") %>%
   filter(county %in% c("Liberty County", "Wakulla County")) %>%
@@ -379,7 +393,7 @@ ggplot(data = sc,
   geom_col() +
   scale_fill_distiller(palette = "Blues",
                        direction = 1,
-                       guide = FALSE) +
+                       guide = "none") +
   labs(x = "", y = "",
        title = "Lightning in the Apalachicola National Forest peaks from June-August",
        subtitle = "Daily average number of cloud-to-ground lightning strikes by month",
@@ -387,7 +401,11 @@ ggplot(data = sc,
   theme_minimal() 
 ```
 
+Cloud to ground lightning is most common in the ANF between June through August. The natural wildfire season is the cross correlation between the dry season and the lightning season. https://en.wikipedia.org/wiki/Cross-correlation
+
 ## Get TLH airport daily weather data and compute the Keetch & Byram drought index
+
+Drought indices: https://piahs.copernicus.org/articles/383/291/2020/
 
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
