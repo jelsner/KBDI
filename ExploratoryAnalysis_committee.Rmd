@@ -6,8 +6,24 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-
 This file will explore ideas proposed by the committee during the prospectus defense on 5/25/2021
+
+
+Import Libraries to be used
+```{r}
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+library(tidycensus)
+library(dplyr)
+library(readr)
+library(sf)
+library(tmap)
+library(rgeos)
+```
+
+
 
 
 ### Checking Value of Q
@@ -23,8 +39,6 @@ Assign no rainfall on days with missing values.
 
 For Tallahassee Station TLH
 ```{r}
-library(lubridate)
-library(tidyverse)
 TLH.df <- read_csv(file = 'Data/TLH_Daily1940.csv') %>%
   rename(Date = DATE) %>%
   mutate(Year = year(Date), 
@@ -35,10 +49,8 @@ TLH.df <- read_csv(file = 'Data/TLH_Daily1940.csv') %>%
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4)
-```
 
-Fill in the missing temperature data.
-```{r}
+#Fill in the missing temperature data
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 ```
 
@@ -105,10 +117,6 @@ head(rangeQ.df)
 
 Plot Q values for first year of data period (1940)
 ```{r}
-library(lubridate)
-library(ggplot2)
-library(patchwork)
-
 p1_1940 <- rangeQ.df %>% 
   filter(year(Date) == 1940) %>%
   ggplot(mapping = aes(x = Date)) +
@@ -263,9 +271,6 @@ Note: this data is not spatial and cannot be bounded by the ANF.For exploratory 
 
 First get the Florida fips codes for Liberty, Wakulla, Franklin and Leon counties, then get the data.
 ```{r}
-library(tidycensus)
-library(dplyr)
-
 FLfips <- fips_codes %>%
   filter(state == "FL") %>%
   filter(county %in% c("Liberty County", "Wakulla County", "Franklin County", "Leon County")) %>%
@@ -288,10 +293,6 @@ lightningdata.df <- lightningdata.df %>%
 
 Attempt to read files from each downloaded csv because website import is not reliable and does not always open
 ```{r}
-library(dplyr)
-#library(plyr)
-library(readr)
-
 lightningdata1.df <- list.files(path = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/FIPS_LightningData",
                   pattern = "*.csv", full.names = TRUE) %>%
   lapply(read_csv) %>%
@@ -302,36 +303,23 @@ lightningdata1.df <- lightningdata1.df %>%
          DAY = day(SEQDAY),
          MONTH = month(SEQDAY),
          YEAR = year(SEQDAY)) %>%
-#missing data beyond 5/20/2013. Remove last 5 rows from data set. This addresses the parsing failure as well
+#missing data beyond 5/20/2013 for FIPS #12037. Remove last 5 rows from data set. This addresses the parsing failure and removes data that is NA.
   filter(SEQDAY <=  "2013-05-20")
 ```
 
 
-
-
-
-lightningdata.df gives lighting data for each individual county based on fips code. Combine total lightning strikes in ANF counties by date.
-```{r}
-countlightning.df <- lightningdata.df %>%
-  group_by(SEQDAY) %>%
-  summarise(FCOUNT_NLDN = sum(FCOUNT_NLDN)) %>%
-  rename(ANFcountiesCount = FCOUNT_NLDN)
-```
+lightningdata1.df gives lighting data for each individual county based on fips code. Combine total lightning strikes in ANF counties by date.
 
 ```{r}
 countlightning.df <- lightningdata1.df %>%
   group_by(SEQDAY) %>%
-  summarise(FCOUNT_NLDN = sum(FCOUNT_NLDN))
-  #rename(ANFcountiesCount = FCOUNT_NLDN)
+  summarise(LightningCount = sum(FCOUNT_NLDN))
 ```
 
-Explore relationship between high lightning count days and number of lightning sparked wildfires in the ANF
+Explore the relationship between high lightning count days and number of lightning sparked wildfires in the ANF
 
-Import Forest Boundaries to explore lightning firedata in ANF
+Import Forest Boundaries to explore lightning fire data bounded by the ANF
 ```{r}
-library(tidyverse)
-library(sf)
-
 if(!"S_USA.NFSLandUnit" %in% list.files()){
   download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
                 "S_USA.NFSLandUnit.zip")
@@ -355,41 +343,54 @@ unzip("FL_Fires.zip")
 FL_Fires.sf <- st_read(dsn = "FL_Fires") %>%
 st_transform(crs = 3086)
 
+#filtered fires within ANF bounds
 anf_fires.sf <- st_join(FL_Fires.sf, anfbounds.sf, join = st_within) %>%
   filter(NFSLANDU_2 == 'Apalachicola National Forest')
-```
 
-Filtered for Lightning
-```{r}
 anf_LF.sf <- anf_fires.sf %>%
   filter(STAT_CAU_1 == "Lightning")
 ```
 
-create data set containing fires and lightning counts. Match years for data sets (2005 - 2013)
+Archived fire data has been updated through 2018. Use this code chunk for most up to data fire file.
+Website link with data and metadata
+https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.5 
 ```{r}
-exploreLF <- anf_LF.sf %>%
-  filter(FIRE_Y <= 2013)
+if(!"updatedFires" %in% list.files()){
+download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GDB.zip",
+"updatedFires.zip")
+unzip("updatedFires.zip")
+}
+updatedFires.sf <- st_read(dsn = "updatedFires.zip") %>%
+st_transform(crs = 3086)
 
-countfires.df <- exploreLF %>%
+#filtered fires within ANF bounds
+anf_fires.sf <- st_join(updatedFL_Fires.sf, anfbounds.sf, join = st_within) %>%
+  filter(NFSLANDU_2 == 'Apalachicola National Forest')
+
+anf_LF.sf <- anf_fires.sf %>%
+  filter(STAT_CAU_1 == "Lightning")
+```
+
+
+
+create data set containing fires and lightning counts. Match years for data sets (1992 - 2013)
+Merge1.df is a new data frame that contains the number of lightning strikes and fires occurring in the Apalachicola National Forest broken down by day from 1992 - 2013.
+```{r}
+#exploreLF <- anf_LF.sf %>%
+  #filter(FIRE_Y <= 2013)
+
+countfires.df <- anf_LF.sf %>%
+#countfires.df <- exploreLF %>%
   count(DISCOVERY_) %>%
   rename(FireCount = n, Date = DISCOVERY_)
 
 countlightning.df <- countlightning.df %>%
-  filter(year(SEQDAY) >= 1992) %>%
-  rename(LightningCount = FCOUNT_NLDN)
+  filter(year(SEQDAY) >= 1992)
+  #rename(LightningCount = FCOUNT_NLDN)
 
 merge1.df <- left_join(x = countlightning.df, y = countfires.df, by = c("SEQDAY" = "Date")) %>%
   rename(Date = SEQDAY) %>%
   select(Date, LightningCount, FireCount)
-
-
-##exploratory <- left_join(x = countlightning.df, y = anf_LF.sf, by = c("SEQDAY" = "DISCOVERY_")) %>%
-  #filter(year(SEQDAY) >= 1992)
-#exploratory <- merge(x = anf_LF.sf, y = countlightning.df, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
-#exploratorytest <- merge(x = exploreLF, y = exploreCount, by.x = c("DISCOVERY_"), by.y = c("SEQDAY"))
-
-#Create concatenated column to make it easier to count number of fires
-#exploratory$Y_DOY <- paste(exploratory$FIRE_Y,exploratory$DISCOVER_1)
 ```
 
 Recalculate QLm for intital Q value of 269. Create new data frame (TLH1.df) to be merged with lightningcount/firecount dataframe (merge1)
@@ -488,9 +489,9 @@ ggplot(mapping = aes(x = merge2.df$LightningCount, y = pred_glmLightning$fit)) +
     caption = "Period of Record: 1-1-1992 to 5-20-2013")
 ```
 
-Filter data for only fire season before running glm.
+Filter data for only dates in the fire season before running glm.
 
-When filtering to only the fire season, there is more uncertianty, and the model is closer to linear.
+When filtering to only the fire season, there is more uncertainty, and the model is closer to linear.
 ```{r}
 fireSeasondates.df <- merge2.df %>%
   filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
@@ -520,6 +521,8 @@ ggplot(mapping = aes(x = fireSeasondates.df$LightningCount, y = pred_glmLightnin
 
 
 General linear regression - Study how Qlm impacts lightning wildfire occurrence.
+
+Note: There are no days with a Qlm value above 200 in this set of data (1992-2012)
 ```{r}
 glmQlm <- glm(formula = FireBool ~ Qlm, family = binomial, data = merge2.df)
 
@@ -531,7 +534,7 @@ lowerQlm <- pred_glmQlm$fit - (1.96*pred_glmQlm$se.fit)
 upperQlm <- pred_glmQlm$fit + (1.96*pred_glmQlm$se.fit)
 
 ggplot(mapping = aes(x = merge2.df$Qlm, y = pred_glmQlm$fit)) +
-  #geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey") +
+  geom_ribbon(aes(ymin = lowerQlm, ymax = upperQlm), fill = "grey") +
   geom_line(color = "blue") +
   ylab("Predicited Probablility") +
   xlab("Daily Qlm") +
@@ -554,289 +557,30 @@ summary(GLM)
 
 
 
-Explore the frequency of fires for high lightning count days.
-```{r}
-datefirecounts <- exploratory %>%
-  #filter(year(SEQDAY) >= 1992) %>%
-  #mutate(Y_DOY = na_if(Y_DOY, "NA NA")) %>%
-  count(SEQDAY, ANFcountiesCount) %>%
-  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
-  rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
-  group_by()
-  
-  #count(Y_DOY, .drop = FALSE, SEQDAY) %>%
-  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
-  #rename(FireCount = n)
-  #mutate(Y_DOY = na_if(Y_DOY, "NA NA"))
+Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.
 
-#ifelse(is.na(datefirecounts$FOD_I),
-       #datefirecounts$FireCount <- 0,
-       #datefirecounts$FireCount <- datefirecounts$FireCount)
-  #group_by()
-```
+Explore relationship between the number of fires and fire size.
 
 ```{r}
-datefirecounts <- exploratory %>%
-  filter(year(SEQDAY) >= 1992) %>%
-  count(SEQDAY, ANFcountiesCount) %>%
-  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
-  rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
-  group_by()
-```
+seasonFires <- anf_LF.sf %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  count(FIRE_Y) %>%
+  rename(Year = FIRE_Y, nFIRES = n) %>%
+  st_set_geometry(NULL)
 
-```{r}
-datefirecounts <- exploratory %>%
-  filter(year(SEQDAY) >= 1992) %>%
-  group_by(FIRE_Y, DISCOVER_1) %>%
-  tally()
-  #count(SEQDAY, FIRE_Y, DISCOVER_1) %>%
-  #count(.(FIRE_Y, DISCOVER_1), ANFcountiesCount) %>%
-  #rename(FireCount = n, LightningCount = ANFcountiesCount) %>%
-  #group_by()
+LargestFires <- anf_LF.sf %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  group_by(FIRE_Y) %>%
+  summarise(LargestFire = max(FIRE_SIZE)) %>%
+  rename(Year = FIRE_Y) %>%
+  st_set_geometry(NULL)
+
+seasonSummary <- merge(x = seasonFires, y = LargestFires, by = c("Year"))
+
+cor(seasonSummary$nFIRES, seasonSummary$LargestFire)
 ```
 
 
-
-A linear regression model shows a p-value > 0.05 and suggests the number of lightning strikes does not have a significant roll in the outcome of if a lightning strike creating a fire.
-```{r}
-datefirecounts.lm <- lm(FireCount ~ LightningCount, data = datefirecounts)
-summary(datefirecounts.lm)
-```
-
-Plotting the data suggest that the number of lighting strikes does not have a significant impact on the frequency of a fire that occur.
-```{r}
-datefirecounts %>%
-ggplot(mapping = aes(x = LightningCount, y = FireCount)) +
-  geom_point()
-```
-
-```{r}
-datefirecounts %>%
-  filter(LightningCount <= 1000) %>%
-  ggplot(mapping = aes(x = LightningCount, y = FireCount)) +
-  geom_point()
-```
-
-
-Does a higher lightning count correspond to more rainfall? Would high rainfall values help to saturate the fuel and limit the spread/ ignition of lightning cause wildfires? Plots and a p-value greater than 0.05 suggest there is no relationship between the number of lightning strikes and the amount of rainfall on a given day.
-```{r}
-lightningRainfall <- merge(x = TLH.df, y = exploreCount, by.x = c("Date"), by.y = c("SEQDAY"))
-
-lightningRainfall<- lightningRainfall %>%
-  select("Date", "PRCP", "ANFcountiesCount") %>%
-  rename(LightningCount = ANFcountiesCount) %>%
-  filter(LightningCount > 0)
-```
-
-
-plot lightning to precip
-```{r}
-lightningRainfall %>%
-  ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
-  geom_point()
-```
-
-```{r}
-lightningRainfall.lm <- lm(PRCP ~ LightningCount, data = lightningRainfall)
-summary(datefirecounts.lm)
-```
-
-Does this relationship exist during the convective months of our statistically defined fire season?
-```{r}
-lightningRainfall %>%
-  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
-  ggplot(mapping = aes(x = LightningCount, y = PRCP)) +
-  geom_point() +
-  geom_smooth(method = lm)
-```
-
-
-
-
-of 2898 days with lightning in this data set, fires occurred on 235 of those days. 8.12% of days with lightning sparked a wildfire
-```{r}
-forBool <- left_join(x = exploreCount, y = exploreLF, by = c("SEQDAY" = "DISCOVERY_")) %>%
-  select("SEQDAY", "ANFcountiesCount", "FOD_I") %>%
-  rename(Date = SEQDAY, LCount = ANFcountiesCount) %>%
-  #a lightning fire cannot occur on a day without lighting
-  filter(LCount >0) %>%
-  #multiple fires occurring on one day will count as one event
-  distinct(Date, .keep_all = TRUE)
-
-forBool %>%
-  count("Date")
-
-forBool %>%
-  count(FOD_I != "NA")
-
-forBool$fireBool <- !is.na(forBool$FOD_I)
-
-sum(forBool$fireBool) / as.double(length(forBool$fireBool)) * 100
-```
-
-There are 561 days with a lightning count greater than or equal to 500. Lightning sparked wildfires on 97 of those days (17.29%)
-```{r}
-Lcount200 <- forBool %>%
-  filter(LCount >= 200)
-
-Lcount200 %>%
-  count("Date")
-
-Lcount1500 <- forBool %>%
-  filter(LCount >= 1500)
-```
-
-
-Find the percent likelihood a fire occurs based on the number of lightning strikes on a given day.
-The most lightning strikes in a day is 5588
-```{r}
-LightningStats <- data.frame(Filter = integer(0), LightningDays = integer(0), FireDays = double(0), Percent = double(0))
-#LightningStats[1,] <- 1:4
-LightningStats[nrow(LightningStats)+1,] <- NA
-
-LightningStats$Filter <- 0
-LightningStats$LightningDays <- as.double(length(forBool$fireBool))
-LightningStats$FireDays <- sum(forBool$fireBool)
-LightningStats$Percent <- (LightningStats$FireDays / LightningStats$LightningDays) * 100
-
-for (i in 1:22){
-  LightningStats[nrow(LightningStats)+1,] <- NA
-  x <- i*250
-  LightningStats$Filter[i] <- x
-  filterLoop <- forBool %>%
-    filter(LCount >= x)
-  LightningStats$LightningDays[i] <-  as.double(length(filterLoop$fireBool))
-  LightningStats$FireDays[i] <- sum(filterLoop$fireBool)
-  LightningStats$Percent[i] <- (LightningStats$FireDays[i] / LightningStats$LightningDays[i]) * 100
-}
-
-#LightningStats <- LightningStats[-c(23)]
-```
-
-Plot the likelihood of a fire occurring based on the amount of lighting in a storm
-```{r}
-ggplot(data = LightningStats,
-       mapping = aes(y = Percent, 
-                     x = Filter,
-                     fill = Percent)) +
-  geom_col() +
-  scale_fill_distiller(palette = "Oranges",
-                      direction = 1,
-                       guide = FALSE) +
-  #xlab("") + ylab("") +
-  labs(title = "Likelihood a Lightning Stike Starts a Wildfire",
-       subtitle = "Filtered by # of Lightning Strikes increasing by 250") +
-  theme_minimal() 
-```
-
-
-
-
-Explore Lightning Statistics for fire season months
-```{r}
-LightningStatsFS <- data.frame(Filter = integer(0), LightningDays = integer(0), FireDays = double(0), Percent = double(0))
-#LightningStats[1,] <- 1:4
-LightningStatsFS[nrow(LightningStatsFS)+1,] <- NA
-
-forBoolFS <- forBool %>%
-  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
-
-LightningStatsFS$Filter <- 0
-LightningStatsFS$LightningDays <- as.double(length(forBoolFS$fireBool))
-LightningStatsFS$FireDays <- sum(forBoolFS$fireBool)
-LightningStatsFS$Percent <- (LightningStatsFS$FireDays / LightningStatsFS$LightningDays) * 100
-
-for (i in 1:20){
-  LightningStatsFS[nrow(LightningStatsFS)+1,] <- NA
-  x <- i*250
-  LightningStatsFS$Filter[i] <- x
-  filterLoop <- forBoolFS %>%
-    filter(LCount >= x)
-  LightningStatsFS$LightningDays[i] <-  as.double(length(filterLoop$fireBool))
-  LightningStatsFS$FireDays[i] <- sum(filterLoop$fireBool)
-  LightningStatsFS$Percent[i] <- (LightningStatsFS$FireDays[i] / LightningStatsFS$LightningDays[i]) * 100
-}
-```
-
-
-
-Plot for fire season months.
-```{r}
-ggplot(data = LightningStatsFS,
-      mapping = aes(y = Percent, 
-                   x = Filter,
-                   fill = Percent)) +
-  geom_col() +
-  scale_fill_distiller(palette = "Oranges",
-                      direction = 1,
-                       guide = FALSE) +
-  #xlab("") + ylab("") +
-  labs(title = "Likelihood a Lightning Stike Starts a Wildfire (May - July)",
-       subtitle = "Filtered by # of Lightning Strikes increasing by 250") +
-  theme_minimal() 
-```
-
-
-
-
-
-
-
-Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.Studying this question finds inconclusive results. The fires in this data set are not large enough, and only 2 fires occur within the burned area.
-
-There are 6 fires larger than 600 acres (~2.5 km^2) in this data set
-```{r}
-anf_LF.sf %>%
-  count(FIRE_SIZE >= 600) %>%
-  head()
-```
-
-```{r}
-library(tmap)
-library(rgeos)
-
-tmap_mode("view")
-
-buffer <- anf_LF.sf %>%
-  filter(FIRE_SIZE >= 600) %>%
-  #buffer defaults to meters?
-  st_buffer(2500)
-
-tm_shape(anfbounds.sf) +
-  tm_borders() +
-
-anf_LF.sf %>%
-  filter(FIRE_SIZE >= 600) %>%
-  tm_shape() +
-  tm_dots( "red") +
-
-anf_LF.sf %>% 
-  filter(FIRE_SIZE < 600) %>%
-  tm_shape() +
-  tm_dots("yellow") +
-  
-buffer %>%
-  tm_shape() +
-  tm_borders(col = "black")
-
-```
-
-```{r}
-bufferContains <- st_join(anf_LF.sf, buffer, join = st_within) %>%
-  filter(FOD_I.y != "NA") %>%
-  select("FOD_I.y", "FOD_I.x", "DISCOVERY_.y", "DISCOVERY_.x", "FIRE_SIZE.x") %>%
-  filter(FOD_I.x != FOD_I.y) %>%
-  rename(FOD_I.buffer = FOD_I.y, FOD_I = FOD_I.x, DISCOVERY_.buffer = DISCOVERY_.y, DISCOVERY_ = DISCOVERY_.x, FIRE_SIZE = FIRE_SIZE.x) %>%
-  group_by(FOD_I.buffer) %>%
-  #fires in the 117094 were all reported on the same date. Assumed to be same event.Filter out
-  filter(FOD_I.buffer != 117094)
-
-bufferContains$diff_in_days<- difftime(bufferContains$DISCOVERY_ ,bufferContains$DISCOVERY_.buffer , units = c("days"))
-
-#If diff_in_days is negative, fire occurred before large fire
-bufferContains <- bufferContains %>%
-  filter(diff_in_days > 0) 
-```
 
 
 
@@ -911,27 +655,6 @@ droughtFire <- droughtFire %>%
 ```
 
 
-###
-Explore relationship between the number of fires and fire size.
-
-```{r}
-seasonFires <- anf_LF.sf %>%
-  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
-  count(FIRE_Y) %>%
-  rename(Year = FIRE_Y, nFIRES = n) %>%
-  st_set_geometry(NULL)
-
-LargestFires <- anf_LF.sf %>%
-  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
-  group_by(FIRE_Y) %>%
-  summarise(LargestFire = max(FIRE_SIZE)) %>%
-  rename(Year = FIRE_Y) %>%
-  st_set_geometry(NULL)
-
-seasonSummary <- merge(x = seasonFires, y = LargestFires, by = c("Year"))
-
-cor(seasonSummary$nFIRES, seasonSummary$LargestFire)
-```
 
 
 
