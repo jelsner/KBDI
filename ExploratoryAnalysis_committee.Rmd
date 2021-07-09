@@ -21,6 +21,7 @@ library(readr)
 library(sf)
 library(tmap)
 library(rgeos)
+library(RColorBrewer)
 ```
 
 
@@ -571,16 +572,45 @@ Run general linear regression. The number of lightning strikes and the saturatio
 ```{r}
 GLM <- glm(formula = FireBool ~ LightningCount + Ql, family = binomial, data = merge2.df)
 
+pred_GLM <- predict(object = GLM,
+                    type = "response",
+                    se.fit = TRUE)
+
+ggplot(mapping = aes(x = merge2.df$Ql, y = merge2.df$LightningCount, color = pred_GLM$fit)) +
+  geom_point() +
+  scale_color_gradient(low = "orange", high = "red4") +
+  xlab("KBDI") +
+  ylab("Number of Lightning Strikes") +
+  labs(color = "Probability of Fire") +
+  labs(title = "Predicted Probability of Fire Occurance\nBased on Daily KBDI Values and Daily Lightning Strikes",
+       caption = "Period of Record: 1-1-1992 to 5-20-2012")
+  
+
 #GLM
-summary(GLM)
+#summary(GLM)
 #exp(GLM$coefficients)
 ```
 
+Filter for fire season
+```{r}
+GLMFS <- glm(formula = FireBool ~ LightningCount + Ql, family = binomial, data = fireSeasondates.df)
 
+pred_GLMFS <- predict(object = GLMFS,
+                    type = "response",
+                    se.fit = TRUE)
+
+ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = fireSeasondates.df$LightningCount, color = pred_GLMFS$fit)) +
+  geom_point() +
+  scale_color_gradient(low = "orange", high = "red4") +
+  xlab("KBDI") +
+  ylab("Number of Lightning Strikes") +
+  labs(color = "Probability of Fire") +
+  labs(title = "Predicted Probability of Fire Occurance\nBased on Daily KBDI Values and Daily Lightning Strikes",
+       caption = "Fire Season Months (May - July) 1992 - 2013")
+```
 
 
 Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.
-
 Explore relationship between the number of fires and fire size.
 
 ```{r}
