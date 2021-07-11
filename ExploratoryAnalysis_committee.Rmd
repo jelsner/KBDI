@@ -358,7 +358,7 @@ st_transform(crs = 3086)
   #filter(NFSLANDU_2 == 'Apalachicola National Forest')
 
 #filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
-anf_fires.sf <- anf_fires.sf <- st_join(FL_Fires.sf, ANFcountyBounds.sf, join = st_within) %>%
+anf_fires.sf <- st_join(FL_Fires.sf, ANFcountyBounds.sf, join = st_within) %>%
   filter(CNTY_FIPS != "NA") %>%
   select(FOD_I, FIRE_N, FIRE_Y, DISCOVERY_, STAT_CAU_1, FIRE_SIZE, FIRE_SIZE_, LATIT, LONGI, NAME, FIPS, geometry)
 
@@ -369,22 +369,25 @@ anf_LF.sf <- anf_fires.sf %>%
 Archived fire data has been updated through 2018. Use this code chunk for most up to data fire file.
 Website link with data and metadata
 https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.5 
-```{r}
-if(!"updatedFires" %in% list.files()){
-download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GDB.zip",
-"updatedFires.zip")
-unzip("updatedFires.zip")
-}
-updatedFires.sf <- st_read(dsn = "updatedFires.zip") %>%
-st_transform(crs = 3086)
 
-#filtered fires within ANF bounds
-anf_fires.sf <- st_join(updatedFL_Fires.sf, anfbounds.sf, join = st_within) %>%
-  filter(NFSLANDU_2 == 'Apalachicola National Forest')
+Fire set downloaded and pulled from file rather than directly from the website. Had errors when trying to import it directly from the website because the file format could not be read. Downloaded and converted to more user friendly shapefiles in ESRI.
+
+New Data Set has change categories for cause. Lightning is not listed. Is lightning the equivalent of fires filtered as natural? Explore this at the bottom of the rmd.
+```{r}
+updatedFires.sf <- st_read(dsn = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/updatedFires",
+                           layer = "FLFiresUpdated") %>%
+  st_transform(crs = 3086)
+
+#filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
+anf_fires.sf <- st_join(updatedFires.sf, ANFcountyBounds.sf, join = st_within) %>%
+  filter(CNTY_FIPS != "NA") %>%
+  select(FOD_I, FIRE_N, FIRE_Y, DISCOVERY_, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_, LATIT, LONGI, NAME, FIPS, geometry)
 
 anf_LF.sf <- anf_fires.sf %>%
   filter(STAT_CAU_1 == "Lightning")
 ```
+
+
 
 View fire points that have been bounded by four counties (Liberty, Leon, Wakulla, and Franklin)
 ```{r}
@@ -567,6 +570,29 @@ ggplot(mapping = aes(x = merge2.df$Ql, y = pred_glmQl$fit)) +
     caption = "Period of Record: 1-1-1992 to 5-20-2012")
 ```
 
+KBDI impacts on lightning wildfire occurrence during the fire season. KBDI has a much stronger impact during the fire season months.
+```{r}
+glmQlFS <- glm(formula = FireBool ~ Ql, family = binomial, data = fireSeasondates.df)
+
+pred_glmQlFS <- predict(object = glmQlFS,
+                      type = "response",
+                      se.fit = TRUE)
+
+lowerQlFS <- pred_glmQlFS$fit - (1.96*pred_glmQlFS$se.fit)
+upperQlFS <- pred_glmQlFS$fit + (1.96*pred_glmQlFS$se.fit)
+
+ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = pred_glmQlFS$fit)) +
+  geom_ribbon(aes(ymin = lowerQlFS, ymax = upperQlFS), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Daily Ql") +
+  labs(
+    title = "Predicted Probability of Fire Occurance Based on Daily KBDI Values\nFiltered By Fire Season Months",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Fire Season Months (May - July) 1992 - 2013")
+```
+
+
 
 Run general linear regression. The number of lightning strikes and the saturation of the soil are both statistically significant.
 ```{r}
@@ -636,7 +662,70 @@ head(seasonSummary)
 
 
 
+###Explore updated fire data set compared to the old data set
 
+Filters have changed between the new data set, and fires are not defined by cause = lightning. Natural is introduced as a new classification. Are lightning fires the equivalent of natural fires?
+
+Per meta data (copy and pasted):
+NWCG_CAUSE_CLASSIFICATION = Broad classification of the reason the fire occurred (Human, Natural, Missing data/not specified/undetermined).
+
+NWCG_GENERAL_CAUSE = Event or circumstance that started a fire or set the stage for its occurrence (Arson/incendiarism, Debris and open burning, Equipment and vehicle use, Firearms and explosives use, Fireworks, Misuse of fire by a minor, Natural, Power generation/transmission/distribution, Railroad operations and maintenance, Recreation and ceremony, Smoking, Other causes, Missing data/not specified/undetermined).
+
+
+Create est simple features for old data
+```{r}
+if(!"FL_Fires" %in% list.files()){
+download.file("http://myweb.fsu.edu/jelsner/temp/data/FL_Fires.zip",
+"FL_Fires.zip")
+unzip("FL_Fires.zip")
+}
+FL_FiresTest1.sf <- st_read(dsn = "FL_Fires") %>%
+st_transform(crs = 3086)
+
+#filtered fires within ANF bounds
+#anf_fires.sf <- st_join(FL_Fires.sf, anfbounds.sf, join = st_within) %>%
+  #filter(NFSLANDU_2 == 'Apalachicola National Forest')
+
+#filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
+anf_firesTest1.sf <- st_join(FL_FiresTest1.sf, ANFcountyBounds.sf, join = st_within) %>%
+  filter(CNTY_FIPS != "NA") %>%
+  select(FOD_I, FIRE_N, FIRE_Y, DISCOVERY_, STAT_CAU_1, FIRE_SIZE, FIRE_SIZE_, LATIT, LONGI, NAME, FIPS, geometry)
+
+anf_LFTest1.sf <- anf_firesTest1.sf %>%
+  filter(STAT_CAU_1 == "Lightning") %>%
+  #drop geometry so data sets can merge
+  st_drop_geometry()
+```
+
+Create test simple features for new data
+```{r}
+updatedFiresTest2.sf <- st_read(dsn = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/updatedFires",
+                           layer = "FLFiresUpdated") %>%
+  st_transform(crs = 3086)
+
+#filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
+anf_firesTest2.sf <- st_join(updatedFiresTest2.sf, ANFcountyBounds.sf, join = st_within) %>%
+  filter(CNTY_FIPS != "NA") %>%
+  select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_, NWCG_CAUSE, NWCG_GENER, FIRE_SIZE, FIRE_SIZE_, LATITUDE, LONGITUDE, COUNTY, FIPS_CODE, geometry)
+
+anf_LFTest2.sf <- anf_firesTest2.sf %>%
+  filter(NWCG_GENER == "Natural")
+```
+
+Join two data sets together to do bolean comparison. Boolean column is all TRUE. Therefore we can conclude that fires filtered as natural are the equivalent of fires filtered as Lightning in the 2015 data set.
+```{r}
+TestFires.sf <- left_join(x = anf_LFTest2.sf, y = anf_LFTest1.sf, by = c("FOD_ID" = "FOD_I")) %>%
+  select(FOD_ID, FIRE_NAME, FIRE_N, FIRE_YEAR, FIRE_Y, NWCG_GENER, STAT_CAU_1) %>%
+  rename(NAME2018 = FIRE_NAME, NAME2015 = FIRE_N, YEAR2018 = FIRE_YEAR, YEAR2015 = FIRE_Y, CAUSE2018 = NWCG_GENER, CAUSE2015 = STAT_CAU_1)
+
+#create bool argeument to test if Lightining Fires are equivalent to Natural Fires
+TestFires.sf$BOOL <- TestFires.sf$CAUSE2018 == "Natural" & TestFires.sf$CAUSE2015 == "Lightning"
+```
+
+Count number of new data points added in the 2018 set. There are 30 new data points.
+```{r}
+sum(is.na(TestFires.sf$YEAR2015))
+```
 
 
 ###Still Working on this
