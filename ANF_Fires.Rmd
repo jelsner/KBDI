@@ -104,6 +104,8 @@ From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/_metadata_RDS
 Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2018. It is the fourth update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as a Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG), including an updated wildfire-cause standard (approved August 2020). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. In addition to incorporating data for 2016-2018, some previously unavailable nonfederal wildfire records for the period 1999-2015 were acquired either directly from the state fire services (NH, NJ) or indirectly from an updated National Association of State Foresters database (AR, AZ, CA, CO, FL, HI, ID, IL, OK, SD) and added. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 2.17 million geo-referenced wildfire records, representing a total of 165 million acres burned during the 27-year period. Identifiers necessary to link the point-based, final-fire-reporting information to published large-fire-perimeter and operational-situation-reporting datasets are included.
 
 See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/
+
+Not used.
 ```{r}
 Fires2.sf <- st_read(dsn = "NIFC_ANF_firesshapefile",
                      layer = "NIFCboundedfires")
@@ -401,15 +403,13 @@ ggplot(data = sc,
   theme_minimal() 
 ```
 
-Cloud to ground lightning is most common in the ANF between June through August. The natural wildfire season is the cross correlation between the dry season and the lightning season. https://en.wikipedia.org/wiki/Cross-correlation
+Cloud to ground lightning is most common in the ANF between June through August. The wildfire season beats to the rhythms of drying and lightning.
 
 ## Get TLH airport daily weather data and compute the Keetch & Byram drought index
 
-Drought indices: https://piahs.copernicus.org/articles/383/291/2020/
-
 Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
 
-The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indexes specifically developed to equate the effects of drought with potential fire behavior. 
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Units are 100's of inches. KBDI relates current and recent weather conditions to potential or expected fire behavior. It was originally developed for the Southeast United States and is based primarily on recent rainfall patterns. It is one of the only drought indexes specifically developed to equate the effects of drought with potential fire behavior. KBDI is used for fire studies as opposed to hydrological drought indices: https://piahs.copernicus.org/articles/383/291/2020/ 
 
 For different soil types, the depth of soil required to hold 8 inches of moisture varies (loam = 30", clay = 25" and sand = 80"). A prolonged drought (high KBDI) influences fire intensity largely because more fuel is available for combustion (i.e. fuels have a lower moisture content). In addition, the drying of organic material in the soil can make it harder to suppress fires.
 
@@ -421,7 +421,7 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-Import the summary of the day data and add columns to the data frame. Assign no rainfall on days with missing values.
+Import the summary of the day data and add columns to the data frame. Assign zero rainfall on days with missing values.
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
                    stringsAsFactors = FALSE,
@@ -433,14 +433,58 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
          MaxTemp = TMAX,
          MinTemp = TMIN,
          Rainfall24 = PRCP,
-         Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4)
 
-TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96 # missing max temperature. Filled from weather underground data
-
 sum(is.na(TLH.df$PRCP))
-nrow(TLH.df)
-sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [< .02% of all days]
+sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [~ .0171% of all days]
+sum(is.na(TLH.df$TMAX))
+sum(is.na(TLH.df$TMAX)) / nrow(TLH.df) * 100  # only 1 missing value [~ .0034% of all days]
+
+# Missing temperature and rainfall filled in from NCDC daily summaries
+# https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
+TLH.df$Rainfall24[is.na(TLH.df$PRCP)] <- c(.1, .3, 0, .1, 0)
+TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
+```
+
+Plot monthly values of average daily high temperature and average month rainfall.
+```{r}
+df <- TLH.df %>%
+  filter(Year >= 1944 & Year <= 2019) %>%
+  group_by(month) %>%
+  summarize(totalRain = sum(Rainfall24mm),
+            avgMonthlyTotalRain = totalRain/76,
+            avgDailyHighTemp = mean(MaxTemp))
+
+p1 <- ggplot(data = df,
+             mapping = aes(x = month, y = avgMonthlyTotalRain, fill = avgMonthlyTotalRain)) +
+        geom_col() +
+        scale_fill_distiller(palette = "Greens",
+                         direction = 1, 
+                         guide = 'none') +
+        theme_dark() +
+        labs(x = "", y = "(mm)",
+             title = "Average monthly rainfall amount in the Apalachicola National Forest",
+             subtitle = "1944-2019")
+
+
+p2 <- ggplot(data = df,
+             mapping = aes(x = month, y = avgDailyHighTemp, color = avgDailyHighTemp)) +
+        geom_point(size = 4) +
+        scale_color_distiller(palette = "Oranges",
+                              direction = 1, 
+                              guide = 'none') +
+        scale_y_continuous(limits = c(60, 100)) +
+        theme_dark() +
+        labs(x = "", y = "(°F)",
+             title = "Average daily high temperature in the Apalachicola National Forest",
+             subtitle = "1944-2019")
+
+library(patchwork)
+
+p1 / p2
+
 ```
 
 Compute daily values of the KBDI. Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with a minor correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
