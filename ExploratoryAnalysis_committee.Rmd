@@ -269,17 +269,98 @@ p2_1991 / p1_1991 +
   theme(legend.position = "bottom")
 ```
 
-Create 4 panel plot showing showing 1940 and 1941 side by side.
-The 1940 data does not start until March. Should these be compared, or should another full year date be chosen?
-Only use one legend to represent plot.
-Could net rainfall plot use bars rather than lines?
+Display Q-values for 1941, the first full year of data. Compare this to 1991, one year before the period of fire data.
+Filtering TLH data frame to start in 1991. This is one year prior to the fire data obtained from the Forest Service Research Data Archive
 ```{r}
-((p2_1940 + ylim(0,5)) + (p2_1991 + ylim(0, 5) + scale_x_date(date_labels = "%b %Y"))) / (p1_1940 + (p1_1991 + scale_x_date(date_labels = "%b %Y"))) +
+TLH1941.df <- TLH.df %>%
+  filter(year(Date) >= 1941)
+```
+
+Initialize different Q values starting in 1941 and create rangeQ1941.df
+```{r}
+Rainfall24 <- TLH1941.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+CumR <- 0
+NetR <- numeric()
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH1941.df$NetR <- NetR
+R <- 59.23
+
+rangeQ1941.df <- TLH1941.df %>%
+  select(Date, Rainfall24, MaxTemp, NetR)
+
+for(i in 1:9){
+  Q2 <- i-1
+  Q <- Q2*100
+  MaxTemp <- TLH1941.df$MaxTemp
+  Ql <- numeric()
+  for(i in 1:length(Rainfall24)){
+    DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+    Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+    Q <- ifelse(Q < 0, 0, Q) 
+    Ql <- c(Ql, Q)
+  }
+  rangeQ1941.df[, ncol(rangeQ1941.df)+1] <- Ql
+  colnames(rangeQ1941.df) <- c("Date", "Rainfall24", "MaxTemp", "NetR", "Q0", "Q100", "Q200", "Q300", "Q400", "Q500", "Q600", "Q700", "Q800")
+}
+```
+
+Create plots of 1941 to be compared with 1991
+```{r}
+p1_1941 <- rangeQ1941.df %>% 
+  filter(year(Date) == 1941) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(aes(y = Q0, color = "0")) +
+    geom_line(aes(y = Q400, color = "400")) + 
+    geom_line(aes(y = Q800, color = "800")) +
+    scale_color_manual("Initial Q-values",
+                       breaks = c("0", "400", "800"),
+                       values = c("red", "blue", "black")) +
+  ylab("KBDI") +
+  scale_x_date(date_labels = "%b %Y")
+  #theme(legend.position = "bottom")
+  #theme(legend.position = c(0.8,0.3)
+
+p2_1941 <- rangeQ1941.df %>% 
+  filter(year(Date) == 1941) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(mapping = aes(y = Rainfall24)) +
+  ylab("24Hr Net Rainfall") +
+  scale_x_date(date_labels = "%b %Y")
+```
+
+Create 4 panel plot showing showing 1941 (first full year of KBDI data) and 1991(one year prior to the start of fire data) side by side.
+```{r}
+((p2_1941 + ylim(0,5)) + (p2_1991 + ylim(0, 5))) / 
+  ((p1_1941 + theme(legend.position = "none")) + p1_1991) +
   plot_annotation(
     title = "KBDI values merge with time regardless of initial Q-values",
     subtitle = "Q-values intialized at 0, 400, and 800",
-    caption = "Period of Record: 1940 (Left) & 1991 (Right)") &
-  theme(legend.position = "bottom")
+    caption = "Period of Record: 1940 (Left) & 1991 (Right)")
 ```
 
 
