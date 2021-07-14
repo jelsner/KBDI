@@ -128,20 +128,23 @@ p1_1940 <- rangeQ.df %>%
                        breaks = c("0", "400", "800"),
                        values = c("red", "blue", "black")) +
   ylab("KBDI") +
-  theme(legend.position = "bottom")
+  scale_x_date(date_labels = "%b %Y")
+  #theme(legend.position = "bottom")
   #theme(legend.position = c(0.8,0.3)
 
 p2_1940 <- rangeQ.df %>% 
   filter(year(Date) == 1940) %>%
   ggplot(mapping = aes(x = Date)) +
     geom_line(mapping = aes(y = Rainfall24)) +
-  ylab("24Hr Net Rainfall")
+  ylab("24Hr Net Rainfall") +
+  scale_x_date(date_labels = "%b %Y")
 
-p1_1940 + p2_1940 +
+p2_1940 / p1_1940 +
   plot_annotation(
     title = "KBDI values merge with time regardless of initial Q-values",
     subtitle = "Q-values intialized at 0, 400, and 800",
-    caption = "Period of Record: March 1940 - December 1940") 
+    caption = "Period of Record: March 1940 - December 1940") +
+  theme(legend.position = "bottom")
 ```
 
 
@@ -216,20 +219,23 @@ p1_1991 <- rangeQ1991.df %>%
                        breaks = c("0", "400", "800"),
                        values = c("red", "blue", "black")) +
   ylab("KBDI") +
-  theme(legend.position = "bottom")
+  scale_x_date(date_labels = "%b %Y")
+  #theme(legend.position = "bottom")
   #theme(legend.position = c(0.8,0.3)
 
 p2_1991 <- rangeQ1991.df %>% 
   filter(year(Date) == 1991) %>%
   ggplot(mapping = aes(x = Date)) +
     geom_line(mapping = aes(y = Rainfall24)) +
-  ylab("24Hr Net Rainfall")
+  ylab("24Hr Net Rainfall") +
+  scale_x_date(date_labels = "%b %Y")
 
-p1_1991 + p2_1991 +
+p2_1991 / p1_1991 +
   plot_annotation(
     title = "KBDI values merge with time regardless of initial Q-values",
     subtitle = "Q-values intialized at 0, 400, and 800",
-    caption = "Period of Record: 1991") 
+    caption = "Period of Record: 1991") +
+  theme(legend.position = "bottom")
 ```
 
 focus plot on first month
@@ -244,8 +250,8 @@ p1_1991 <- rangeQ1991.df %>%
     scale_color_manual("Initial Q-values",
                        breaks = c("0", "400", "800"),
                        values = c("red", "blue", "black")) +
-  ylab("KBDI") +
-  theme(legend.position = "bottom")
+  ylab("KBDI")
+  #theme(legend.position = "bottom")
   #theme(legend.position = c(0.8,0.3)
 
 p2_1991 <- rangeQ1991.df %>% 
@@ -255,12 +261,28 @@ p2_1991 <- rangeQ1991.df %>%
     geom_line(mapping = aes(y = Rainfall24)) +
   ylab("24Hr Net Rainfall")
 
-p1_1991 + p2_1991 +
+p2_1991 / p1_1991 +
   plot_annotation(
     title = "KBDI values merge with time regardless of initial Q-values",
     subtitle = "Q-values intialized at 0, 400, and 800",
-    caption = "Period of Record: January 1991") 
+    caption = "Period of Record: January 1991") +
+  theme(legend.position = "bottom")
 ```
+
+Create 4 panel plot showing showing 1940 and 1941 side by side.
+The 1940 data does not start until March. Should these be compared, or should another full year date be chosen?
+Only use one legend to represent plot.
+Could net rainfall plot use bars rather than lines?
+```{r}
+((p2_1940 + ylim(0,5)) + (p2_1991 + ylim(0, 5) + scale_x_date(date_labels = "%b %Y"))) / (p1_1940 + (p1_1991 + scale_x_date(date_labels = "%b %Y"))) +
+  plot_annotation(
+    title = "KBDI values merge with time regardless of initial Q-values",
+    subtitle = "Q-values intialized at 0, 400, and 800",
+    caption = "Period of Record: 1940 (Left) & 1991 (Right)") &
+  theme(legend.position = "bottom")
+```
+
+
 
 
 ##Explore lightning data and concerns mentioned by committee.
@@ -511,7 +533,7 @@ ggplot(mapping = aes(x = merge2.df$LightningCount, y = pred_glmLightning$fit)) +
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
   labs(
-    title = "Predicted Probability of a Fire Occurance Based on the Number of Lightning Strikes in a Day",
+    title = "Predicted Probability of a Fire Occurrence Based on the Number of Lightning Strikes in a Day",
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: 1-1-1992 to 5-20-2013")
 ```
@@ -541,7 +563,7 @@ ggplot(mapping = aes(x = fireSeasondates.df$LightningCount, y = pred_glmLightnin
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
   labs(
-    title = "Predicted Probability of Fire Occurance Based on the Number of Lightning Strikes in a Day\nFiltered By Fire Season Months",
+    title = "Predicted Probability of Fire Occurrence Based on the Number of Lightning Strikes in a Day\nFiltered By Fire Season Months",
     subtitle = "With 95% Confidence Interval",
     caption = "Fire Season Months (May - July) 1992 - 2013")
 ```
@@ -565,7 +587,7 @@ ggplot(mapping = aes(x = merge2.df$Ql, y = pred_glmQl$fit)) +
   ylab("Predicited Probablility") +
   xlab("Daily Ql") +
   labs(
-    title = "Predicted Probability of Fire Occurance Based on Daily KBDI Values",
+    title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values",
     subtitle = "With 95% Confidence Interval",
     caption = "Period of Record: 1-1-1992 to 5-20-2012")
 ```
@@ -587,7 +609,7 @@ ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = pred_glmQlFS$fit)) +
   ylab("Predicited Probablility") +
   xlab("Daily Ql") +
   labs(
-    title = "Predicted Probability of Fire Occurance Based on Daily KBDI Values\nFiltered By Fire Season Months",
+    title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values\nFiltered By Fire Season Months",
     subtitle = "With 95% Confidence Interval",
     caption = "Fire Season Months (May - July) 1992 - 2013")
 ```
@@ -608,7 +630,7 @@ ggplot(mapping = aes(x = merge2.df$Ql, y = merge2.df$LightningCount, color = pre
   xlab("KBDI") +
   ylab("Number of Lightning Strikes") +
   labs(color = "Probability of Fire") +
-  labs(title = "Predicted Probability of Fire Occurance\nBased on Daily KBDI Values and Daily Lightning Strikes",
+  labs(title = "Predicted Probability of Fire Occurrence\nBased on Daily KBDI Values and Daily Lightning Strikes",
        caption = "Period of Record: 1-1-1992 to 5-20-2012")
   
 
@@ -631,7 +653,7 @@ ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = fireSeasondates.df$Lightning
   xlab("KBDI") +
   ylab("Number of Lightning Strikes") +
   labs(color = "Probability of Fire") +
-  labs(title = "Predicted Probability of Fire Occurance\nBased on Daily KBDI Values and Daily Lightning Strikes",
+  labs(title = "Predicted Probability of Fire Occurrence\nBased on Daily KBDI Values and Daily Lightning Strikes",
        caption = "Fire Season Months (May - July) 1992 - 2013")
 ```
 
