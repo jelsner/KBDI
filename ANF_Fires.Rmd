@@ -437,10 +437,11 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
          MaxTemp = TMAX,
          MinTemp = TMIN,
          Rainfall24 = PRCP,
-         Rainfall24mm = Rainfall24 * 25.4)
+         Rainfall24mm = Rainfall24 * 25.4) %>%
+  filter(Year <= 2020)
 
 sum(is.na(TLH.df$PRCP))
-sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [~ .0171% of all days]
+sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [~ .017% of all days]
 sum(is.na(TLH.df$TMAX))
 sum(is.na(TLH.df$TMAX)) / nrow(TLH.df) * 100  # only 1 missing value [~ .0034% of all days]
 
@@ -452,7 +453,7 @@ TLH.df$Rainfall24[is.na(TLH.df$PRCP)] <- c(.1, .3, 0, .1, 0)
 TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
 
 ( AnnualRainfall <- TLH.df %>%
-  filter(Year > 1940) %>%  # data started in March 1940
+  filter(Year >= 1943) %>%  # complete data started in March 1943
   group_by(Year) %>%
   summarize(totalRainfall = sum(Rainfall24)) %>%
   pull(totalRainfall) %>%
@@ -462,7 +463,7 @@ TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
 Plot monthly values of average daily high temperature and average month rainfall.
 ```{r}
 df <- TLH.df %>%
-  filter(Year >= 1944 & Year <= 2019) %>%
+  filter(Year >= 1943 & Year <= 2019) %>%
   group_by(month) %>%
   summarize(totalRain = sum(Rainfall24mm),
             avgMonthlyTotalRain = totalRain/76,
@@ -477,7 +478,7 @@ p1 <- ggplot(data = df,
         theme_dark() +
         labs(x = "", y = "(mm)",
              title = "Average monthly rainfall amount in the Apalachicola National Forest",
-             subtitle = "1944-2019")
+             subtitle = "1943-2020")
 
 
 p2 <- ggplot(data = df,
@@ -490,7 +491,7 @@ p2 <- ggplot(data = df,
         theme_dark() +
         labs(x = "", y = "(°F)",
              title = "Average daily high temperature in the Apalachicola National Forest",
-             subtitle = "1944-2019")
+             subtitle = "1943-2020")
 
 library(patchwork)
 
@@ -559,7 +560,7 @@ TLH.df$DeltaQl <- DeltaQl
 TLH.df$DroughtIndex <- floor(Ql/100)
 
 TLH.df <- TLH.df %>%
- dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years after the daily Q values have converged
+ dplyr::filter(Year >= 1943 & Year <= 2020) # Only full years after the daily Q values have converged
 range(TLH.df$Ql)
 ```
 
@@ -586,7 +587,7 @@ ggplot(mapping = aes(y = MonthF,
   labs(x = "", y = "",
        title = "May through November is the dry season in the Apalachicola National Forest",
        subtitle = "Average soil moisture deficit (mm)",
-       caption = "Period of record: 1946-2019, Data source: NWSFO Tallahassee") +
+       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
   theme_dark() 
 ```
 
@@ -602,7 +603,7 @@ ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
        subtitle = "Daily soil moisture deficit (mm)", 
-       caption = "Period of record: 1946-2019, Data source: NWSFO Tallahassee") 
+       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
 
 TLH.df %>%
   group_by(month, Year) %>%
@@ -617,9 +618,9 @@ TLH.df %>%
   facet_wrap(~ month, ncol = 12) +
   theme_dark() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Dry months are getting drier in the Apalachicola National Forest.",
+  labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
        subtitle = "Monthly average soil moisture deficit (mm) by year with trend line (gray)", 
-       caption = "Period of record: 1946-2019, Data source: NWSFO Tallahassee") 
+       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
 ```
 
 Side-by-side daily distribution plots (early vs late) by month. 1946:1980, 1981:2019
@@ -628,7 +629,7 @@ TLH.df %>%
   mutate(Epoch = Year > 1980) %>%
   ggplot(aes(x = Qlm, color = Epoch)) +
   geom_freqpoly(size = 1, bins = 8) +
-  scale_color_manual(labels = c("1946-1980", "1981-2019"), values = c("black", "sandybrown")) +
+  scale_color_manual(labels = c("1943-1980", "1981-2020"), values = c("black", "sandybrown")) +
   scale_x_continuous(limits = c(0, 250), breaks = c(0, 100, 200)) +
   ylab("Number of days") + xlab("Daily soil moisture deficit (mm)") +
   facet_wrap(~ month, ncol = 12) +
@@ -688,10 +689,11 @@ df <- TLH.df %>%
   summarize(AvgHiTemp = mean(MaxTemp),
             AvgLoTemp = mean(MinTemp),
             TotalPrcp = sum(Rainfall24mm),
+            TotalNetR = sum(NetR),
             AvgQlm = mean(Qlm))
 
 ggplot(df, 
-       mapping = aes(y = TotalPrcp, x = AvgHiTemp, label = Year, color = factor(Year))) +
+       mapping = aes(y = TotalNetR, x = AvgHiTemp, label = Year, color = factor(Year))) +
   geom_point() +
   geom_label_repel(size = 2.5) +
   scale_y_continuous(limits = c(0, NA)) +
@@ -715,7 +717,7 @@ SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indica
   dplyr::select(Year, Month, month, SOI)
 
 Joined.df <- TLH.df %>% 
-  dplyr::filter(Year >= 1961) %>%
+  dplyr::filter(Year >= 1951) %>%
   group_by(Year, month) %>%
   summarize(AvgQlm = mean(Qlm)) %>%
   dplyr::select(Year, month, AvgQlm) %>%
@@ -732,7 +734,7 @@ Joined.df %>%
   dplyr::filter(term == "SOI")
 ```
 
-SOI is positively correlated with moisture deficit. La Nina conditions (positive SOI) during winter leads to larger moisture deficits (higher Qlm).
+SOI is positively correlated with moisture deficit. La Nina conditions (positive SOI) during winter into spring leads to larger moisture deficits (higher Qlm). The upward trend in Qlm remains significant after accounting for SOI.
 
 In terms of frequency by Drought Index category. Proportion of the year in each drought category.
 ```{r}
@@ -742,7 +744,7 @@ TLH.df %>%
   ggplot(aes(x = Year, y = N)) +
   geom_col(aes(fill = as.factor(DroughtIndex))) +
   scale_fill_manual(values = terrain.colors(8), name = "KDBI") +
-  scale_x_continuous(name = "", breaks = seq(1948, 2019, 4)) +
+  scale_x_continuous(name = "", breaks = seq(1941, 2020, 4)) +
   scale_y_reverse() +
   theme_minimal() +
   theme(axis.title.y = element_blank(),
@@ -751,7 +753,7 @@ TLH.df %>%
   guides(fill = guide_legend(reverse = TRUE)) +
   labs(title = "The proportion of the year in drought (KDBI > 5) in the ANF has increased since 1960",
        subtitle = "KDBI = 7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated",
-       caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee") 
+       caption = "Period of record: 1941-2020, Data source: NWSFO Tallahassee") 
 ```
 
 Daily
@@ -759,7 +761,7 @@ Daily
 ggplot(data = TLH.df, 
        mapping = aes(x = doy, y = Year, fill = Qlm)) +
   geom_tile() +
-  scale_y_reverse(breaks = seq(1948, 2020, 4)) +
+  scale_y_reverse(breaks = seq(1941, 2020, 4)) +
   scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
                      labels = month.abb, position = "top") +
 #  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
@@ -768,7 +770,7 @@ ggplot(data = TLH.df,
   theme_minimal() +
   labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest", 
       subtitle = "Daily soil moisture deficit (mm)",
-      caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee") 
+      caption = "Period of record: 1941-2020, Data source: NWSFO Tallahassee") 
 
 ggplot(data = TLH.df, 
        mapping = aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
@@ -790,7 +792,6 @@ Number of days per year with KBDI above 650.
 library(MASS)
 
 TLH.df %>%
-  filter(Year != 2020) %>%
   group_by(Year) %>%
   summarize(nD = sum(Ql > 650)) %>%
   ggplot(aes(Year, nD)) +
