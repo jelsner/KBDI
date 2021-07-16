@@ -1,6 +1,7 @@
-# The script estimates net rainfall from 24-hr (daily) totals in inches
+# The script estimates net rainfall from 24-hr (daily) totals in inches. 
+# No missing values are allowed.
 netRainfall <- function(arg1) {
-  PR <- dplyr::lag(arg1)
+  PR <- lag(arg1)
   PR[1] <- 0
   
   CumR <- 0

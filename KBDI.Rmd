@@ -97,7 +97,7 @@ Rainfall24 <- TLH.df$Rainfall24
 TLH.df$NetR2 <- netRainfall(Rainfall24)
 ```
 
-Step two: Compute drought index.
+Step two: Compute drought index. Make this a function called `droughtIndex()`.
 ```{r}
 Q <- 269
 R <- 59.23
