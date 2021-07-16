@@ -91,42 +91,10 @@ Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_i
 
 Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bin/get_archive_v2.py?date=2017-05-01 (only past three years are available). Annual avg precipitation for Tallahassee, FL: https://www.usclimatedata.com/climate/tallahassee/florida/united-states/usfl0479 : 59.23 in.
 
-Step one: Compute net rainfall.
+Step one: Compute net rainfall. Make this a function called `netRainfall()`.
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
-
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[i]
-  
-  if ( R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if( R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-  
-  else if ( R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-TLH.df$NetR <- NetR
+TLH.df$NetR2 <- netRainfall(Rainfall24)
 ```
 
 Step two: Compute drought index.
