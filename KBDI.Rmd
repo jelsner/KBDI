@@ -50,7 +50,7 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought. 
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch-Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought. 
 
 Import the data.
 ```{r}
@@ -94,15 +94,17 @@ Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bi
 Step one: Compute net rainfall. Make this a function called `netRainfall()`.
 ```{r}
 Rainfall24 <- TLH.df$Rainfall24
-TLH.df$NetR2 <- netRainfall(Rainfall24)
+TLH.df$NetR <- netRainfall(Rainfall24)
 ```
 
 Step two: Compute drought index. Make this a function called `droughtIndex()`.
 ```{r}
 Q <- 269
 R <- 59.23
-
 MaxTemp <- TLH.df$MaxTemp
+NetR <- TLH.df$NetR
+
+x <- droughtIndex(Q, R, MaxTemp, NetR)
 
 Ql <- numeric()
 DeltaQl <- numeric()

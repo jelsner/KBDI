@@ -33,6 +33,12 @@ R version 4.0.5 (2021-03-31) -- "Shake and Throw"
 
 Fire is controlled by two things: ignition and fuel. Climate change impacts both by increasing flammability (the likelihood something will burn) and the availability of dead, dry stuff on the landscape to burn. People and lightning are ignitors. 
 
+Wildfires require a spark and fuel. In the United States, half of wildfires are initiated by lighting. The other half are human-caused — frequently started by power lines, cigarettes, cars, camp fires or arson. In recent years, there’s been an abundance of very dry fuel. Drought and high heat can kill trees and dry out dead grass, pine needles, and any other material on the bottom of the forest floor that act as kindling when a fire sweeps through a forest. Wildfire experts see the signature of climate change in the dryness, high heat and longer fire season that have made these fires more extreme. “We wouldn’t be seeing this giant ramp up in fire activity as fast as it is happening without climate change,” said Park Williams, a climate scientist at UCLA. 
+
+Like air pollution, wildfire smoke — and particularly the concentration of PM 2.5, or particles smaller than 2.5 microns — can affect the respiratory and cardiovascular systems, said Colleen Reid, an environmental epidemiologist and health geographer at the University of Colorado Boulder.
+
+
+
 ## Get the required packages
 ```{r}
 library(sf)
