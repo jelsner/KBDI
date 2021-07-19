@@ -469,11 +469,32 @@ anf_LF.sf <- anf_fires.sf %>%
   filter(STAT_CAU_1 == "Lightning")
 ```
 
-Archived fire data has been updated through 2018. Use this code chunk for most up to data fire file.
+Archived fire data has been updated through 2018.
 Website link with data and metadata
 https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.5 
 
-Fire set downloaded and pulled from file rather than directly from the website. Had errors when trying to import it directly from the website because the file format could not be read. Downloaded and converted to more user friendly shapefiles in ESRI.
+Attempt to read file in directly from wesite. Still recieving errors.
+```{r}
+if(!"Fires2018" %in% list.files()){
+  download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GPKG.zip",
+                "Data/updatedFireData/Fires2018.zip")
+  unzip("Data/updatedFireData/Fires2018.zip",
+        exdir = "Data/updatedFireData")
+}
+
+updatedFires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
+  filter(STATE == "FL") 
+
+#filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
+anf_fires.sf <- st_join(updatedFires.sf, ANFcountyBounds.sf, join = st_within) %>%
+  filter(CNTY_FIPS != "NA") %>%
+  select(FOD_I, FIRE_N, FIRE_Y, DISCOVERY_, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_, LATIT, LONGI, NAME, FIPS, geometry)
+
+anf_LF.sf <- anf_fires.sf %>%
+  filter(STAT_CAU_1 == "Lightning")
+```
+
+Fire set downloaded and pulled from file rather than directly from the website. Had errors when trying to import it directly from the website. Downloaded and converted to more user friendly shapefiles in ESRI.
 
 New Data Set has change categories for cause. Lightning is not listed. Is lightning the equivalent of fires filtered as natural? Explore this at the bottom of the rmd.
 ```{r}
@@ -738,8 +759,7 @@ ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = fireSeasondates.df$Lightning
        caption = "Fire Season Months (May - July) 1992 - 2013")
 ```
 
-
-Explore if the occurrence of a large fire creates a time lag in the occurrence of another fire.
+### Does the occurance of a large fire create a time lag in the occurrence of another fire?
 Explore relationship between the number of fires and fire size.
 
 ```{r}
@@ -762,6 +782,14 @@ head(seasonSummary)
 
 #cor(seasonSummary$nFIRES, seasonSummary$LargestFire)
 ```
+
+###Compare predicted number of fires for a season with actual values
+
+Explore KBDI by season
+```{r}
+
+```
+
 
 
 
@@ -829,80 +857,6 @@ Count number of new data points added in the 2018 set. There are 30 new data poi
 ```{r}
 sum(is.na(TestFires.sf$YEAR2015))
 ```
-
-
-###Still Working on this
-Further exploring fire and drought data before starting larger regression models:
-Plot data and explore trends.
-
-```{r}
-Rainfall24 <- TLH.df$Rainfall24
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
-
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[i]
-  if (R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if(R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-  else if (R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-TLH.df$NetR <- NetR
-
-Q <- 269  
-R <- 59.23 # average annual rainfall for TLH in inches
-
-MaxTemp <- TLH.df$MaxTemp
-
-Ql <- numeric()
-DeltaQl <- numeric()
-for(i in 1:length(Rainfall24)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-  Q <- ifelse(Q < 0, 0, Q) 
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-
-TLH.df$Ql <- Ql
-TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
-TLH.df$DeltaQl <- DeltaQl
-TLH.df$DroughtIndex <- floor(Ql/100)
-
-TLH.df <- TLH.df %>%
- dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
-```
-
-```{r}
-droughtFire <- merge(x = anf_LF.sf, y = TLH.df, by.x = c("DISCOVERY_"), by.y = c("Date"))
-
-droughtFire <- droughtFire %>%
-  select("Date", "Qlm", "FIRE_SIZE")
-```
-
-
-
-
 
 
 
