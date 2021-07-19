@@ -497,6 +497,8 @@ anf_LF.sf <- anf_fires.sf %>%
 Fire set downloaded and pulled from file rather than directly from the website. Had errors when trying to import it directly from the website. Downloaded and converted to more user friendly shapefiles in ESRI.
 
 New Data Set has change categories for cause. Lightning is not listed. Is lightning the equivalent of fires filtered as natural? Explore this at the bottom of the rmd.
+
+Select column names need to be adjusted
 ```{r}
 updatedFires.sf <- st_read(dsn = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/updatedFires",
                            layer = "FLFiresUpdated") %>%
@@ -786,6 +788,57 @@ head(seasonSummary)
 ###Compare predicted number of fires for a season with actual values
 
 Explore KBDI by season
+
+Merge KBDI and Fire data sets. The rangeQ1991.df data set is used to represent KBDI. Because all KBDI variables merge prior to 1992, it does not matter which KBDI column is used. Q400 will be used here.
+
+Create stat columns for KBDI for each season
+```{r}
+seasonKBDI <- rangeQ1991.df %>%
+  filter(year(Date) >= 1992) %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
+  mutate(Season = year(Date)) %>%
+  group_by(Season) %>%
+  summarise(Season_Avg = mean(Q400), Season_Median = median(Q400), Season_Min = min(Q400), Season_Max = max(Q400))
+```
+
+```{r}
+seasonStats <- left_join(x = seasonFires, y = seasonKBDI, by = c("Year" = "Season")) %>%
+  rename(Season = Year)
+```
+
+Check correlations across data
+```{r}
+cor(seasonStats$nFIRES, seasonStats$Season_Avg)
+cor(seasonStats$nFIRES, seasonStats$Season_Median)
+cor(seasonStats$nFIRES, seasonStats$Season_Max)
+```
+
+
+
+When running the liner regression models, April KBDI values will be used to predict the season. Explore stats for April and compare to the number of fires during the season. Also include the KBDI on the last day of April for each season
+```{r}
+AprilKBDI <- rangeQ1991.df %>%
+  filter(year(Date) >= 1992) %>%
+  filter(month(Date) == 04) %>%
+  mutate(Season = year(Date)) %>%
+  group_by(Season) %>%
+  summarise(April_Avg = mean(Q400), April_Median = median(Q400), April_Min = min(Q400), April_Max = max(Q400), KBDI_LastDay = Q400[month(Date) == 04 & day(Date) == 30])
+```
+
+```{r}
+AprilStats <- left_join(x = seasonFires, y = AprilKBDI, by = c("Year" = "Season")) %>%
+  rename(Season = Year, SeasonFires = nFIRES)
+```
+
+Check correlations across April data
+```{r}
+cor(AprilStats$SeasonFires, AprilStats$April_Avg)
+cor(AprilStats$SeasonFires, AprilStats$April_Median)
+cor(AprilStats$SeasonFires, AprilStats$April_Max)
+cor(AprilStats$SeasonFires, AprilStats$KBDI_LastDay)
+```
+
+Predict each past season fire count using a glm and compare to what the count actually was. 
 ```{r}
 
 ```
