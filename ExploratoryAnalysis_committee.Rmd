@@ -844,8 +844,8 @@ Questions to consider while working?
 Can't use binomial family is using AprilStats data set. Use poison because SeasonFires is count data.
 Could the min KBDI also have a significant influence. Especially if it resets to zero.
 Should net rainfall be included in the model for each season?
-How can this help to answer the question of predicting fires for May, June and July each season.
 Use predict function to predict the number of April fires and compare to the actual amount.
+
 ```{r}
 AprilGLM <- glm(formula = SeasonFires ~ April_Avg, family = poisson, data = AprilStats)
 
@@ -861,14 +861,38 @@ upperAprilStats <- pred_AprilGLM$fit + (1.96*pred_AprilGLM$se.fit)
 ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
   geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
   geom_line(color = "blue") +
-  ylab("Predicited Probablility") +
+  ylab("Predicited Number of Fires") +
   xlab("Average KBDI") +
   labs(
-    title = "Predicted Probability of Fire Occurrence Based on April Averaged KBDI",
+    title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April Averaged KBDI",
     subtitle = "With 95% Confidence Interval",
     caption = "April 1992-2015")
 ```
 
+create a column of predicted number of fires for each season and compare
+```{r}
+AprilStats$PredFires <- pred_AprilGLM$fit
+AprilStats$Compare <- AprilStats$SeasonFires - AprilStats$PredFires
+cor(AprilStats$SeasonFires, AprilStats$PredFires)
+```
+
+What other factors could influence the number of fires:
+April Max KBDI?
+April Min KBDI?
+April Net Rainfall?
+April KBDI Range?
+Number of days KBDI > 400?
+
+We find that Average KBDI is not statistically significant
+correlation is slightly stronger than without max and min KBDI
+```{r}
+April2GLM <- glm(formula = SeasonFires ~ April_Avg + April_Min + April_Max, family = poisson, data = AprilStats)
+summary(April2GLM)
+pred_April2GLM <- predict(object = April2GLM,
+                         type = "response",
+                         se.fit = TRUE)
+cor(AprilStats$SeasonFires, pred_April2GLM$fit)
+```
 
 
 
