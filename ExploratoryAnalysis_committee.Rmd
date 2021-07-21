@@ -839,8 +839,34 @@ cor(AprilStats$SeasonFires, AprilStats$KBDI_LastDay)
 ```
 
 Predict each past season fire count using a glm and compare to what the count actually was. 
-```{r}
 
+Questions to consider while working?
+Can't use binomial family is using AprilStats data set. Use poison because SeasonFires is count data.
+Could the min KBDI also have a significant influence. Especially if it resets to zero.
+Should net rainfall be included in the model for each season?
+How can this help to answer the question of predicting fires for May, June and July each season.
+Use predict function to predict the number of April fires and compare to the actual amount.
+```{r}
+AprilGLM <- glm(formula = SeasonFires ~ April_Avg, family = poisson, data = AprilStats)
+
+pred_AprilGLM <- predict(object = AprilGLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+#summary(AprilGLM)
+
+lowerAprilStats <- pred_AprilGLM$fit - (1.96*pred_AprilGLM$se.fit)
+upperAprilStats <- pred_AprilGLM$fit + (1.96*pred_AprilGLM$se.fit)
+
+ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
+  geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Average KBDI") +
+  labs(
+    title = "Predicted Probability of Fire Occurrence Based on April Averaged KBDI",
+    subtitle = "With 95% Confidence Interval",
+    caption = "April 1992-2015")
 ```
 
 
