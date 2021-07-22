@@ -22,6 +22,8 @@ library(sf)
 library(tmap)
 library(rgeos)
 library(RColorBrewer)
+
+library(rgdal)
 ```
 
 
@@ -436,6 +438,10 @@ NF_Bounds.sf <- st_read(dsn = "s_USA.NFSLandUnit.shp") %>%
 
 anfbounds.sf <- NF_Bounds.sf %>%
   filter(NFSLANDU_2 == "Apalachicola National Forest")
+
+#when running code from ANF_Fires Run this line
+#ANF_Boundary.sf <- NF_Bounds.sf %>%
+  #filter(NFSLANDU_2 == "Apalachicola National Forest")
 ```
 
 Import County Boundaries of the forest. This will make the bounds consistent across both the fire data set and the lightning data set.
@@ -473,7 +479,13 @@ Archived fire data has been updated through 2018.
 Website link with data and metadata
 https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.5 
 
-Attempt to read file in directly from wesite. Still recieving errors.
+Attempt to read file in directly from website. Receiving warning messages:
+
+1: In CPL_read_ogr(dsn, layer, query, as.character(options), quiet,  :
+  GDAL Message 1: This version of GeoPackage user_version=0x0000283C (10300, v1.3.0) on 'C:\Users\zlaw9\OneDrive\GITHUB\KDBI code\Data\updatedFireData\Data\FPA_FOD_20210617.gpkg' may only be partially supported
+2: attribute variables are assumed to be spatially constant throughout all geometries 
+
+Taking a long time to load.
 ```{r}
 if(!"Fires2018" %in% list.files()){
   download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GPKG.zip",
@@ -483,34 +495,28 @@ if(!"Fires2018" %in% list.files()){
 }
 
 updatedFires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
-  filter(STATE == "FL") 
+  filter(STATE == "FL") %>%
+  st_transform(crs = st_crs(ANFcountyBounds.sf)) %>%
+  st_intersection(ANFcountyBounds.sf) %>%
+  select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
 
-#filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
-anf_fires.sf <- st_join(updatedFires.sf, ANFcountyBounds.sf, join = st_within) %>%
-  filter(CNTY_FIPS != "NA") %>%
-  select(FOD_I, FIRE_N, FIRE_Y, DISCOVERY_, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_, LATIT, LONGI, NAME, FIPS, geometry)
-
-anf_LF.sf <- anf_fires.sf %>%
-  filter(STAT_CAU_1 == "Lightning")
+anf_LF.sf <- updatedFires.sf %>%
+  filter(NWCG_GENERAL_CAUSE == "Natural")
 ```
 
-Fire set downloaded and pulled from file rather than directly from the website. Had errors when trying to import it directly from the website. Downloaded and converted to more user friendly shapefiles in ESRI.
+Fire set downloaded and pulled from file rather than directly from the website. Importing from GPKG runs slow. Downloaded and converted to more user friendly shapefiles in ESRI.
 
 New Data Set has change categories for cause. Lightning is not listed. Is lightning the equivalent of fires filtered as natural? Explore this at the bottom of the rmd.
 
-Select column names need to be adjusted
 ```{r}
 updatedFires.sf <- st_read(dsn = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/updatedFires",
                            layer = "FLFiresUpdated") %>%
-  st_transform(crs = 3086)
-
-#filtered for county bounds of ANF. This is to match the bounds of the lightning dataset
-anf_fires.sf <- st_join(updatedFires.sf, ANFcountyBounds.sf, join = st_within) %>%
-  filter(CNTY_FIPS != "NA") %>%
-  select(FOD_I, FIRE_N, FIRE_Y, DISCOVERY_, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_, LATIT, LONGI, NAME, FIPS, geometry)
-
-anf_LF.sf <- anf_fires.sf %>%
-  filter(STAT_CAU_1 == "Lightning")
+  st_transform(crs = st_crs(ANFcountyBounds.sf)) %>%
+  st_intersection(ANFcountyBounds.sf) %>%
+  select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_, NWCG_CAUSE, NWCG_GENER, FIRE_SIZE, FIRE_SIZE_, LATITUDE, LONGITUDE, NAME, FIPS, geometry)
+  
+anf_LF.sf <- updatedFires.sf %>%
+  filter(NWCG_CAUSE == "Natural")
 ```
 
 
