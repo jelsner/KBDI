@@ -13,7 +13,7 @@ What is the relationship between dryness of the soil and lightning-sparked wildf
 
 What climate factors are associated with soil dryness during the dry season?
 
-The increasing risk of fire in the ANF. Is the risk of fire in the ANF increasing? Why we need this paper: Uses an index that assesses the risk of fire rather than just dryness. Looks at changes during the fire season.
+The increasing risk of fire in the ANF. Is the risk of fire in the ANF increasing? Why we need this paper: Uses an index that assesses the risk of fire rather than just precipitation. Looks at changes during the fire season.
 
 KDBI assesses the risk of fire. KDBI is computed from daily rainfall and high temperature. These data are available at TLH NWS. Establish that TLH represents well the ANF by showing a correlation map between KDBI computed at TLH and PRISM data across the ANF. The PRISM dataset should not be used to calculate century-long climate trends due to non-climatic variations from to station equipment and location changes, openings and closings, varying observation times, and the use of relatively short-term networks.
 
