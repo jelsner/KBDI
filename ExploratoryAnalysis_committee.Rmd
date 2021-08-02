@@ -57,6 +57,62 @@ TLH.df <- read_csv(file = 'Data/TLH_Daily1940.csv') %>%
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
 ```
 
+Calculating qlm using inital Q-value of 269. Add these columns to the TLH.df data frame. This data frame will be referenced and filtered as needed.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+PR <- dplyr::lag(Rainfall24)
+PR[1] <- 0
+
+CumR <- 0
+NetR <- numeric()
+
+for(i in 1:length(Rainfall24)) {
+  R24 <- Rainfall24[i]
+  if (R24 == 0) {
+    NetR[i] <- 0
+    CumR <- 0
+  } 
+  else if(R24 > 0 & R24 <= .2) {
+      CumR <- CumR + R24
+      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
+      else if (CumR > .2) NetR[i] <- CumR - .2
+      else NetR[i] <- 0
+    }
+  else if (R24 > .2) {
+      if (CumR <= .2) {
+      NetR[i] <- CumR + R24 - .2
+      CumR <- CumR + R24
+      }
+      else {
+      NetR[i] <- R24
+      CumR <- CumR + R24
+      }
+  }
+}
+
+TLH.df$NetR <- NetR
+
+Q <- 269  
+R <- 59.23 # average annual rainfall for TLH in inches
+
+MaxTemp <- TLH.df$MaxTemp
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+```
+
 
 A new data frame is created to compare initial Q values. Q is representative of the starting value of KBDI. Here a column of several Q values is created to be used and compared among multiple plots. Daily KBDI is calculated for each initial Q value. This is testing the theory that with enough time elapsed, the initial value of Q does not matter.
 
@@ -453,6 +509,8 @@ ANFcountyBounds.sf <- st_read(dsn = "ANFCounties.shp") %>%
 
 
 Import fire data
+
+This is the old data set containing fires only until 2015
 ```{r}
 if(!"FL_Fires" %in% list.files()){
 download.file("http://myweb.fsu.edu/jelsner/temp/data/FL_Fires.zip",
@@ -487,12 +545,12 @@ Attempt to read file in directly from website. Receiving warning messages:
 
 Taking a long time to load.
 ```{r}
-if(!"Fires2018" %in% list.files()){
-  download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GPKG.zip",
-                "Data/updatedFireData/Fires2018.zip")
-  unzip("Data/updatedFireData/Fires2018.zip",
-        exdir = "Data/updatedFireData")
-}
+#if(!"Fires2018" %in% list.files()){
+  #download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GPKG.zip",
+                #"Data/updatedFireData/Fires2018.zip")
+  #unzip("Data/updatedFireData/Fires2018.zip",
+        #exdir = "Data/updatedFireData")
+#}
 
 updatedFires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
   filter(STATE == "FL") %>%
@@ -502,6 +560,14 @@ updatedFires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpk
 
 anf_LF.sf <- updatedFires.sf %>%
   filter(NWCG_GENERAL_CAUSE == "Natural")
+```
+
+Reformat date column to not include time. Rename to match other merged columns
+```{r}
+anf_LF.sf$DISCOVERY_DATE <- as.Date(anf_LF.sf$DISCOVERY_DATE)
+
+anf_LF.sf <- anf_LF.sf %>%
+  rename(DISCOVERY_ = DISCOVERY_DATE)
 ```
 
 Fire set downloaded and pulled from file rather than directly from the website. Importing from GPKG runs slow. Downloaded and converted to more user friendly shapefiles in ESRI.
@@ -552,66 +618,12 @@ merge1.df <- left_join(x = countlightning.df, y = countfires.df, by = c("SEQDAY"
   select(Date, LightningCount, FireCount)
 ```
 
-Recalculate QLm for intital Q value of 269. Create new data frame (TLH1.df) to be merged with lightningcount/firecount dataframe (merge1)
+Create new data frame (TLH1.df) to match the dates with merge1.df. These data frames will be combined.
 ```{r}
 TLH1.df <- TLH.df %>%
   filter(year(Date) >= 1992) %>%
   filter(Date <= "2013-05-25")
-  
-Rainfall24 <- TLH1.df$Rainfall24
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
-
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[i]
-  if (R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if(R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-  else if (R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-TLH1.df$NetR <- NetR
-
-Q <- 269  
-R <- 59.23 # average annual rainfall for TLH in inches
-
-MaxTemp <- TLH1.df$MaxTemp
-
-Ql <- numeric()
-DeltaQl <- numeric()
-for(i in 1:length(Rainfall24)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-  Q <- ifelse(Q < 0, 0, Q) 
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-
-TLH1.df$Ql <- Ql
-TLH1.df$Qlm <- Ql * .254  # tenth of an inch to mm
-TLH1.df$DeltaQl <- DeltaQl
-TLH1.df$DroughtIndex <- floor(Ql/100)
 ```
-
 
 
 Merge data frames to have lightning strike count, fire count and Qlm all in one dataframe
@@ -653,11 +665,11 @@ Filter data for only dates in the fire season before running glm.
 
 When filtering to only the fire season, there is more uncertainty, and the model is closer to linear.
 ```{r}
-fireSeasondates.df <- merge2.df %>%
+fireSeasondates2013.df <- merge2.df %>%
   filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
 
 #general linear regression
-glmLightningFS <- glm(formula = FireBool ~ LightningCount, family = binomial, data = fireSeasondates.df)
+glmLightningFS <- glm(formula = FireBool ~ LightningCount, family = binomial, data = fireSeasondates2013.df)
 
 #probabilities based on glm
 pred_glmLightningFS <- predict(object = glmLightningFS,
@@ -667,7 +679,7 @@ pred_glmLightningFS <- predict(object = glmLightningFS,
 lowerLightningFS <- pred_glmLightningFS$fit - (1.96*pred_glmLightningFS$se.fit)
 upperLightningFS <- pred_glmLightningFS$fit + (1.96*pred_glmLightningFS$se.fit)
 
-ggplot(mapping = aes(x = fireSeasondates.df$LightningCount, y = pred_glmLightningFS$fit)) +
+ggplot(mapping = aes(x = fireSeasondates2013.df$LightningCount, y = pred_glmLightningFS$fit)) +
   geom_ribbon(aes(ymin = lowerLightningFS, ymax = upperLightningFS), fill = "grey") +
   geom_line(color = "blue") +
   ylab("Predicited Probablility") +
@@ -681,8 +693,27 @@ ggplot(mapping = aes(x = fireSeasondates.df$LightningCount, y = pred_glmLightnin
 
 
 General linear regression - Study how KBDI impacts lightning wildfire occurrence.
+
+Update to include fires beyond 2012. No longer bounded by lightning data dates and can use full fire data set.
+qlm file data frame needs to match new fire data frame dates. Filter TLH.df which was initialized in 1940. This data frame can be referenced cause Q-values merge and values will be the same as initializing one year prior to the start. This limits the amount of code and time to run the entire qlm code chunk again
+
 ```{r}
-glmQl <- glm(formula = FireBool ~ Ql, family = binomial, data = merge2.df)
+qlm2018fires <- TLH.df %>% 
+  filter(year(Date) >= 1992) %>%
+  filter(year(Date) <= 2018)
+```
+
+```{r}
+countfiresmerge2018.df <- left_join(x = qlm2018fires, y = countfires.df, by = c("Date" = "Date")) %>%
+  select(Date, FireCount, Ql)
+
+countfiresmerge2018.df$FireBool <- !is.na(countfiresmerge2018.df$FireCount)
+```
+
+
+
+```{r}
+glmQl <- glm(formula = FireBool ~ Ql, family = binomial, data = countfiresmerge2018.df)
 
 pred_glmQl <- predict(object = glmQl,
                       type = "response",
@@ -691,7 +722,7 @@ pred_glmQl <- predict(object = glmQl,
 lowerQl <- pred_glmQl$fit - (1.96*pred_glmQl$se.fit)
 upperQl <- pred_glmQl$fit + (1.96*pred_glmQl$se.fit)
 
-ggplot(mapping = aes(x = merge2.df$Ql, y = pred_glmQl$fit)) +
+ggplot(mapping = aes(x = countfiresmerge2018.df$Ql, y = pred_glmQl$fit)) +
   geom_ribbon(aes(ymin = lowerQl, ymax = upperQl), fill = "grey") +
   geom_line(color = "blue") +
   ylab("Predicited Probablility") +
@@ -699,12 +730,15 @@ ggplot(mapping = aes(x = merge2.df$Ql, y = pred_glmQl$fit)) +
   labs(
     title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values",
     subtitle = "With 95% Confidence Interval",
-    caption = "Period of Record: 1-1-1992 to 5-20-2012")
+    caption = "Period of Record: 1992 to 2018")
 ```
 
 KBDI impacts on lightning wildfire occurrence during the fire season. KBDI has a much stronger impact during the fire season months.
 ```{r}
-glmQlFS <- glm(formula = FireBool ~ Ql, family = binomial, data = fireSeasondates.df)
+fireSeasondates2018.df <- countfiresmerge2018.df %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
+
+glmQlFS <- glm(formula = FireBool ~ Ql, family = binomial, data = fireSeasondates2018.df)
 
 pred_glmQlFS <- predict(object = glmQlFS,
                       type = "response",
@@ -713,7 +747,7 @@ pred_glmQlFS <- predict(object = glmQlFS,
 lowerQlFS <- pred_glmQlFS$fit - (1.96*pred_glmQlFS$se.fit)
 upperQlFS <- pred_glmQlFS$fit + (1.96*pred_glmQlFS$se.fit)
 
-ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = pred_glmQlFS$fit)) +
+ggplot(mapping = aes(x = fireSeasondates2018.df$Ql, y = pred_glmQlFS$fit)) +
   geom_ribbon(aes(ymin = lowerQlFS, ymax = upperQlFS), fill = "grey") +
   geom_line(color = "blue") +
   ylab("Predicited Probablility") +
@@ -721,7 +755,7 @@ ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = pred_glmQlFS$fit)) +
   labs(
     title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values\nFiltered By Fire Season Months",
     subtitle = "With 95% Confidence Interval",
-    caption = "Fire Season Months (May - July) 1992 - 2013")
+    caption = "Fire Season Months (May - July) 1992 - 2018")
 ```
 
 
@@ -751,13 +785,13 @@ ggplot(mapping = aes(x = merge2.df$Ql, y = merge2.df$LightningCount, color = pre
 
 Filter for fire season
 ```{r}
-GLMFS <- glm(formula = FireBool ~ LightningCount + Ql, family = binomial, data = fireSeasondates.df)
+GLMFS <- glm(formula = FireBool ~ LightningCount + Ql, family = binomial, data = fireSeasondates2013.df)
 
 pred_GLMFS <- predict(object = GLMFS,
                     type = "response",
                     se.fit = TRUE)
 
-ggplot(mapping = aes(x = fireSeasondates.df$Ql, y = fireSeasondates.df$LightningCount, color = pred_GLMFS$fit)) +
+ggplot(mapping = aes(x = fireSeasondates2013.df$Ql, y = fireSeasondates2013.df$LightningCount, color = pred_GLMFS$fit)) +
   geom_point() +
   scale_color_gradient(low = "orange", high = "red4") +
   xlab("KBDI") +
@@ -773,15 +807,15 @@ Explore relationship between the number of fires and fire size.
 ```{r}
 seasonFires <- anf_LF.sf %>%
   filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
-  count(FIRE_Y) %>%
-  rename(Year = FIRE_Y, nFIRES = n) %>%
+  count(FIRE_YEAR) %>%
+  rename(Year = FIRE_YEAR, nFIRES = n) %>%
   st_set_geometry(NULL)
 
 LargestFires <- anf_LF.sf %>%
   filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
-  group_by(FIRE_Y) %>%
+  group_by(FIRE_YEAR) %>%
   summarise(LargestFire = max(FIRE_SIZE)) %>%
-  rename(Year = FIRE_Y) %>%
+  rename(Year = FIRE_YEAR) %>%
   st_set_geometry(NULL)
 
 seasonSummary <- merge(x = seasonFires, y = LargestFires, by = c("Year"))
@@ -806,6 +840,17 @@ seasonKBDI <- rangeQ1991.df %>%
   group_by(Season) %>%
   summarise(Season_Avg = mean(Q400), Season_Median = median(Q400), Season_Min = min(Q400), Season_Max = max(Q400))
 ```
+Reworked using TLH.df. Compare to make sure they are equivalent
+```{r}
+seasonKBDI <- TLH.df %>%
+  filter(year(Date) >= 1992) %>%
+  filter(year(Date) <= 2018) %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
+  mutate(Season = year(Date)) %>%
+  group_by(Season) %>%
+  summarise(Season_Avg = mean(Ql), Season_Median = median(Ql), Season_Min = min(Ql), Season_Max = max(Ql))
+```
+
 
 ```{r}
 seasonStats <- left_join(x = seasonFires, y = seasonKBDI, by = c("Year" = "Season")) %>%
@@ -823,12 +868,13 @@ cor(seasonStats$nFIRES, seasonStats$Season_Max)
 
 When running the liner regression models, April KBDI values will be used to predict the season. Explore stats for April and compare to the number of fires during the season. Also include the KBDI on the last day of April for each season
 ```{r}
-AprilKBDI <- rangeQ1991.df %>%
+AprilKBDI <- TLH.df %>%
   filter(year(Date) >= 1992) %>%
+  filter(year(Date) <= 2018) %>%
   filter(month(Date) == 04) %>%
   mutate(Season = year(Date)) %>%
   group_by(Season) %>%
-  summarise(April_Avg = mean(Q400), April_Median = median(Q400), April_Min = min(Q400), April_Max = max(Q400), KBDI_LastDay = Q400[month(Date) == 04 & day(Date) == 30])
+  summarise(April_Avg = mean(Ql), April_Median = median(Ql), April_Min = min(Ql), April_Max = max(Ql), KBDI_LastDay = Ql[month(Date) == 04 & day(Date) == 30])
 ```
 
 ```{r}
@@ -872,7 +918,7 @@ ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
   labs(
     title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April Averaged KBDI",
     subtitle = "With 95% Confidence Interval",
-    caption = "April 1992-2015")
+    caption = "April 1992-2018")
 ```
 
 create a column of predicted number of fires for each season and compare
