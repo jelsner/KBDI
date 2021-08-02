@@ -270,7 +270,7 @@ ggplot(data = df,
   theme_minimal()
 ```
 
-At larger scales there are features that make natural fires somewhat more or less likely (e.g., Bradwell Bay Wilderness--swamp) 
+At longer lags there are features that make natural fires somewhat more or less likely (e.g., Bradwell Bay Wilderness--swamp) 
 
 Monthly occurrence (relative frequency) of natural wildfires in the ANF.
 ```{r}
