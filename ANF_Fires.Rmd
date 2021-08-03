@@ -299,7 +299,7 @@ ggplot(data = df,
   theme_minimal() 
 ```
 
-Seasonal number of natural fires and seasonal total acres burned.
+Graph showing the seasonal number of natural fires and seasonal total acres burned.
 ```{r}
 df <- NaturalFires.sf %>%
   st_drop_geometry() %>%
@@ -318,7 +318,7 @@ ggplot(data = df,
   scale_color_distiller(palette = "Oranges",
                         direction = 1,
                         guide = "none") +
-  scale_x_continuous(breaks = seq(1992, 2018, by = 3)) +
+  scale_x_continuous(breaks = seq(1992, 2018, by = 4)) +
   theme_minimal() +
   labs(x = "", y = "",
        title = "Large inter-seasonal variability in the number of natural wildfires in the ANF",
