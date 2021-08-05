@@ -946,6 +946,100 @@ pred_April2GLM <- predict(object = April2GLM,
 cor(AprilStats$SeasonFires, pred_April2GLM$fit)
 ```
 
+###Data Exploration
+
+create dataframe with both fire and KBDI data
+```{r}
+KBDI_Fires.sf <- left_join(x = anf_LF.sf, y = TLH.df, by = c("DISCOVERY_" = "Date")) %>%
+  dplyr::select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_, FIRE_SIZE, FIRE_SIZE_CLASS, Ql, DroughtIndex)
+```
+
+Explore the percentage of wildfires that occur in each KBDI catagory 
+```{r}
+KBDI_per <- KBDI_Fires.sf %>%
+  group_by(DroughtIndex) %>%
+  summarise(count = n(),
+            percent = count/nrow(KBDI_Fires.sf))
+
+plot1 <- ggplot(data = KBDI_per,
+       mapping = aes(y = percent, 
+                     x = DroughtIndex,
+                     fill = percent)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = "none") +
+  scale_y_continuous(labels = percent) +
+  xlab("") + ylab("") +
+  labs(title = "Year Round") +
+  #labs(title = "Over 70% of Wildfires Occur During Dry Conditions",
+       #subtitle = "KDBI = 7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated",
+       #caption = "Period of record: 1992-2018, Data source: Short, Karen (2021) & NWSFO Tallahassee") +
+  theme_minimal() 
+
+KBDI_Aprilper <- KBDI_Fires.sf %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  group_by(DroughtIndex) %>%
+  summarise(count = n(),
+            percent = count/nrow(KBDI_Fires.sf))
+
+plot2 <- ggplot(data = KBDI_Aprilper,
+       mapping = aes(y = percent, 
+                     x = DroughtIndex,
+                     fill = percent)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = "none") +
+  scale_y_continuous(labels = percent) +
+  xlab("") + ylab("") +
+  labs(title = "Fire Season") +
+  #labs(title = "60% of Natural Fires Occur During Dry Conditions in the Fire Season",
+       #subtitle = "KDBI = 7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated",
+       #caption = "Period of record: May - July 1992-2018, Data source: Short, Karen (2021) & NWSFO Tallahassee") +
+  theme_minimal()
+
+(plot1 + plot2) +
+  plot_annotation(title = "Natural Fires Peak During Dry Conditions",
+       subtitle = "KDBI = 7-6: Drought, 4-5: Dry, 1-3: Moist, 0: Saturated",
+       caption = "Period of record: May - July 1992-2018, Data source: Short, Karen (2021) & NWSFO Tallahassee")
+```
+
+Explore trends in fire size by month/year
+
+Fix Error: DISCOVERY_ not found
+```{r}
+anf_LF.sf %>%
+  group_by(month(DISCOVERY_), year(DISCOVERY_)) %>%
+  summarise(Avg = mean(FIRE_SIZE)) %>%
+  ggplot(aes(x = year(DISCOVERY_), y = Avg, color = Avg)) +
+  geom_smooth(method = lm, se = FALSE, color = "gray70") +
+  geom_point() +  
+  scale_color_gradientn(colors = terrain.colors(5), guide = "none") +
+  #scale_y_continuous(limits = c(0, 201)) +
+  scale_x_continuous(limits = c(1992, 2018)) + #, breaks = c(1950, 1980, 2010)) +
+  ylab("") + xlab("") +
+  facet_wrap(~ month(DISCOVERY_), ncol = 12) +
+  theme_dark() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  #labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
+       #subtitle = "Monthly average soil moisture deficit (mm) by year with trend line (gray)", 
+       #caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") 
+```
+
+Import El Nino Data
+```{r}
+SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
+                   skip = 1, header = TRUE) %>%
+  mutate(Date = parse_date_time(as.character(Date), "ym"),
+         Year = year(Date),
+         Month = month(Date),
+         month = month(Date, label = TRUE, abbr = TRUE),
+         SOI = Value) %>%
+  dplyr::select(Year, Month, month, SOI)
+```
 
 
 ###Explore updated fire data set compared to the old data set
@@ -1011,6 +1105,26 @@ TestFires.sf$BOOL <- TestFires.sf$CAUSE2018 == "Natural" & TestFires.sf$CAUSE201
 Count number of new data points added in the 2018 set. There are 30 new data points.
 ```{r}
 sum(is.na(TestFires.sf$YEAR2015))
+```
+
+###Code to run anf_fires
+When referencing anf_fires file, data sources are in different drives. Run these code chunks to find the data
+```{r}
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip")
+}
+
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit.shp") %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+```
+
+```{r}
+Fires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
+  filter(STATE == "FL") %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
+  st_intersection(ANF_Boundary.sf)
 ```
 
 
