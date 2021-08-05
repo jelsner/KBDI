@@ -37,35 +37,29 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
          MaxTemp = TMAX,
-         MinTemp = TMIN,
-         Rainfall24 = PRCP,
-         Rainfall24mm = Rainfall24 * 25.4) %>%
-  filter(Year <= 2020)
+         MinTemp = TMIN) %>%
+  filter(Year <= 2020 & Year >= 1943)
 
-sum(is.na(TLH.df$PRCP))
-sum(is.na(TLH.df$PRCP)) / nrow(TLH.df) * 100  # only 5 missing values [~ .017% of all days]
-sum(is.na(TLH.df$TMAX))
-sum(is.na(TLH.df$TMAX)) / nrow(TLH.df) * 100  # only 1 missing value [~ .0034% of all days]
-
-# Missing temperature and rainfall filled in from NCDC daily summaries
-# https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily
+# Missing temperatures filled in from NCDC daily summaries https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
 
+TLH.df <- TLH.df |>
+  mutate(AvgTemp = (MaxTemp + MinTemp) / 2)
 
 ( AnnualMeanTemperatures <- TLH.df %>%
-  filter(Year >= 1943) %>%  # complete data started in March 1943
   group_by(Year) %>%
   summarize(AvgHighTemp = mean(MaxTemp),
-            AvgLowTemp = mean(MinTemp)) )
+            AvgLowTemp = mean(MinTemp),
+            AvgMeanTemp = mean(AvgTemp)) )
 ```
 
 Plot annual mean temperatures.
 ```{r}
 AnnualMeanTemperatures |>
-  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
+  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp, AvgMeanTemp)) |>
   ggplot(mapping = aes(x = Year, y = value, color = name)) +
     geom_point() +
     geom_smooth(method = lm)
@@ -78,20 +72,19 @@ library(nortest)
 
 TLH.df |>
   group_by(doy) |>
-  summarize( AvgTempByDoY = mean(MinTemp),
-             SDTempByDoY = sd(MinTemp),
-             SkewTempByDoY = skewness(MinTemp) ) |>
-  ggplot(mapping = aes(x = doy, y = SDTempByDoY)) +
+  summarize( AvgTempByDoY = mean(AvgTemp),
+             SDTempByDoY = sd(AvgTemp),
+             SkewTempByDoY = skewness(AvgTemp) ) |>
+  ggplot(mapping = aes(x = doy, y = SkewTempByDoY)) +
     geom_point() +
     geom_smooth()
 
 normTest <- 
   TLH.df |>
-  filter(Year >= 1990) |>
-  mutate(AvgTemp = (MaxTemp + MinTemp) / 2) |>
+#  filter(Year >= 1990) |>
   group_by(doy) |>
-  summarize(pvalueS = shapiro.test(MaxTemp)$p.value,
-            pvalueAD = ad.test(MaxTemp)$p.value) 
+  summarize(pvalueS = shapiro.test(AvgTemp)$p.value,
+            pvalueAD = ad.test(AvgTemp)$p.value) 
 
 normTest$doy[normTest$pvalueS > .05]
 normTest$doy[normTest$pvalueAD > .05]
@@ -99,26 +92,38 @@ normTest$doy[normTest$pvalueAD > .05]
 library(broom)
 ( Trends <- 
   TLH.df |> 
-  filter(Year >= 1990) |>
-  group_by(doy) |>
-  do(tidy(lm(MinTemp ~ Year, data = .))) |>
-  dplyr::filter(term == "Year") )
+#  filter(Year >= 1990) |>
+    group_by(doy) |>
+    do(tidy(lm(MinTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           ymax = estimate + std.error,
+           ymin = estimate - std.error) )
+
+Trends |> 
+  arrange(estimate)
   
 Trends |>
-  ggplot(mapping = aes(x = doy, y = statistic)) +
+  ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
+  scale_y_continuous(limits = c(-.2, .2)) +
+  geom_hline(yintercept = 0, color = "gray70") +
+  scale_color_distiller(palette = "RdBu", guide = 'none') +
   geom_point() + 
-  geom_smooth()
+  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
+  scale_x_continuous(position = "bottom", 
+                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  theme_minimal() +
+  labs(x = "")
 ```
 
 Use `ggdist` package from Matthew Kay.
 ```{r}
 library(ggdist)
-theme_set(theme_ggdist())
+# theme_set(theme_ggdist())
 
 TLH.df |>
   ggplot(mapping = aes(x = doy, y = MaxTemp)) +
   stat_gradientinterval()
 
 ```
-
-Compute trends using `do()`.
