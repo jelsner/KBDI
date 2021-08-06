@@ -17,6 +17,7 @@ R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 ```{r}
 library(tidyverse)
 library(lubridate)
+library(broom)
 ```
 
 ## Get TLH airport daily weather data
@@ -62,7 +63,8 @@ AnnualMeanTemperatures |>
   pivot_longer(cols = c(AvgHighTemp, AvgLowTemp, AvgMeanTemp)) |>
   ggplot(mapping = aes(x = Year, y = value, color = name)) +
     geom_point() +
-    geom_smooth(method = lm)
+    geom_smooth() +
+  theme_minimal()
 ```
 
 Non-normality in daily high and low temperatures
@@ -88,33 +90,78 @@ normTest <-
 
 normTest$doy[normTest$pvalueS > .05]
 normTest$doy[normTest$pvalueAD > .05]
-  
-library(broom)
+```
+
+Compute long-term trends in day-of-year high and low temperatures.
+```{r}
 ( Trends <- 
   TLH.df |> 
+    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
 #  filter(Year >= 1990) |>
     group_by(doy) |>
-    do(tidy(lm(MinTemp ~ Year, data = .))) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
     filter(term == "Year") |>
     mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate * 10,
+           std.error = std.error * 10,
            ymax = estimate + std.error,
            ymin = estimate - std.error) )
 
 Trends |> 
-  arrange(estimate)
-  
-Trends |>
+  arrange(desc(statistic))
+
+TLH.df |>
+  filter(doy %in% c(26, 350, 192)) |>
+  select(Year, MaxTemp, Date, doy) |>
+  ggplot(mapping = aes(x = Year, y = MaxTemp)) +
+    geom_point() +
+    geom_smooth(method = lm) +
+  facet_wrap(~ doy) +
+  theme_minimal()
+```
+
+Plot trends.
+```{r}
+p1 <- Trends |>
   ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
-  scale_y_continuous(limits = c(-.2, .2)) +
+  scale_y_continuous(limits = c(-1.2, 1.2)) +
   geom_hline(yintercept = 0, color = "gray70") +
-  scale_color_distiller(palette = "RdBu", guide = 'none') +
+  scale_color_distiller(palette = "RdBu", 
+                        limits = c(-1, 1) * max(abs(Trends$statistic)),
+                        guide = 'none') +
   geom_point() + 
   geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
   scale_x_continuous(position = "bottom", 
                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
                      labels = month.name) +
   theme_minimal() +
-  labs(x = "")
+  labs(title = "Long-term (1943-2020) trends in daily high temperature (°C/decade) in Tallahassee, Florida", 
+       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
+       x = "", y = "")
+```
+
+Annotate plot. http://jenrichmond.rbind.io/post/idhtg-how-to-annotate-plots/
+
+```{r}
+  annotate("text", x = 46, y = -1, label = "Most cooling day: January 26") +
+  annotate("text", x = 130, y = .8, label = "Most significant warming day: July 10 or 11") +
+  annotate("text", x = 280, y = 1, label = "Most warming day: December 15 or 16") 
+  
+arrows <- 
+  tibble(
+    x1 = c(187, 212),
+    x2 = c(205, 204),
+    y1 = c(6000, 3000), 
+    y2 = c(5500, 3500)
+  )
+
+arrows
+
+p1 +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
+    color = "gray20", curvature = -0.3)
 ```
 
 Use `ggdist` package from Matthew Kay.
