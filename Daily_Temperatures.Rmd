@@ -1,15 +1,17 @@
 ---
-title: "Climate Trends in Daily Temperatures"
+title: "Climate Trends in Day-Of-The-Year High and Low Temperatures"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
+The upward trend is 0.12°C per decade from 1951-2012. The Intergovernmental Panel on Climate Change (IPCC) in their 2013 Fifth Assessment Report state “it is extremely likely that more than half of the observed global trend was caused by anthropogenic (human-activity) increase in greenhouse gas concentrations and other anthropogenic forcings”. 
+
 1. Writing is thinking, 
 2. 1 article, 1 question, 1 finding, 
 3. it's not a review of the literature, it's an argument about why we need your paper
 
-What day(s) of the year show the largest long-term trends in max/min temperatures? Corollary: what day(s) of the year do not show a normal distribution in max/min temperatures?
+What day(s) of the year show the largest long-term (climate) trends in max/min temperatures? Corollary: what day(s) of the year do not show a normal distribution in max/min temperatures?
 
 R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 
@@ -28,7 +30,7 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-Import the summary of the day data and add columns to the data frame.
+Import the summary-of-the-day data and add columns to the data frame.
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
                    stringsAsFactors = FALSE,
@@ -60,11 +62,48 @@ TLH.df <- TLH.df |>
 Plot annual mean temperatures.
 ```{r}
 AnnualMeanTemperatures |>
-  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp, AvgMeanTemp)) |>
+  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
   ggplot(mapping = aes(x = Year, y = value, color = name)) +
+  scale_y_continuous(limits = c(50, 90)) +
+  scale_color_discrete(guide = "none") +
     geom_point() +
     geom_smooth() +
-  theme_minimal()
+  theme_minimal() +
+  labs(title = "Annual mean daily high and low temperatures (°F)",
+       subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+```
+
+Histogram of daily high temperature.
+```{r}
+labels <- c(paste0(seq(30, 100, by = 10), "°", " F"))
+
+p1 <- TLH.df |> 
+ggplot(mapping = aes(x = MaxTemp)) + 
+  geom_histogram(binwidth = 1, 
+                 mapping = aes(fill = ..count..)) +
+  scale_fill_viridis_c(guide = "none") +
+  scale_x_continuous(breaks = seq(30, 100, by = 10),
+                     labels = labels) +
+  theme_minimal() +
+  labs(title = "Frequency of daily high temperatures",
+       subtitle = "Tallahassee, Florida (1943-2020)",
+       x = "", y = "")
+
+arrows <- 
+  tibble(
+    x1 = c(75),
+    x2 = c(89),
+    y1 = c(1025), 
+    y2 = c(1200)
+  )
+
+p1 +
+  annotate("text", x = 60, y = 1000, label = "The most common high temperature is 90° F") +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray20", curvature = -.3)
 ```
 
 Non-normality in daily high and low temperatures
@@ -112,11 +151,15 @@ Trends |>
 
 TLH.df |>
   filter(doy %in% c(26, 350, 192)) |>
-  select(Year, MaxTemp, Date, doy) |>
+  mutate(Day = factor(case_when(Day = doy == 26 ~ "26 January",
+                         Day = doy == 350 ~ "15/16 December",
+                         Day = doy == 192 ~ "10/11 July"), 
+                      levels = c("26 January", "10/11 July", "15/16 December"))) |>
+  select(Year, MaxTemp, Date, doy, Day) |>
   ggplot(mapping = aes(x = Year, y = MaxTemp)) +
     geom_point() +
     geom_smooth(method = lm) +
-  facet_wrap(~ doy) +
+  facet_wrap(~ Day) +
   theme_minimal()
 ```
 
