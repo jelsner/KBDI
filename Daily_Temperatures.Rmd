@@ -106,6 +106,38 @@ p1 +
     color = "gray20", curvature = -.3)
 ```
 
+Histogram of daily low temperature.
+```{r}
+labels <- c(paste0(seq(10, 80, by = 10), "°", " F"))
+
+p2 <- TLH.df |> 
+ggplot(mapping = aes(x = MinTemp)) + 
+  geom_histogram(binwidth = 1, 
+                 mapping = aes(fill = ..count..)) +
+  scale_fill_viridis_c(guide = "none") +
+  scale_x_continuous(breaks = seq(10, 80, by = 10),
+                     labels = labels) +
+  theme_minimal() +
+  labs(title = "Frequency of daily low temperatures",
+       subtitle = "Tallahassee, Florida (1943-2020)",
+       x = "", y = "")
+
+arrows <- 
+  tibble(
+    x1 = c(50),
+    x2 = c(71),
+    y1 = c(1250), 
+    y2 = c(1460)
+  )
+
+p2 +
+  annotate("text", x = 48, y = 1200, label = "The most common low temperature is 72° F") +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray20", curvature = -.3)
+```
+
 Non-normality in daily high and low temperatures
 ```{r}
 library(moments)
@@ -149,23 +181,30 @@ Compute long-term trends in day-of-year high and low temperatures.
 Trends |> 
   arrange(desc(statistic))
 
-TLH.df |>
+labels <- c(paste0(seq(40, 100, by = 20), "°", " F"))
+
+( p3 <- TLH.df |>
   filter(doy %in% c(26, 350, 192)) |>
-  mutate(Day = factor(case_when(Day = doy == 26 ~ "26 January",
-                         Day = doy == 350 ~ "15/16 December",
-                         Day = doy == 192 ~ "10/11 July"), 
-                      levels = c("26 January", "10/11 July", "15/16 December"))) |>
+  mutate(Day = factor(case_when(Day = doy == 26 ~ "26 January\n Most cooling",
+                         Day = doy == 350 ~ "15/16 December\n Most warming",
+                         Day = doy == 192 ~ "10/11 July\n Most significant warming"), 
+                      levels = c("26 January\n Most cooling", 
+                                 "10/11 July\n Most significant warming", "15/16 December\n Most warming"))) |>
   select(Year, MaxTemp, Date, doy, Day) |>
   ggplot(mapping = aes(x = Year, y = MaxTemp)) +
-    geom_point() +
-    geom_smooth(method = lm) +
+    geom_smooth(method = lm, mapping = aes(color = Day)) +
+    geom_point(color = "gray70") +
   facet_wrap(~ Day) +
-  theme_minimal()
+  scale_x_continuous(breaks = seq(50, 2010, by = 20)) +
+  scale_y_continuous(limits = c(35, 105), breaks = seq(40, 100, by = 20), labels = labels) +
+  scale_color_manual(values = c("skyblue", "red3", "salmon"), guide = "none") +
+  theme_minimal() +
+  labs(x = "", y = "") )
 ```
 
 Plot trends.
 ```{r}
-p1 <- Trends |>
+( p4 <- Trends |>
   ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
   scale_y_continuous(limits = c(-1.2, 1.2)) +
   geom_hline(yintercept = 0, color = "gray70") +
@@ -178,33 +217,34 @@ p1 <- Trends |>
                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
                      labels = month.name) +
   theme_minimal() +
-  labs(title = "Long-term (1943-2020) trends in daily high temperature (°C/decade) in Tallahassee, Florida", 
+  labs(title = "Long-term (1943-2020) trends in day-of-year high temperature (°C/decade) in Tallahassee, Florida", 
        subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
-       x = "", y = "")
+       x = "", y = "") )
 ```
 
 Annotate plot. http://jenrichmond.rbind.io/post/idhtg-how-to-annotate-plots/
 
 ```{r}
-  annotate("text", x = 46, y = -1, label = "Most cooling day: January 26") +
-  annotate("text", x = 130, y = .8, label = "Most significant warming day: July 10 or 11") +
-  annotate("text", x = 280, y = 1, label = "Most warming day: December 15 or 16") 
-  
 arrows <- 
   tibble(
-    x1 = c(187, 212),
-    x2 = c(205, 204),
-    y1 = c(6000, 3000), 
-    y2 = c(5500, 3500)
+    x1 = c(46, 130, 300),
+    x2 = c(26.5, 191.5, 349.5),
+    y1 = c(-.95, .75, 1.15), 
+    y2 = c(-.525, .48, .8)
   )
 
-arrows
-
-p1 +
+( p4 <- p4 + 
+  annotate("text", x = 46, y = -1, label = "Most cooling: 26 January") +
+  annotate("text", x = 130, y = .8, label = "Most significant warming: 10/11 July") +
+  annotate("text", x = 300, y = 1.2, label = "Most warming: 15/16 December") +
   geom_curve(
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
-    arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
-    color = "gray20", curvature = -0.3)
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray50", curvature = .3) )
+
+library(patchwork)
+
+p4/p3
 ```
 
 Use `ggdist` package from Matthew Kay.
