@@ -1029,6 +1029,119 @@ anf_LF.sf %>%
        #caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") 
 ```
 
+Find monthly KBDI averages
+```{r}
+KBDI_Trends.df <- TLH.df %>%
+  group_by(Year, month) %>%
+  summarise(MonthlyKBDI = mean(Ql))
+```
+
+April, May, July, August, September, and October all show significant drying trends from 1940 - 2020
+```{r}
+ggplot(data = KBDI_Trends.df,
+       mapping = aes(x = Year, y = MonthlyKBDI)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "gray70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  facet_wrap(~month, ncol = 12)
+```
+
+Explore rainfall trends
+
+Monthly rain totals are significantly decreasing in May/July, but increasing in June
+```{r}
+TLH.df %>%
+  group_by(Year, month) %>%
+  summarise(MonthlyTotal = sum(Rainfall24mm)) %>%
+  ggplot(aes(x = Year, y = MonthlyTotal)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  facet_wrap(~month, ncol = 12)
+```
+
+Explore Temperature trends
+
+The average monthly temperature is warming for every month but January
+```{r}
+TLH.df %>%
+  group_by(Year, month) %>%
+  summarise(TempAvg = mean(TMAX)) %>%
+  ggplot(aes(x = Year, y = TempAvg)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  facet_wrap(~month, ncol = 12)
+```
+
+Further explore temperature, precip and KBDI trends over the fire season
+```{r}
+gg.SeasonTemp <- TLH.df %>%
+  filter(month == "May" | month == "Jun" | month == "Jul") %>%
+  group_by(Year, month) %>%
+  summarise(TempAvg = mean(TMAX)) %>%
+  ggplot(aes(x = Year, y = TempAvg)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  facet_wrap(~month, ncol = 3)
+
+gg.SeasonRain <- TLH.df %>%
+  filter(month == "May" | month == "Jun" | month == "Jul") %>%
+  group_by(Year, month) %>%
+  summarise(MonthlyRain = sum(Rainfall24mm)) %>%
+  ggplot(aes(x = Year, y = MonthlyRain)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  facet_wrap(~month, ncol = 3)
+
+gg.KBDIavg <- TLH.df %>%
+  filter(month == "May" | month == "Jun" | month == "Jul") %>%
+  group_by(Year, month) %>%
+  summarise(MonthlyKBDI = mean(Ql)) %>%
+  ggplot(aes(x = Year, y = MonthlyKBDI)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  facet_wrap(~month, ncol = 3)
+
+gg.KBDIavg/(gg.SeasonTemp + gg.SeasonRain)
+```
+
+Explore across fire season without breaking down month. Data for May, June, July
+```{r}
+gg.SeasonTemp1 <- TLH.df %>%
+  filter(month == "May" | month == "Jun" | month == "Jul") %>%
+  group_by(Year, month) %>%
+  summarise(TempAvg = mean(TMAX)) %>%
+  ggplot(aes(x = Year, y = TempAvg)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010))
+
+gg.SeasonRain1 <- TLH.df %>%
+  filter(month == "May" | month == "Jun" | month == "Jul") %>%
+  group_by(Year, month) %>%
+  summarise(MonthlyRain = sum(Rainfall24mm)) %>%
+  ggplot(aes(x = Year, y = MonthlyRain)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010))
+
+gg.KBDIavg1 <- TLH.df %>%
+  filter(month == "May" | month == "Jun" | month == "Jul") %>%
+  group_by(Year, month) %>%
+  summarise(MonthlyKBDI = mean(Ql)) %>%
+  ggplot(aes(x = Year, y = MonthlyKBDI)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010))
+
+gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1)
+```
+
+
 Import El Nino Data
 ```{r}
 SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
