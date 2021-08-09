@@ -4,7 +4,7 @@ author: "Zach"
 date: "5/27/2021"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 This file will explore ideas proposed by the committee during the prospectus defense on 5/25/2021
 
@@ -1140,6 +1140,42 @@ gg.KBDIavg1 <- TLH.df %>%
 
 gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1)
 ```
+
+
+1991 - 2020 April Normal:
+MeanMaxTemp: 80.2
+MeanPrecip: 3.53 inches
+MeanPrecip Jan-April 17.46 inches
+https://climatecenter.fsu.edu/products-services/data/1991-2020-normals/tallahassee 
+
+April of 2002 was significantly warm (+4.4 degrees above normal) and dry (-3.04 inches below normal)
+April of 2011 was also significantly warm (+4.43 degrees above normal) and dry (-1.42 inches below normal)
+```{r}
+TLH.df %>%
+  filter(month == "Apr") %>%
+  filter(Year >= 1991 & Year <= 2020) %>%
+  group_by(Year, month) %>%
+  summarise(TempAvg = mean(TMAX), Precip = sum(Rainfall24), TempAnom = mean(TMAX)-80.2, PrecipAnom = sum(Rainfall24)-3.53, AvgKBDI = mean(Ql))
+```
+
+In the years that were noted to be abnormally hot and dry (2002 & 2011) KBDI values for the summer months were high. Infact, monthly mean KBDI values were higher than they were in April in both cases
+```{r}
+TLH.df%>%
+  #filter(month == "May"| month == "Jun"|month == "Jul") %>%
+  filter(Year >= 1991 & Year <= 2020) %>%
+  group_by(Year) %>% #, month) %>%
+  summarise(AvgKBDI = mean(Ql))
+```
+Does the trend hold if a further rain deficit is explored. Explore what summer KBDI values might be based on rainfall anomalies between Jan and April
+The relationship between summer KBDI averages is not as clear when comparing it to rainfall deficits from Jan - Apr
+```{r}
+TLH.df %>%
+  filter(month == "Jan"| month == "Feb" | month == "Mar"| month == "Apr") %>%
+  filter(Year >= 1991 & Year <= 2020) %>%
+  group_by(Year) %>%
+  summarise(PrecipAnom = sum(Rainfall24)-17.46)
+```
+
 
 
 Import El Nino Data
