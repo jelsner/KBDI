@@ -7,15 +7,21 @@ editor_options:
 
 According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
 
+But how individuals and communities experience climate change is local.
+
 Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is quantified using 90% uncertainty intervals. The 90% uncertainty interval, reported in square brackets [x to y], is estimated to have a 90% likelihood of covering the value that is being estimated. The range encompasses the median value and there is an estimated 10% combined likelihood of the value being below the lower end of the range (x) and above its upper end (y). Often the distribution will be considered symmetric about the corresponding best estimate, but this is not always the case."
 
 1. Writing is thinking, 
 2. 1 article, 1 question, 1 finding, 
 3. it's not a review of the literature, it's an argument about why we need your paper
 
+We compute day-of-year trends in min and max temperature and use descriptive statistics to examine the range, distribution, and extremes of these trends.
+
 What day(s) of the year show the largest long-term (climate) trends in max/min temperatures? Corollary: what day(s) of the year do not show a normal distribution in max/min temperatures?
 
 Why is this important? Climate change on the scale relevant to our daily lives.
+
+The paper is exploratory. We did not have a hypothesis in mind.
 
 R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 
@@ -24,6 +30,7 @@ R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 library(tidyverse)
 library(lubridate)
 library(broom)
+library(patchwork)
 ```
 
 ## Get TLH airport daily weather data
@@ -169,7 +176,7 @@ normTest$doy[normTest$pvalueAD > .05]
 
 Compute long-term trends in day-of-year high temperatures.
 ```{r}
-( Trends <- 
+( TrendsMax <- 
   TLH.df |> 
     mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
 #  filter(Year >= 1990) |>
@@ -180,11 +187,40 @@ Compute long-term trends in day-of-year high temperatures.
            estimate = estimate * 10,
            std.error = std.error * 10,
            ymax = estimate + std.error,
-           ymin = estimate - std.error) )
+           ymin = estimate - std.error,
+           Daily = "High") )
 
-Trends |> 
+sum(TrendsMax$estimate > 0)
+sum(TrendsMax$estimate < 0)
+sum(TrendsMax$estimate > 0) / length(TrendsMax$estimate) * 100
+
+TrendsMax |> 
   arrange(desc(statistic))
+```
 
+Histogram of trends
+```{r}
+library(scales)
+
+TrendsMax |>
+  mutate(bins = cut(estimate, seq(-1, 1, by = .1))) |>
+  group_by(bins) |>
+  ggplot(mapping = aes(x = estimate)) +
+    geom_histogram(binwidth = .1, 
+                   color = "white",
+                   fill = "gray70",
+                   center = .05) +
+    geom_rug(mapping = aes(color = estimate)) +
+    scale_color_gradient2(low = muted("blue"),
+                          mid = "white",
+                          high = muted("red"),
+                          midpoint = 0,
+                          guide = 'none') +
+    theme_minimal()
+```
+
+Plot largest trends.
+```{r}
 labels <- c(paste0(seq(40, 100, by = 20), "°", " F"))
 
 ( p3 <- TLH.df |>
@@ -252,7 +288,7 @@ p4/p3
 
 Compute long-term trends in day-of-year low temperatures.
 ```{r}
-( Trends <- 
+( TrendsMin <- 
   TLH.df |> 
     mutate(MinTemp = (MinTemp - 32) * 5/9) |>
 #  filter(Year >= 1990) |>
@@ -263,11 +299,35 @@ Compute long-term trends in day-of-year low temperatures.
            estimate = estimate * 10,
            std.error = std.error * 10,
            ymax = estimate + std.error,
-           ymin = estimate - std.error) )
+           ymin = estimate - std.error,
+           Daily = "Low") )
 
-Trends |> 
+sum(TrendsMin$estimate > 0)
+sum(TrendsMin$estimate < 0)
+sum(TrendsMin$estimate > 0) / length(TrendsMin$estimate) * 100
+
+TrendsMin |> 
   arrange(desc(statistic))
+```
 
+```{r}
+Trends <- rbind(TrendsMax, TrendsMin)
+Trends |>
+  ggplot(mapping = aes(y = estimate, x = Daily, color = estimate)) +
+    stat_slab(color = "gray80", fill = "gray80") +
+    geom_point(shape = "_", size = 4) + 
+#    stat_halfeye() +
+    scale_color_gradient2(low = "blue",
+                          mid = "white",
+                          high = "red",
+                          midpoint = 0,
+                          guide = 'none') +
+    scale_y_continuous(limits = c(-1, 1)) +
+    theme_minimal() +
+    labs(x = "", y = "", title = "Day-of-year trends in high and low temperatures (°C/decade)")
+```
+
+```{r}
 labels <- c(paste0(seq(20, 80, by = 20), "°", " F"))
 
 ( p5 <- TLH.df |>
@@ -288,10 +348,7 @@ labels <- c(paste0(seq(20, 80, by = 20), "°", " F"))
   scale_color_manual(values = c("skyblue", "red3", "salmon"), guide = "none") +
   theme_minimal() +
   labs(x = "", y = "") )
-```
 
-Plot trends.
-```{r}
 ( p6 <- Trends |>
   ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
   scale_y_continuous(limits = c(-1.2, 1.2)) +
@@ -308,10 +365,7 @@ Plot trends.
   labs(title = "Long-term (1943-2020) trends in day-of-year low temperatures (°C/decade), Tallahassee, Florida", 
        subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
        x = "", y = "") )
-```
 
-Annotate the plot with text and arrows. http://jenrichmond.rbind.io/post/idhtg-how-to-annotate-plots/
-```{r}
 arrows <- 
   tibble(
     x1 = c(56, 160, 300),
@@ -329,8 +383,6 @@ arrows <-
     arrow = arrow(length = unit(.08, "inch")), size = .5,
     color = "gray50", curvature = .3) )
 
-library(patchwork)
-
 p6/p5
 ```
 
@@ -347,5 +399,8 @@ TLH.df |>
                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
                      labels = month.name) +
   theme_minimal()
+
+Trends |>
+  ggplot(mapping = aes(y = estimate)) +
 
 ```
