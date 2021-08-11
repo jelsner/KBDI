@@ -11,6 +11,10 @@ But how individuals and communities experience climate change is local.
 
 Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is quantified using 90% uncertainty intervals. The 90% uncertainty interval, reported in square brackets [x to y], is estimated to have a 90% likelihood of covering the value that is being estimated. The range encompasses the median value and there is an estimated 10% combined likelihood of the value being below the lower end of the range (x) and above its upper end (y). Often the distribution will be considered symmetric about the corresponding best estimate, but this is not always the case."
 
+"For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures" "There has been widespread evidence of human influence on various aspects of temperature extremes, at global, continental, and regional scales. This includes attribution to human influence of observed changes in intensity, frequency, and duration and other relevant characteristics at global and continental scales."
+
+https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.4688 Diurnal asymmetry to the observed global warming
+
 1. Writing is thinking, 
 2. 1 article, 1 question, 1 finding, 
 3. it's not a review of the literature, it's an argument about why we need your paper
@@ -21,7 +25,7 @@ What day(s) of the year show the largest long-term (climate) trends in max/min t
 
 Why is this important? Climate change on the scale relevant to our daily lives.
 
-The paper is exploratory. We did not have a hypothesis in mind.
+The paper is exploratory. We do not have a hypothesis in mind though we do expect to see more days with upward than downward trends with perhaps a greater number of days with upward trends in low temperatures compared to the number of days with upward trends in high temperatures.
 
 R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 
@@ -61,13 +65,15 @@ TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
 
 TLH.df <- TLH.df |>
-  mutate(AvgTemp = (MaxTemp + MinTemp) / 2)
+  mutate(AvgTemp = (MaxTemp + MinTemp) / 2,
+         DTR = MaxTemp - MinTemp)
 
 ( AnnualMeanTemperatures <- TLH.df %>%
   group_by(Year) %>%
   summarize(AvgHighTemp = mean(MaxTemp),
             AvgLowTemp = mean(MinTemp),
-            AvgMeanTemp = mean(AvgTemp)) )
+            AvgMeanTemp = mean(AvgTemp),
+            AvgDTR = mean(DTR)) )
 ```
 
 Plot annual mean temperatures.
@@ -81,6 +87,16 @@ AnnualMeanTemperatures |>
     geom_smooth() +
   theme_minimal() +
   labs(title = "Annual mean daily high and low temperatures (°F)",
+       subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+
+AnnualMeanTemperatures |>
+  ggplot(mapping = aes(x = Year, y = AvgDTR)) +
+  scale_y_continuous(limits = c(NA, NA)) +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual mean DTR (°F)",
        subtitle = "Tallahasee, Florida (1943-2020)",
        x = "", y = "")
 ```
@@ -147,6 +163,20 @@ p2 +
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
     arrow = arrow(length = unit(.08, "inch")), size = .5,
     color = "gray20", curvature = -.3)
+
+labels <- c(paste0(seq(0, 50, by = 10), "°", " F"))
+TLH.df |> 
+ggplot(mapping = aes(x = DTR)) + 
+  geom_histogram(binwidth = 1, 
+                 mapping = aes(fill = ..count..)) +
+  scale_fill_viridis_c(guide = "none") +
+  scale_x_continuous(breaks = seq(0, 50, by = 10),
+                     labels = labels) +
+  theme_minimal() +
+  labs(title = "Frequency of DTR",
+       subtitle = "Tallahassee, Florida (1943-2020)",
+       x = "", y = "")
+
 ```
 
 Non-normality in daily high and low temperatures
@@ -156,10 +186,10 @@ library(nortest)
 
 TLH.df |>
   group_by(doy) |>
-  summarize( AvgTempByDoY = mean(AvgTemp),
-             SDTempByDoY = sd(AvgTemp),
-             SkewTempByDoY = skewness(AvgTemp) ) |>
-  ggplot(mapping = aes(x = doy, y = SkewTempByDoY)) +
+  summarize( AvgByDoY = mean(DTR),
+             SDByDoY = sd(DTR),
+             SkewByDoY = skewness(DTR) ) |>
+  ggplot(mapping = aes(x = doy, y = SkewByDoY)) +
     geom_point() +
     geom_smooth()
 
@@ -167,8 +197,8 @@ normTest <-
   TLH.df |>
 #  filter(Year >= 1990) |>
   group_by(doy) |>
-  summarize(pvalueS = shapiro.test(AvgTemp)$p.value,
-            pvalueAD = ad.test(AvgTemp)$p.value) 
+  summarize(pvalueS = shapiro.test(DTR)$p.value,
+            pvalueAD = ad.test(DTR)$p.value) 
 
 normTest$doy[normTest$pvalueS > .05]
 normTest$doy[normTest$pvalueAD > .05]
@@ -314,7 +344,7 @@ TrendsMin |>
 Trends <- rbind(TrendsMax, TrendsMin)
 Trends |>
   ggplot(mapping = aes(y = estimate, x = Daily, color = estimate)) +
-    stat_slab(color = "gray80", fill = "gray80") +
+    stat_slab(color = "gray80", fill = "gray80", scale = .5) +
     geom_point(shape = "_", size = 4) + 
 #    stat_halfeye() +
     scale_color_gradient2(low = "blue",
