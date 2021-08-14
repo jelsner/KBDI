@@ -907,48 +907,48 @@ summary(JulyFires.ppp)
 ```
 
 ```{r}
-#fireseason
-SeasonFires.ppp %>%
-  density() %>%
-  plot()
-
-#April
-AprilFires.ppp %>%
-  density() %>%
-  plot()
-
-#May
-MayFires.ppp %>%
-  density() %>%
-  plot()
-
-#June
-JuneFires.ppp %>%
-  density() %>%
-  plot()
-
-#July
-JulyFires.ppp %>%
-  density() %>%
-  plot()
-```
-
-```{r}
 par(mfrow=c(2,2))
 AprilFires.ppp %>%
   density() %>%
-  plot()
+  plot(main = "April")
 MayFires.ppp %>%
   density() %>%
-  plot()
+  plot(main = "May")
 JuneFires.ppp %>%
   density() %>%
-  plot()
+  plot(main = "June")
 JulyFires.ppp %>%
   density() %>%
-  plot()
+  plot(main = "July")
 ```
 
+April Fire Distribution - Only 6 fires across all April months in the data set?
+```{r}
+par(mfrow=c(1,2))
+
+AprilFires.ppp %>%
+  plot(main = "April Fires")
+AprilFires.ppp %>%
+  density() %>%
+  plot(main = "Spatial Distribution - April Fires")
+```
+
+Fire Season Distribution
+```{r}
+par(mfrow=c(1,2))
+
+SeasonFires.ppp %>%
+  plot(main = "Season Fires")
+SeasonFires.ppp %>%
+  density() %>%
+  plot(main = "Spatial Distribution - Season Fires")
+```
+
+
+Use this code to turn off combined plots
+```{r}
+dev.off() 
+```
 
 ###Explore relationships between April KBDI observations, FireSeason KBDI observations, and the number of FireSeason Fires
 
@@ -1208,7 +1208,10 @@ ggplot(data = KBDI_Trends.df,
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "gray70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
-  facet_wrap(~month, ncol = 12)
+  facet_wrap(~month, ncol = 12) +
+  ylab("Monthly KBDI Average")
+  labs(title = "Monthly KBDI averages are increasing annually in the Appalachacola National Forest",
+       caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
 
 Explore rainfall trends
@@ -1222,8 +1225,28 @@ TLH.df %>%
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
-  facet_wrap(~month, ncol = 12)
+  facet_wrap(~month, ncol = 12) +
+  ylab("Monthly Rainfall Total (mm)")
+  labs(title = "Monthly rainfall totals are significantly decreasing in May and July",
+       subtitle = "The fire season runs May - July",
+       caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
+
+```{r}
+TLH.df %>%
+  filter(month == "May"| month == "June"| month == "July") %>%
+  group_by(Year) %>%
+  summarise(FireSeasonRain = sum(Rainfall24mm)) %>%
+  ggplot(aes(x = Year, y = FireSeasonRain)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE, color = "grey70") +
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  ylab("Fire Season Rain Total (mm)") +
+  labs(title = "Annual Rainfall During the Fire Season is Decreasing",
+       subtitle = "At the Tallahassee International Airport",
+       caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
+```
+
 
 Explore Temperature trends
 
@@ -1236,7 +1259,11 @@ TLH.df %>%
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
-  facet_wrap(~month, ncol = 12)
+  facet_wrap(~month, ncol = 12) +
+  ylab("Average Monthly Temperature (Degrees F)") +
+  labs(title = "The Average Monthly Temperature at the Tallahassee International Airport is Rising",
+       subtitle = "*Except for January",
+       caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
 
 Further explore temperature, precip and KBDI trends over the fire season
@@ -1249,7 +1276,9 @@ gg.SeasonTemp <- TLH.df %>%
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
-  facet_wrap(~month, ncol = 3)
+  facet_wrap(~month, ncol = 3) +
+  ylab("Average Monthly Temperature (Degrees F)") +
+  labs(title = "Max Temperature Averages")
 
 gg.SeasonRain <- TLH.df %>%
   filter(month == "May" | month == "Jun" | month == "Jul") %>%
@@ -1259,7 +1288,9 @@ gg.SeasonRain <- TLH.df %>%
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
-  facet_wrap(~month, ncol = 3)
+  facet_wrap(~month, ncol = 3) +
+  ylab("Total Monthly Rainfall (mm)") +
+  labs(title = "Annual Rainfall Totals")
 
 gg.KBDIavg <- TLH.df %>%
   filter(month == "May" | month == "Jun" | month == "Jul") %>%
@@ -1269,7 +1300,9 @@ gg.KBDIavg <- TLH.df %>%
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
-  facet_wrap(~month, ncol = 3)
+  facet_wrap(~month, ncol = 3) +
+  ylab("Monthly KBDI Averages") +
+  labs(title = "Annual Trends in Monthly KBDI Averages")
 
 gg.KBDIavg/(gg.SeasonTemp + gg.SeasonRain)
 ```
@@ -1283,16 +1316,20 @@ gg.SeasonTemp1 <- TLH.df %>%
   ggplot(aes(x = Year, y = TempAvg)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
-  scale_x_continuous(breaks = c(1945, 1977, 2010))
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  ylab("Average Monthly Temperature (Degrees F)") +
+  labs(title = "Max Temperature Averages")
 
 gg.SeasonRain1 <- TLH.df %>%
   filter(month == "May" | month == "Jun" | month == "Jul") %>%
-  group_by(Year, month) %>%
-  summarise(MonthlyRain = sum(Rainfall24mm)) %>%
-  ggplot(aes(x = Year, y = MonthlyRain)) +
+  group_by(Year) %>%
+  summarise(SeasonRain = sum(Rainfall24mm)) %>%
+  ggplot(aes(x = Year, y = SeasonRain)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
-  scale_x_continuous(breaks = c(1945, 1977, 2010))
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  ylab("Season Rainfall Totals (mm)") +
+  labs(title = "Season Rainfall Totals")
 
 gg.KBDIavg1 <- TLH.df %>%
   filter(month == "May" | month == "Jun" | month == "Jul") %>%
@@ -1301,7 +1338,9 @@ gg.KBDIavg1 <- TLH.df %>%
   ggplot(aes(x = Year, y = MonthlyKBDI)) +
   geom_point() +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
-  scale_x_continuous(breaks = c(1945, 1977, 2010))
+  scale_x_continuous(breaks = c(1945, 1977, 2010)) +
+  ylab("Monthly KBDI Averages") +
+  labs(title = "Annual Trends in Monthly KBDI Averages")
 
 gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1)
 ```
