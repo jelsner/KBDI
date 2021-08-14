@@ -825,6 +825,131 @@ head(seasonSummary)
 #cor(seasonSummary$nFIRES, seasonSummary$LargestFire)
 ```
 
+###Spatial Distribution of Natural Wildfires
+suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
+```{r}
+library(spatstat)
+library(maptools)
+#remotes::install_github("walkerke/crsuggest")
+library(crsuggest)
+
+suggest_crs(anfbounds.sf)
+
+W <- anfbounds.sf %>% 
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.owin()
+
+#FireSeason Object
+SeasonFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(5, 6, 7)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+SeasonFires.ppp <- SeasonFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(SeasonFires.ppp)
+
+#April Fire Object
+AprilFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(4)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+AprilFires.ppp <- AprilFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(AprilFires.ppp)
+
+#May Fires Object
+MayFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(5)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+MayFires.ppp <- MayFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(MayFires.ppp)
+
+#June Fires Object
+JuneFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(6)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+JuneFires.ppp <- JuneFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(JuneFires.ppp)
+
+#July Fires object
+JulyFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(7)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+JulyFires.ppp <- JulyFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(JulyFires.ppp)
+```
+
+```{r}
+#fireseason
+SeasonFires.ppp %>%
+  density() %>%
+  plot()
+
+#April
+AprilFires.ppp %>%
+  density() %>%
+  plot()
+
+#May
+MayFires.ppp %>%
+  density() %>%
+  plot()
+
+#June
+JuneFires.ppp %>%
+  density() %>%
+  plot()
+
+#July
+JulyFires.ppp %>%
+  density() %>%
+  plot()
+```
+
+```{r}
+par(mfrow=c(2,2))
+AprilFires.ppp %>%
+  density() %>%
+  plot()
+MayFires.ppp %>%
+  density() %>%
+  plot()
+JuneFires.ppp %>%
+  density() %>%
+  plot()
+JulyFires.ppp %>%
+  density() %>%
+  plot()
+```
+
+
 ###Explore relationships between April KBDI observations, FireSeason KBDI observations, and the number of FireSeason Fires
 
 There is a low correlation (0.399) between the average KBDI in April and the Average KBDI of the proceeding summer season
