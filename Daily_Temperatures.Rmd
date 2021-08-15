@@ -1,5 +1,5 @@
 ---
-title: "Climate Trends in Day-Of-Year High and Low Temperatures"
+title: "Long-term Trends in Day-Of-Year High and Low Temperatures"
 output: html_document
 editor_options: 
   chunk_output_type: console
