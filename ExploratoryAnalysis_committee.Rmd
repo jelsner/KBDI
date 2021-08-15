@@ -922,7 +922,7 @@ JulyFires.ppp %>%
   plot(main = "July")
 ```
 
-April Fire Distribution - Only 6 fires across all April months in the data set?
+April Fire Distribution - Only 4 fires across all April months in the data set?
 ```{r}
 par(mfrow=c(1,2))
 
@@ -944,6 +944,73 @@ SeasonFires.ppp %>%
   plot(main = "Spatial Distribution - Season Fires")
 ```
 
+Explore how the distribution of wildfires may vary based on season
+```{r}
+FallFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(8, 9, 10)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+FallFires.ppp <- FallFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(FallFires.ppp)
+
+WinterFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(11, 12, 1)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+WinterFires.ppp <- WinterFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(WinterFires.ppp)
+
+SpringFires.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(2, 3, 4)) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+SpringFires.ppp <- SpringFires.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(SpringFires.ppp)
+```
+
+```{r}
+par(mfrow=c(2,2))
+WinterFires.ppp %>%
+  density() %>%
+  plot(main = "November, December, January")
+SpringFires.ppp %>%
+  density() %>%
+  plot(main = "February, March, April")
+SeasonFires.ppp %>%
+  density() %>%
+  plot(main = "May, June, July - Fire Season")
+FallFires.ppp %>%
+  density() %>%
+  plot(main = "August, September, October")
+```
+
+November, December, January - Only one lightning fire occurred during this group of months.
+```{r}
+par(mfrow=c(1,2))
+
+WinterFires.ppp %>%
+  plot(main = "November, December, January")
+WinterFires.ppp %>%
+  density() %>%
+  plot(main = "Spatial Distribution - November, December, January")
+```
+
+
 
 Use this code to turn off combined plots
 ```{r}
@@ -961,8 +1028,8 @@ TLH.df%>%
   summarise(AprilKBDIavg = mean(Ql[month == "Apr"]), SummerKBDIavg = mean(Ql[month == "May"| month == "Jun"| month == "Jul"])) %>%
   summarise(correlation = cor(AprilKBDIavg, SummerKBDIavg))
 ```
-How would the correlation compare if just the last day of April's KBDI was compared to the summer average KBDI?
 
+How would the correlation compare if just the last day of April's KBDI was compared to the summer average KBDI?
 Comparing the just the last day of April results in a higher correlation coefficient of 0.484.
 ```{r}
 TLH.df %>% 
@@ -1040,13 +1107,13 @@ AprilKBDI <- TLH.df %>%
   summarise(April_Avg = mean(Ql), April_Median = median(Ql), April_Min = min(Ql), April_Max = max(Ql), KBDI_LastDay = Ql[month(Date) == 04 & day(Date) == 30])
 ```
 
-Merge fireseason fire counts with the April KBDI summaries 
+Merge fire season fire counts with the April KBDI summaries 
 ```{r}
 AprilStats <- left_join(x = seasonFires, y = AprilKBDI, by = c("Year" = "Season")) %>%
   rename(Season = Year, SeasonFires = nFIRES)
 ```
 
-When exploring the relationship between April KBDI values and the number of fires that occured in the proceding season a correlation coefficient of about 0.55 is found.
+When exploring the relationship between April KBDI values and the number of fires that occurred in the proceeding season a correlation coefficient of about 0.55 is found, with the best response to the KBDI median and KBDI mean.
 ```{r}
 cor(AprilStats$SeasonFires, AprilStats$April_Avg)
 cor(AprilStats$SeasonFires, AprilStats$April_Median)
@@ -1057,12 +1124,12 @@ cor(AprilStats$SeasonFires, AprilStats$KBDI_LastDay)
 Predict each past season fire count using a glm and compare to what the count actually was. 
 
 Questions to consider while working?
-Can't use binomial family is using AprilStats data set. Use poison because SeasonFires is count data.
+Can't use binomial family when using AprilStats data set. Use poison because SeasonFires is count data.
 Could the min KBDI also have a significant influence. Especially if it resets to zero.
 Should net rainfall be included in the model for each season?
 Use predict function to predict the number of April fires and compare to the actual amount.
 
-A summary of April GLM shows that the Average April KBDI is statisically significant.
+A summary of April GLM shows that the Average April KBDI is statistically significant.
 ```{r}
 AprilGLM <- glm(formula = SeasonFires ~ April_Avg, family = poisson, data = AprilStats)
 
@@ -1079,7 +1146,7 @@ ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
   geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
   geom_line(color = "blue") +
   ylab("Predicited Number of Fires") +
-  xlab("Average KBDI") +
+  xlab("April Average KBDI") +
   labs(
     title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April Averaged KBDI",
     subtitle = "With 95% Confidence Interval",
@@ -1088,9 +1155,9 @@ ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
 
 create a column of predicted number of fires for each season and compare
 ```{r}
-AprilStats$PredFires <- pred_AprilGLM$fit
-AprilStats$Compare <- AprilStats$SeasonFires - AprilStats$PredFires
-cor(AprilStats$SeasonFires, AprilStats$PredFires)
+AprilStats$PredFires1 <- pred_AprilGLM$fit
+AprilStats$Compare1 <- AprilStats$SeasonFires - AprilStats$PredFires1
+cor(AprilStats$SeasonFires, AprilStats$PredFires1)
 ```
 
 What other factors could influence the number of fires:
@@ -1100,16 +1167,27 @@ April Net Rainfall?
 April KBDI Range?
 Number of days KBDI > 400?
 
-We find that Average KBDI is not statistically significant
-correlation is slightly stronger than mode that was run without max and min KBDI
+We find that the April KBDI Average is not statistically significant
+THe correlation is slightly stronger than mode that was run without max and min KBDI
 ```{r}
 April2GLM <- glm(formula = SeasonFires ~ April_Avg + April_Min + April_Max, family = poisson, data = AprilStats)
 summary(April2GLM)
 pred_April2GLM <- predict(object = April2GLM,
                          type = "response",
                          se.fit = TRUE)
+
+#Correlation when including April max and min KBDI values
 cor(AprilStats$SeasonFires, pred_April2GLM$fit)
+#Correlation without including April max and min KBDI values
+cor(AprilStats$SeasonFires, AprilStats$PredFires)
 ```
+
+Create columns to further compare the actual number of fires that occurred in a season and the predicted number of fires.
+```{r}
+AprilStats$PredFires2 <- pred_April2GLM$fit
+AprilStats$Compare2 <- AprilStats$SeasonFires - AprilStats$PredFires2
+```
+
 
 ###Data Exploration
 
@@ -1209,7 +1287,7 @@ ggplot(data = KBDI_Trends.df,
   geom_smooth(method = lm, se = FALSE, color = "gray70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   facet_wrap(~month, ncol = 12) +
-  ylab("Monthly KBDI Average")
+  ylab("Monthly KBDI Average") +
   labs(title = "Monthly KBDI averages are increasing annually in the Appalachacola National Forest",
        caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
@@ -1226,7 +1304,7 @@ TLH.df %>%
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   facet_wrap(~month, ncol = 12) +
-  ylab("Monthly Rainfall Total (mm)")
+  ylab("Monthly Rainfall Total (mm)") +
   labs(title = "Monthly rainfall totals are significantly decreasing in May and July",
        subtitle = "The fire season runs May - July",
        caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
@@ -1242,7 +1320,7 @@ TLH.df %>%
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   ylab("Fire Season Rain Total (mm)") +
-  labs(title = "Annual Rainfall During the Fire Season is Decreasing",
+  labs(title = "Rainfall During the Fire Season is Decreasing Annually",
        subtitle = "At the Tallahassee International Airport",
        caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
@@ -1261,7 +1339,7 @@ TLH.df %>%
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   facet_wrap(~month, ncol = 12) +
   ylab("Average Monthly Temperature (Degrees F)") +
-  labs(title = "The Average Monthly Temperature at the Tallahassee International Airport is Rising",
+  labs(title = "The Average Monthly Temperature at the Tallahassee International Airport is Rising Annually",
        subtitle = "*Except for January",
        caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
@@ -1304,7 +1382,8 @@ gg.KBDIavg <- TLH.df %>%
   ylab("Monthly KBDI Averages") +
   labs(title = "Annual Trends in Monthly KBDI Averages")
 
-gg.KBDIavg/(gg.SeasonTemp + gg.SeasonRain)
+gg.KBDIavg/(gg.SeasonTemp + gg.SeasonRain) +
+  plot_annotation(caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
 
 Explore across fire season without breaking down month. Data for May, June, July
@@ -1342,7 +1421,8 @@ gg.KBDIavg1 <- TLH.df %>%
   ylab("Monthly KBDI Averages") +
   labs(title = "Annual Trends in Monthly KBDI Averages")
 
-gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1)
+gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1) +
+  plot_annotation(caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
 
 
