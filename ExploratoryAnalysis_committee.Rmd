@@ -924,13 +924,15 @@ JulyFires.ppp %>%
 
 April Fire Distribution - Only 4 fires across all April months in the data set?
 ```{r}
-par(mfrow=c(1,2))
-
+par(mfrow=c(2,2))
 AprilFires.ppp %>%
-  plot(main = "April Fires")
-AprilFires.ppp %>%
-  density() %>%
-  plot(main = "Spatial Distribution - April Fires")
+  plot(main = "April")
+MayFires.ppp %>%
+  plot(main = "May")
+JuneFires.ppp %>%
+  plot(main = "June")
+JulyFires.ppp %>%
+  plot(main = "July")
 ```
 
 Fire Season Distribution
@@ -1010,186 +1012,12 @@ WinterFires.ppp %>%
   plot(main = "Spatial Distribution - November, December, January")
 ```
 
-
-
 Use this code to turn off combined plots
 ```{r}
 dev.off() 
 ```
 
-###Explore relationships between April KBDI observations, FireSeason KBDI observations, and the number of FireSeason Fires
-
-There is a low correlation (0.399) between the average KBDI in April and the Average KBDI of the proceeding summer season
-```{r}
-TLH.df%>%
-  filter(month == "Apr"| month == "May"| month == "Jun"|month == "Jul") %>%
-  filter(Year >= 1991 & Year <= 2019) %>%
-  group_by(Year) %>%
-  summarise(AprilKBDIavg = mean(Ql[month == "Apr"]), SummerKBDIavg = mean(Ql[month == "May"| month == "Jun"| month == "Jul"])) %>%
-  summarise(correlation = cor(AprilKBDIavg, SummerKBDIavg))
-```
-
-How would the correlation compare if just the last day of April's KBDI was compared to the summer average KBDI?
-Comparing the just the last day of April results in a higher correlation coefficient of 0.484.
-```{r}
-TLH.df %>% 
-  filter(month == "Apr"| month == "May"| month == "Jun"|month == "Jul") %>%
-  filter(Year >= 1991 & Year <= 2019) %>%
-  group_by(Year) %>%
-  summarise(AprilLastDay = Ql[month == "Apr" & day(Date) == 30], SummerKBDIavg = mean(Ql[month == "May"| month == "Jun"| month == "Jul"])) %>%
-  summarise(correlation = cor(AprilLastDay, SummerKBDIavg))
-```
-
-1991 - 2020 April Normal:
-MeanMaxTemp: 80.2
-MeanPrecip: 3.53 inches
-MeanPrecip Jan-April 17.46 inches
-https://climatecenter.fsu.edu/products-services/data/1991-2020-normals/tallahassee 
-
-April of 2002 was significantly warm (+4.4 degrees above normal) and dry (-3.04 inches below normal)
-April of 2011 was also significantly warm (+4.43 degrees above normal) and dry (-1.42 inches below normal)
-
-April Precip Anomaly is negatively correlated to April Average KBDI (-.62). The further below the average rainfall total, the higher likelihood of a high April KBDI average.
-April Temp Anomaly is positively correlated to April Average KBDI (+0.37). This is a low correlation coeffiecnt and departure from the average April temperature does not appear as significant as the departure from the average April rainfall.
-```{r}
-TLH.df %>%
-  filter(month == "Apr") %>%
-  filter(Year >= 1991 & Year <= 2020) %>%
-  group_by(Year) %>%
-  summarise(TempAvg = mean(TMAX), Precip = sum(Rainfall24), TempAnom = mean(TMAX)-80.2, PrecipAnom = sum(Rainfall24)-3.53, AvgKBDI = mean(Ql)) %>%
-  summarise(PrecipAnomKBDI = cor(PrecipAnom, AvgKBDI), TempAnomKBDI = cor(TempAnom, AvgKBDI))
-```
-
-Does the trend hold if a further rain deficit is explored. Explore what summer KBDI values might be based on rainfall anomalies between Jan and April
-Exploring a longer period of rainfall deficit, a correlation coefficient of -0.56 is found. This is slightly lower than comparing the rainfall deficit across just April which was -0.62
-```{r}
-TLH.df %>%
-  filter(month == "Jan"| month == "Feb" | month == "Mar"| month == "Apr" | month == "May") %>%
-  filter(Year >= 1991 & Year <= 2019) %>%
-  group_by(Year) %>%
-  summarise(PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| month == "Apr"])-17.46, MayKBDI = mean(Ql[month == "May"])) %>%
-  summarise(correlation = cor(PrecipAnom,MayKBDI))
-```
-
-Explore KBDI by season
-Create stat columns for KBDI for each season
-```{r}
-seasonKBDI <- TLH.df %>%
-  filter(year(Date) >= 1992) %>%
-  filter(year(Date) <= 2018) %>%
-  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
-  mutate(Season = year(Date)) %>%
-  group_by(Season) %>%
-  summarise(Season_Avg = mean(Ql), Season_Median = median(Ql), Season_Min = min(Ql), Season_Max = max(Ql))
-```
-
-Merge KBDI and Fire data sets. 
-```{r}
-seasonStats <- left_join(x = seasonFires, y = seasonKBDI, by = c("Year" = "Season")) %>%
-  rename(Season = Year)
-```
-
-There are high correlation values between the number of fires that occur during the fire season and KBDI values during that season
-```{r}
-cor(seasonStats$nFIRES, seasonStats$Season_Avg)
-cor(seasonStats$nFIRES, seasonStats$Season_Median)
-cor(seasonStats$nFIRES, seasonStats$Season_Max)
-```
-
-When running the liner regression models, April KBDI values will be used to predict the season. Explore stats for April and compare to the number of fires during the season. Also include the KBDI on the last day of April for each season
-```{r}
-AprilKBDI <- TLH.df %>%
-  filter(year(Date) >= 1992) %>%
-  filter(year(Date) <= 2018) %>%
-  filter(month(Date) == 04) %>%
-  mutate(Season = year(Date)) %>%
-  group_by(Season) %>%
-  summarise(April_Avg = mean(Ql), April_Median = median(Ql), April_Min = min(Ql), April_Max = max(Ql), KBDI_LastDay = Ql[month(Date) == 04 & day(Date) == 30])
-```
-
-Merge fire season fire counts with the April KBDI summaries 
-```{r}
-AprilStats <- left_join(x = seasonFires, y = AprilKBDI, by = c("Year" = "Season")) %>%
-  rename(Season = Year, SeasonFires = nFIRES)
-```
-
-When exploring the relationship between April KBDI values and the number of fires that occurred in the proceeding season a correlation coefficient of about 0.55 is found, with the best response to the KBDI median and KBDI mean.
-```{r}
-cor(AprilStats$SeasonFires, AprilStats$April_Avg)
-cor(AprilStats$SeasonFires, AprilStats$April_Median)
-cor(AprilStats$SeasonFires, AprilStats$April_Max)
-cor(AprilStats$SeasonFires, AprilStats$KBDI_LastDay)
-```
-
-Predict each past season fire count using a glm and compare to what the count actually was. 
-
-Questions to consider while working?
-Can't use binomial family when using AprilStats data set. Use poison because SeasonFires is count data.
-Could the min KBDI also have a significant influence. Especially if it resets to zero.
-Should net rainfall be included in the model for each season?
-Use predict function to predict the number of April fires and compare to the actual amount.
-
-A summary of April GLM shows that the Average April KBDI is statistically significant.
-```{r}
-AprilGLM <- glm(formula = SeasonFires ~ April_Avg, family = poisson, data = AprilStats)
-
-pred_AprilGLM <- predict(object = AprilGLM,
-                         type = "response",
-                         se.fit = TRUE)
-
-#summary(AprilGLM)
-
-lowerAprilStats <- pred_AprilGLM$fit - (1.96*pred_AprilGLM$se.fit)
-upperAprilStats <- pred_AprilGLM$fit + (1.96*pred_AprilGLM$se.fit)
-
-ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
-  geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
-  geom_line(color = "blue") +
-  ylab("Predicited Number of Fires") +
-  xlab("April Average KBDI") +
-  labs(
-    title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April Averaged KBDI",
-    subtitle = "With 95% Confidence Interval",
-    caption = "April 1992-2018")
-```
-
-create a column of predicted number of fires for each season and compare
-```{r}
-AprilStats$PredFires1 <- pred_AprilGLM$fit
-AprilStats$Compare1 <- AprilStats$SeasonFires - AprilStats$PredFires1
-cor(AprilStats$SeasonFires, AprilStats$PredFires1)
-```
-
-What other factors could influence the number of fires:
-April Max KBDI?
-April Min KBDI?
-April Net Rainfall?
-April KBDI Range?
-Number of days KBDI > 400?
-
-We find that the April KBDI Average is not statistically significant
-THe correlation is slightly stronger than mode that was run without max and min KBDI
-```{r}
-April2GLM <- glm(formula = SeasonFires ~ April_Avg + April_Min + April_Max, family = poisson, data = AprilStats)
-summary(April2GLM)
-pred_April2GLM <- predict(object = April2GLM,
-                         type = "response",
-                         se.fit = TRUE)
-
-#Correlation when including April max and min KBDI values
-cor(AprilStats$SeasonFires, pred_April2GLM$fit)
-#Correlation without including April max and min KBDI values
-cor(AprilStats$SeasonFires, AprilStats$PredFires)
-```
-
-Create columns to further compare the actual number of fires that occurred in a season and the predicted number of fires.
-```{r}
-AprilStats$PredFires2 <- pred_April2GLM$fit
-AprilStats$Compare2 <- AprilStats$SeasonFires - AprilStats$PredFires2
-```
-
-
-###Data Exploration
+###Data Exploration: Precip, Temp & KBDI
 
 create data frame with both fire and KBDI data
 ```{r}
@@ -1279,6 +1107,7 @@ KBDI_Trends.df <- TLH.df %>%
   summarise(MonthlyKBDI = mean(Ql))
 ```
 
+How do monthly KBDI trends vary Annually? Is ther a drying trend with time?
 April, May, July, August, September, and October all show significant drying trends from 1940 - 2020
 ```{r}
 ggplot(data = KBDI_Trends.df,
@@ -1310,6 +1139,7 @@ TLH.df %>%
        caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
 
+Fire season rain fall trends have been decreasing annually.
 ```{r}
 TLH.df %>%
   filter(month == "May"| month == "June"| month == "July") %>%
@@ -1425,7 +1255,185 @@ gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1) +
   plot_annotation(caption = "Period of Record: Mar. 1940 - Apr. 2020, Source: NWSWFO Tallahassee")
 ```
 
+###Explore relationships between April KBDI observations, FireSeason KBDI observations, and the number of FireSeason Fires
 
+There is a low correlation (0.399) between the average KBDI in April and the Average KBDI of the proceeding summer season
+```{r}
+TLH.df%>%
+  filter(month == "Apr"| month == "May"| month == "Jun"|month == "Jul") %>%
+  filter(Year >= 1991 & Year <= 2019) %>%
+  group_by(Year) %>%
+  summarise(AprilKBDIavg = mean(Ql[month == "Apr"]), SummerKBDIavg = mean(Ql[month == "May"| month == "Jun"| month == "Jul"])) %>%
+  summarise(correlation = cor(AprilKBDIavg, SummerKBDIavg))
+```
+
+How would the correlation compare if just the last day of April's KBDI was compared to the summer average KBDI?
+Comparing the just the last day of April results in a higher correlation coefficient of 0.484.
+```{r}
+TLH.df %>% 
+  filter(month == "Apr"| month == "May"| month == "Jun"|month == "Jul") %>%
+  filter(Year >= 1991 & Year <= 2019) %>%
+  group_by(Year) %>%
+  summarise(AprilLastDay = Ql[month == "Apr" & day(Date) == 30], SummerKBDIavg = mean(Ql[month == "May"| month == "Jun"| month == "Jul"])) %>%
+  summarise(correlation = cor(AprilLastDay, SummerKBDIavg))
+```
+
+1991 - 2020 April Normal:
+MeanMaxTemp: 80.2
+MeanPrecip: 3.53 inches
+MeanPrecip Jan-April 17.46 inches
+https://climatecenter.fsu.edu/products-services/data/1991-2020-normals/tallahassee 
+
+Notable years:
+April of 2002 was significantly warm (+4.4 degrees above normal) and dry (-3.04 inches below normal)
+April of 2011 was also significantly warm (+4.43 degrees above normal) and dry (-1.42 inches below normal)
+
+April Precip Anomaly is negatively correlated to May Average KBDI (-.669). The further below the average rainfall total, the higher likelihood of a high May KBDI average.
+April Temp Anomaly is positively correlated to May Average KBDI (+0.193). This is a low correlation coefficient and departure from the average April temperature does not appear as significant as the departure from the average April rainfall.
+```{r}
+TLH.df %>%
+  filter(month == "Apr" | month == "May") %>%
+  filter(Year >= 1991 & Year < 2020) %>%
+  group_by(Year) %>%
+  summarise(AprTempAvg = mean(TMAX[month == "Apr"]), AprPrecip = sum(Rainfall24[month == "Apr"]), AprTempAnom = mean(TMAX[month == "Apr"])-80.2, AprPrecipAnom = sum(Rainfall24[month == "Apr"])-3.53, MayAvgKBDI = mean(Ql[month == "May"])) %>%
+  summarise(PrecipAnomKBDI = cor(AprPrecipAnom, MayAvgKBDI), TempAnomKBDI = cor(AprTempAnom, MayAvgKBDI))
+```
+
+Does the trend hold if a further rain deficit is explored. Explore what summer KBDI values might be based on rainfall anomalies between Jan and April
+Exploring a longer period of rainfall deficit, a correlation coefficient of -0.558 is found. This is lower than comparing the rainfall deficit across just April which was -0.669
+```{r}
+TLH.df %>%
+  filter(month == "Jan"| month == "Feb" | month == "Mar"| month == "Apr" | month == "May") %>%
+  filter(Year >= 1991 & Year <= 2019) %>%
+  group_by(Year) %>%
+  summarise(PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| month == "Apr"])-17.46, MayKBDI = mean(Ql[month == "May"])) %>%
+  summarise(correlation = cor(PrecipAnom,MayKBDI))
+```
+
+Explore KBDI by season
+Create stat columns for KBDI for each season
+```{r}
+seasonKBDI <- TLH.df %>%
+  filter(year(Date) >= 1992) %>%
+  filter(year(Date) <= 2018) %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07) %>%
+  mutate(Season = year(Date)) %>%
+  group_by(Season) %>%
+  summarise(Season_Avg = mean(Ql), Season_Median = median(Ql), Season_Min = min(Ql), Season_Max = max(Ql))
+```
+
+Merge KBDI and Fire data sets. 
+```{r}
+seasonStats <- left_join(x = seasonFires, y = seasonKBDI, by = c("Year" = "Season")) %>%
+  rename(Season = Year)
+```
+
+There are high correlation values between the number of fires that occur during the fire season and KBDI values during that season
+```{r}
+cor(seasonStats$nFIRES, seasonStats$Season_Avg)
+cor(seasonStats$nFIRES, seasonStats$Season_Median)
+cor(seasonStats$nFIRES, seasonStats$Season_Max)
+```
+
+When running the liner regression models, April KBDI values will be used to predict the season. Explore stats for April and compare to the number of fires during the season. Also include the KBDI on the last day of April for each season
+```{r}
+AprilKBDI <- TLH.df %>%
+  filter(year(Date) >= 1992) %>%
+  filter(year(Date) <= 2018) %>%
+  filter(month(Date) == 04) %>%
+  mutate(Season = year(Date)) %>%
+  group_by(Season) %>%
+  summarise(April_Avg = mean(Ql), April_Median = median(Ql), April_Min = min(Ql), April_Max = max(Ql), KBDI_LastDay = Ql[month(Date) == 04 & day(Date) == 30])
+```
+
+Merge fire season fire counts with the April KBDI summaries 
+```{r}
+AprilStats <- left_join(x = seasonFires, y = AprilKBDI, by = c("Year" = "Season")) %>%
+  rename(Season = Year, SeasonFires = nFIRES)
+```
+
+When exploring the relationship between April KBDI values and the number of fires that occurred in the proceeding season a correlation coefficient of about 0.55 is found, with the best response to the KBDI median and KBDI mean.
+```{r}
+cor(AprilStats$SeasonFires, AprilStats$April_Avg)
+cor(AprilStats$SeasonFires, AprilStats$April_Median)
+cor(AprilStats$SeasonFires, AprilStats$April_Max)
+cor(AprilStats$SeasonFires, AprilStats$KBDI_LastDay)
+```
+
+Predict each past season fire count using a glm and compare to what the count actually was. 
+
+Questions to consider while working?
+Can't use binomial family when using AprilStats data set. Use poison because SeasonFires is count data.
+Could the min KBDI also have a significant influence. Especially if it resets to zero.
+Should net rainfall be included in the model for each season?
+Use predict function to predict the number of April fires and compare to the actual amount.
+
+A summary of April GLM shows that the Average April KBDI is statistically significant.
+```{r}
+AprilGLM <- glm(formula = SeasonFires ~ April_Avg, family = poisson, data = AprilStats)
+
+pred_AprilGLM <- predict(object = AprilGLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+#summary(AprilGLM)
+
+lowerAprilStats <- pred_AprilGLM$fit - (1.96*pred_AprilGLM$se.fit)
+upperAprilStats <- pred_AprilGLM$fit + (1.96*pred_AprilGLM$se.fit)
+
+ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_AprilGLM$fit)) +
+  geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Number of Fires") +
+  xlab("April Average KBDI") +
+  labs(
+    title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April Averaged KBDI",
+    subtitle = "With 95% Confidence Interval",
+    caption = "April 1992-2018")
+```
+
+create a column of predicted number of fires for each season and compare
+```{r}
+AprilStats$PredFires1 <- pred_AprilGLM$fit
+AprilStats$Compare1 <- AprilStats$SeasonFires - AprilStats$PredFires1
+cor(AprilStats$SeasonFires, AprilStats$PredFires1)
+```
+
+Whats the relationship between April KBDI and the accuracy of the predicted fire count. Use the absolute value to demonstate how far the predictied value is off of the actual value. This correlation returns 0.693. How is this interpreted/ how should the relationship be summarized?
+```{r}
+cor(AprilStats$April_Avg, abs(AprilStats$Compare1))
+```
+
+What other factors could influence the number of fires:
+April Max KBDI?
+April Min KBDI?
+April Net Rainfall?
+April KBDI Range?
+Number of days KBDI > 400?
+
+We find that the April KBDI Average is not as statistically significant as our first model.
+The correlation is slightly stronger than the model that was run without max and min KBDI
+```{r}
+April2GLM <- glm(formula = SeasonFires ~ April_Avg + April_Min + April_Max, family = poisson, data = AprilStats)
+summary(April2GLM)
+pred_April2GLM <- predict(object = April2GLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+#Correlation when including April max and min KBDI values
+cor(AprilStats$SeasonFires, pred_April2GLM$fit)
+#Correlation without including April max and min KBDI values
+cor(AprilStats$SeasonFires, AprilStats$PredFires)
+```
+
+Create columns to further compare the actual number of fires that occurred in a season and the predicted number of fires.
+```{r}
+AprilStats$PredFires2 <- pred_April2GLM$fit
+AprilStats$Compare2 <- AprilStats$SeasonFires - AprilStats$PredFires2
+```
+
+
+###El Nino
 Import El Nino Data
 ```{r}
 SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
