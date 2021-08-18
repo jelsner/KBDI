@@ -68,14 +68,14 @@ TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          MinTemp = TMIN) |>
   filter(Year <= 2020 & Year >= 1943)
 
-ALB.df <- read_csv(file = 'Data/ALB_Daily1891-2020.csv') |>
+Other.df <- read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 1891)
+  filter(Year <= 2020 & Year >= 1943)
 
 
 # Missing temperatures filled in from NCDC daily summaries https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily
@@ -84,7 +84,7 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
 
-# TLH.df <- ALB.df  # Albany, GA shows more cooling days than warming days. Why? Try another station?
+# TLH.df <- Other.df  # Albany, GA shows more cooling days than warming days. Why? Milwaukee shows more warming days than cooling days like Tallahassee
 
 TLH.df <- TLH.df |>
   mutate(AvgTemp = (MaxTemp + MinTemp) / 2,
@@ -105,7 +105,7 @@ Plot annual mean temperatures.
 AnnualMeanTemperatures |>
   pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
   ggplot(mapping = aes(x = Year, y = value, color = name)) +
-  scale_y_continuous(limits = c(50, 90)) +
+  scale_y_continuous(limits = c(NA, NA)) +
   scale_color_discrete(guide = "none") +
     geom_point() +
     geom_smooth() +
@@ -331,7 +331,7 @@ Plot trends.
 ```{r}
 ( p4 <- TrendsMax |>
   ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
-  scale_y_continuous(limits = c(-1.2, 1.2)) +
+  scale_y_continuous(limits = c(-1.5, 1.5)) +
   geom_hline(yintercept = 0, color = "gray70") +
   scale_color_distiller(palette = "RdBu", 
                         limits = c(-1, 1) * max(abs(Trends$statistic)),
@@ -407,7 +407,7 @@ Trends |>
                           high = "red",
                           midpoint = 0,
                           guide = 'none') +
-    scale_y_continuous(limits = c(-1, 1)) +
+    scale_y_continuous(limits = c(-1.5, 1.5)) +
     theme_minimal() +
     labs(x = "", y = "", title = "Day-of-year trends in high and low temperatures (°C/decade)")
 ```
