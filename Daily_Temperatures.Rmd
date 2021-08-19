@@ -57,6 +57,38 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
+Use the `GSODR` package. MAX - Maximum temperature reported during the day converted to Celsius to tenths--time of max temp report varies by country and region, so this will sometimes not be the max for the calendar day. Missing = NA;
+```{r}
+# install.packages("GSODR")
+library(GSODR)
+
+near_stations <- nearest_stations(LAT =  30.3965, #42.9476,
+                                  LON = -84.3503,
+                                  distance = 3)
+
+#data <- get_GSOD(years = 2000:2019, station = "726400-14839")
+data <- get_GSOD(years = 2019:2019, station = "722140-93805")
+data2 <- get_GSOD(years = 2019:2019, station = "999999-93805")
+str(data)
+
+data |> 
+  group_by(YDAY) |>
+  summarize(AvgMax = mean(MAX, na.rm = TRUE)) |>
+ggplot(mapping = aes(x = YDAY, y = AvgMax)) +
+  geom_line()
+
+TLH2.df <- data |>
+  select(Date = YEARMODA,
+         Year = YEAR,
+         Month = MONTH,
+         doy = YDAY,
+         MAX,
+         MIN) |>
+  mutate(MaxTemp = MAX * 1.8 + 32,
+         MinTemp = MIN * 1.8 + 32) |>
+  filter(Year <= 2020 & Year >= 1943)
+```
+
 Import the summary-of-the-day data and add columns to the data frame.
 ```{r}
 TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
@@ -66,7 +98,7 @@ TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 1943)
+  filter(Year <= 2019 & Year >= 2019)
 
 Other.df <- read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
