@@ -47,6 +47,7 @@ library(tidyverse)
 library(lubridate)
 library(broom)
 library(patchwork)
+library(ggdist)
 ```
 
 ## Get TLH airport daily weather data
@@ -57,38 +58,6 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-Use the `GSODR` package. MAX - Maximum temperature reported during the day converted to Celsius to tenths--time of max temp report varies by country and region, so this will sometimes not be the max for the calendar day. Missing = NA;
-```{r}
-# install.packages("GSODR")
-library(GSODR)
-
-near_stations <- nearest_stations(LAT =  30.3965, #42.9476,
-                                  LON = -84.3503,
-                                  distance = 3)
-
-#data <- get_GSOD(years = 2000:2019, station = "726400-14839")
-data <- get_GSOD(years = 2019:2019, station = "722140-93805")
-data2 <- get_GSOD(years = 2019:2019, station = "999999-93805")
-str(data)
-
-data |> 
-  group_by(YDAY) |>
-  summarize(AvgMax = mean(MAX, na.rm = TRUE)) |>
-ggplot(mapping = aes(x = YDAY, y = AvgMax)) +
-  geom_line()
-
-TLH2.df <- data |>
-  select(Date = YEARMODA,
-         Year = YEAR,
-         Month = MONTH,
-         doy = YDAY,
-         MAX,
-         MIN) |>
-  mutate(MaxTemp = MAX * 1.8 + 32,
-         MinTemp = MIN * 1.8 + 32) |>
-  filter(Year <= 2020 & Year >= 1943)
-```
-
 Import the summary-of-the-day data and add columns to the data frame.
 ```{r}
 TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
@@ -98,9 +67,9 @@ TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2019 & Year >= 2019)
+  filter(Year <= 2019 & Year >= 1973)
 
-Other.df <- read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
+Other.df <- read_csv(file = 'Data/LVG_Daily1940-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
@@ -116,7 +85,7 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
 
-# TLH.df <- Other.df  # Albany, GA shows more cooling days than warming days. Why? Milwaukee shows more warming days than cooling days like Tallahassee
+# TLH.df <- Other.df  # Albany, GA shows more cooling days than warming days. Why? Milwaukee shows more warming days than cooling days like Tallahassee. Las Vegas shows more warming days and all warming nights.
 
 TLH.df <- TLH.df |>
   mutate(AvgTemp = (MaxTemp + MinTemp) / 2,
@@ -366,7 +335,7 @@ Plot trends.
   scale_y_continuous(limits = c(-1.5, 1.5)) +
   geom_hline(yintercept = 0, color = "gray70") +
   scale_color_distiller(palette = "RdBu", 
-                        limits = c(-1, 1) * max(abs(Trends$statistic)),
+                        limits = c(-1, 1) * max(abs(TrendsMax$statistic)),
                         guide = 'none') +
   geom_point() + 
   geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
@@ -505,9 +474,6 @@ p6/p5
 
 Use `ggdist` package from Matthew Kay.
 ```{r}
-library(ggdist)
-# theme_set(theme_ggdist())
-
 TLH.df |>
   ggplot(mapping = aes(x = doy, y = MaxTemp)) +
   stat_pointinterval(show_point = FALSE) +
@@ -518,6 +484,88 @@ TLH.df |>
   theme_minimal()
 
 Trends |>
-  ggplot(mapping = aes(y = estimate)) +
+  ggplot(mapping = aes(y = estimate)) 
+```
 
+Note if you use the `GSODR` package. MAX - Maximum temperature reported during the day converted to Celsius to tenths--time of max temp report varies by country and region, so this will sometimes not be the max for the calendar day. Missing = NA;
+```{r}
+# install.packages("GSODR")
+library(GSODR)
+
+near_stations <- nearest_stations(LAT =  30.3965, #42.9476,
+                                  LON = -84.3503,
+                                  distance = 3)
+
+#data <- get_GSOD(years = 2000:2019, station = "726400-14839")
+data <- get_GSOD(years = 1943:2020, station = "722140-93805")
+data2 <- get_GSOD(years = 1943:2020, station = "999999-93805")
+str(data)
+
+data |> 
+  group_by(YDAY) |>
+  summarize(AvgMax = mean(MAX, na.rm = TRUE)) |>
+ggplot(mapping = aes(x = YDAY, y = AvgMax)) +
+  geom_line()
+
+TLH2.df <- data |>
+  select(Date = YEARMODA,
+         Year = YEAR,
+         Month = MONTH,
+         doy = YDAY,
+         MAX,
+         MIN) |>
+  mutate(MaxTemp = MAX * 1.8 + 32,
+         MinTemp = MIN * 1.8 + 32) |>
+  filter(Year <= 2020 & Year >= 1943)
+
+AnnualMeanTemperatures <- TLH2.df %>%
+  group_by(Year) |>
+  summarize(AvgHighTemp = mean(MaxTemp, na.rm = TRUE),
+            AvgLowTemp = mean(MinTemp, na.rm = TRUE)) 
+AnnualMeanTemperatures |>
+  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
+  ggplot(mapping = aes(x = Year, y = value, color = name)) +
+  scale_y_continuous(limits = c(NA, NA)) +
+  scale_color_discrete(guide = "none") +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual mean daily high and low temperatures (°F)",
+       subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+
+
+TrendsMax <- 
+  TLH2.df |> 
+    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+    group_by(doy) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate * 10,
+           std.error = std.error * 10,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error,
+           Daily = "High") 
+
+sum(TrendsMax$estimate > 0)
+sum(TrendsMax$estimate < 0)
+sum(TrendsMax$estimate > 0) / length(TrendsMax$estimate) * 100
+
+TrendsMax |>
+  ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
+  scale_y_continuous(limits = c(-1.5, 1.5)) +
+  geom_hline(yintercept = 0, color = "gray70") +
+  scale_color_distiller(palette = "RdBu", 
+                        limits = c(-1, 1) * max(abs(TrendsMax$statistic)),
+                        guide = 'none') +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
+  scale_x_continuous(position = "bottom", 
+                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  theme_minimal() +
+  labs(title = "Long-term (1943-2020) trends in day-of-year high temperatures (°C/decade), Tallahassee, Florida", 
+       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
+       x = "", y = "")
 ```
