@@ -906,6 +906,18 @@ JulyFires.ppp <- JulyFires.ppp[W] %>%
 summary(JulyFires.ppp)
 ```
 
+Fire Season Distribution
+```{r}
+par(mfrow=c(1,2))
+
+SeasonFires.ppp %>%
+  plot(main = "Season Fires")
+SeasonFires.ppp %>%
+  density() %>%
+  plot(main = "Spatial Distribution - Season Fires")
+```
+
+Distribution across April, May, June, July
 ```{r}
 par(mfrow=c(2,2))
 AprilFires.ppp %>%
@@ -933,17 +945,6 @@ JuneFires.ppp %>%
   plot(main = "June")
 JulyFires.ppp %>%
   plot(main = "July")
-```
-
-Fire Season Distribution
-```{r}
-par(mfrow=c(1,2))
-
-SeasonFires.ppp %>%
-  plot(main = "Season Fires")
-SeasonFires.ppp %>%
-  density() %>%
-  plot(main = "Spatial Distribution - Season Fires")
 ```
 
 Explore how the distribution of wildfires may vary based on season
@@ -1107,12 +1108,13 @@ KBDI_Trends.df <- TLH.df %>%
   summarise(MonthlyKBDI = mean(Ql))
 ```
 
-How do monthly KBDI trends vary Annually? Is ther a drying trend with time?
+How do monthly KBDI trends vary Annually? Is there a drying trend with time?
 April, May, July, August, September, and October all show significant drying trends from 1940 - 2020
 ```{r}
 ggplot(data = KBDI_Trends.df,
        mapping = aes(x = Year, y = MonthlyKBDI)) +
-  geom_point() +
+  geom_point(aes(colour = MonthlyKBDI)) +
+  scale_color_gradient(low = "orange", high = "red4") +
   geom_smooth(method = lm, se = FALSE, color = "gray70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   facet_wrap(~month, ncol = 12) +
@@ -1129,7 +1131,8 @@ TLH.df %>%
   group_by(Year, month) %>%
   summarise(MonthlyTotal = sum(Rainfall24mm)) %>%
   ggplot(aes(x = Year, y = MonthlyTotal)) +
-  geom_point() +
+  geom_point(aes(colour = MonthlyTotal)) +
+  scale_color_gradient(low = "skyblue2", high = "royalblue4") +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   facet_wrap(~month, ncol = 12) +
@@ -1146,7 +1149,8 @@ TLH.df %>%
   group_by(Year) %>%
   summarise(FireSeasonRain = sum(Rainfall24mm)) %>%
   ggplot(aes(x = Year, y = FireSeasonRain)) +
-  geom_point() +
+  geom_point(aes(colour = FireSeasonRain)) +
+  scale_color_gradient(low = "skyblue2", high = "royalblue4") +
   geom_smooth(method = lm, se = FALSE, color = "grey70") +
   scale_x_continuous(breaks = c(1945, 1977, 2010)) +
   ylab("Fire Season Rain Total (mm)") +
@@ -1310,6 +1314,16 @@ TLH.df %>%
   summarise(correlation = cor(PrecipAnom,MayKBDI))
 ```
 
+What is the correlation for the entire fire season when comparing precip and temp deficits to fire season KBDI?
+```{r}
+TLH.df %>%
+  filter(month == "Apr" | month == "May" | month == "Jun" | month == "Jul") %>%
+  filter(Year >= 1991 & Year < 2020) %>%
+  group_by(Year) %>%
+  summarise(AprTempAvg = mean(TMAX[month == "Apr"]), AprPrecip = sum(Rainfall24[month == "Apr"]), AprTempAnom = mean(TMAX[month == "Apr"])-80.2, AprPrecipAnom = sum(Rainfall24[month == "Apr"])-3.53, SeasonAvgKBDI = mean(Ql[month == "May" | month == "Jun" | month == "Jul"])) %>%
+  summarise(PrecipAnomKBDI = cor(AprPrecipAnom, SeasonAvgKBDI), TempAnomKBDI = cor(AprTempAnom, SeasonAvgKBDI))
+```
+
 Explore KBDI by season
 Create stat columns for KBDI for each season
 ```{r}
@@ -1399,7 +1413,7 @@ AprilStats$Compare1 <- AprilStats$SeasonFires - AprilStats$PredFires1
 cor(AprilStats$SeasonFires, AprilStats$PredFires1)
 ```
 
-Whats the relationship between April KBDI and the accuracy of the predicted fire count. Use the absolute value to demonstate how far the predictied value is off of the actual value. This correlation returns 0.693. How is this interpreted/ how should the relationship be summarized?
+Whats the relationship between April KBDI and the accuracy of the predicted fire count. Use the absolute value to demonstrate how far the predicted value is off of the actual value. This correlation returns 0.693. How is this interpreted/ how should the relationship be summarized?
 ```{r}
 cor(AprilStats$April_Avg, abs(AprilStats$Compare1))
 ```
@@ -1420,10 +1434,23 @@ pred_April2GLM <- predict(object = April2GLM,
                          type = "response",
                          se.fit = TRUE)
 
+lowerAprilStats <- pred_April2GLM$fit - (1.96*pred_April2GLM$se.fit)
+upperAprilStats <- pred_April2GLM$fit + (1.96*pred_April2GLM$se.fit)
+
+ggplot(mapping = aes(x = AprilStats$April_Avg, y = pred_April2GLM$fit)) +
+  geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Number of Fires") +
+  xlab("April Average KBDI") +
+  labs(
+    title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April Averaged KBDI\nAccounting For April Min & Max KBDI Values",
+    subtitle = "With 95% Confidence Interval",
+    caption = "April 1992-2018")
+
 #Correlation when including April max and min KBDI values
 cor(AprilStats$SeasonFires, pred_April2GLM$fit)
 #Correlation without including April max and min KBDI values
-cor(AprilStats$SeasonFires, AprilStats$PredFires)
+cor(AprilStats$SeasonFires, AprilStats$PredFires1)
 ```
 
 Create columns to further compare the actual number of fires that occurred in a season and the predicted number of fires.
