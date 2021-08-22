@@ -472,6 +472,110 @@ arrows <-
 p6/p5
 ```
 
+Personalize your weather history. Use daily data from locations where you lived. Start with my weather history. Daily data starting with October 16, 1959 from Milwaukee then from August 1, 1990 from Tallahassee.
+```{r}
+MKE.df <- read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
+  mutate(Date = as.Date(DATE)) |>
+  mutate(Year = year(Date), 
+         Month = month(Date, label = TRUE, abbr = TRUE),
+         Day = day(Date),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN) |>
+  filter(Date >= as.Date("1959-10-16") & Date < as.Date("1990-08-01")) |>
+  select(STATION, NAME, Date, Year, Month, Day, doy, MaxTemp, MinTemp, PRCP)
+
+TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
+  mutate(Date = as.Date(DATE)) |>
+  mutate(Year = year(Date), 
+         Month = month(Date, label = TRUE, abbr = TRUE),
+         Day = day(Date),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN) |>
+  filter(Date >= as.Date("1990-08-01")) |>
+  select(STATION, NAME, Date, Year, Month, Day, doy, MaxTemp, MinTemp, PRCP)
+
+LifeHistory.df <- rbind(MKE.df, TLH.df)
+
+ggplot(data = LifeHistory.df,
+       mapping = aes(x = Date, y = MaxTemp)) +
+  geom_line()
+
+( Trends <- 
+    LifeHistory.df |> 
+    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+    group_by(doy, NAME) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate * 10,
+           std.error = std.error * 10,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error) )
+sampleSize <- 
+    LifeHistory.df |>
+    group_by(doy, NAME) |>
+    summarize(sampleSize = n()) |>
+    pull(sampleSize)
+
+Trends$sampleSize <- sampleSize
+
+sum(Trends$estimate > 0)
+sum(Trends$estimate < 0)
+sum(Trends$estimate > 0) / length(Trends$estimate) * 100
+
+Trends |>
+  ggplot(mapping = aes(y = estimate, x = NAME, color = estimate)) +
+    stat_slab(color = "gray80", fill = "gray80", scale = .5) +
+    geom_point(shape = "_", size = 4) + 
+    scale_color_gradient2(low = "blue",
+                          mid = "white",
+                          high = "red",
+                          midpoint = 0,
+                          guide = 'none') +
+    scale_y_continuous(limits = c(NA, NA)) +
+    theme_minimal() +
+    labs(x = "", y = "", title = "Day-of-year trends in high temperatures (°C/decade)")
+
+
+Trends |>
+  group_by(doy) |>
+  summarize(AvgTrend = weighted.mean(estimate, sampleSize)) |>
+  ggplot(mapping = aes(x = doy, y = AvgTrend, color = AvgTrend)) +
+   scale_y_continuous(limits = c(-2.5, 2.5)) +
+   geom_hline(yintercept = 0, color = "gray70") +
+   scale_color_gradient2(low = "blue",
+                         high = "red",
+                         midpoint = 0,
+                         guide = 'none') +
+   geom_point() +
+   scale_x_continuous(position = "bottom", 
+                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  theme_minimal()
+  
+
+ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
+  scale_y_continuous(limits = c(-1.5, 1.5)) +
+  geom_hline(yintercept = 0, color = "gray70") +
+  scale_color_distiller(palette = "RdBu", 
+                        limits = c(-1, 1) * max(abs(TrendsMax$statistic)),
+                        guide = 'none') +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
+  scale_x_continuous(position = "bottom", 
+                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  theme_minimal() +
+  labs(title = "Long-term (1943-2020) trends in day-of-year high temperatures (°C/decade), Tallahassee, Florida", 
+       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
+       x = "", y = "") )
+
+```
+
+
+
 Use `ggdist` package from Matthew Kay.
 ```{r}
 TLH.df |>
