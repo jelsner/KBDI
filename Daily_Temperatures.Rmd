@@ -502,6 +502,21 @@ ggplot(data = LifeHistory.df,
        mapping = aes(x = Date, y = MaxTemp)) +
   geom_line()
 
+```
+
+Cumulative daily anomalies. 1. Compute the average doy temperature  for each lived location, 2. Subtract average doy from the calendar day temperature conditional on lived location to create a lived anomaly. 3. Start with the birth date and sum the lived anomaly for each day of life.
+
+```{r}
+LivedAnomalies.df <- 
+  LifeHistory.df |>
+  group_by(doy, NAME) |>
+  summarize(AvgByDoYandPlace = mean(MaxTemp, na.rm = TRUE)) |>
+  left_join(LifeHistory.df) |>
+  mutate(Anomaly = MaxTemp - AvgByDoYandPlace,
+         Cum)
+```
+
+```{r}
 ( Trends <- 
     LifeHistory.df |> 
     mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
