@@ -1460,6 +1460,26 @@ AprilStats$PredFires2 <- pred_April2GLM$fit
 AprilStats$Compare2 <- AprilStats$SeasonFires - AprilStats$PredFires2
 ```
 
+###Ideas/ adjustments from meeting on 8/23/2021
+
+What other factors may influence the occurrence of fires during the fire season outside of soil dryness and el nino?
+Could the number of fires over the previous year influence the number of fires in the upcoming season? Explore all fires outside of natural fires. How might the area burned over the last year be relevant?
+
+Create fire data set for all fires in the ANF including human caused.
+```{r}
+allFires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
+  filter(STATE == "FL") %>%
+  st_transform(crs = st_crs(anfbounds.sf)) %>%
+  st_intersection(anfbounds.sf) #%>%
+  #select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, #LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
+```
+
+```{r}
+allFires.sf <- allFires.sf %>%
+select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
+```
+
+
 
 ###El Nino
 Import El Nino Data
