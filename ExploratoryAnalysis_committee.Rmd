@@ -1145,7 +1145,7 @@ TLH.df %>%
 Fire season rain fall trends have been decreasing annually.
 ```{r}
 TLH.df %>%
-  filter(month == "May"| month == "June"| month == "July") %>%
+  filter(month == "May"| month == "Jun"| month == "Jul") %>%
   group_by(Year) %>%
   summarise(FireSeasonRain = sum(Rainfall24mm)) %>%
   ggplot(aes(x = Year, y = FireSeasonRain)) +
@@ -1261,7 +1261,7 @@ gg.KBDIavg1/(gg.SeasonTemp1 + gg.SeasonRain1) +
 
 ###Explore relationships between April KBDI observations, FireSeason KBDI observations, and the number of FireSeason Fires
 
-There is a low correlation (0.399) between the average KBDI in April and the Average KBDI of the proceeding summer season
+There is a low correlation (0.399) between the average KBDI in April and the Average KBDI of the proceeding fire season
 ```{r}
 TLH.df%>%
   filter(month == "Apr"| month == "May"| month == "Jun"|month == "Jul") %>%
@@ -1292,6 +1292,17 @@ Notable years:
 April of 2002 was significantly warm (+4.4 degrees above normal) and dry (-3.04 inches below normal)
 April of 2011 was also significantly warm (+4.43 degrees above normal) and dry (-1.42 inches below normal)
 
+What is the correlation when comparing precip and temp deficits to fire season KBDI? (-0.312) 
+This is lower than using KBDI values.
+```{r}
+TLH.df %>%
+  filter(month == "Apr" | month == "May" | month == "Jun" | month == "Jul") %>%
+  filter(Year >= 1991 & Year < 2020) %>%
+  group_by(Year) %>%
+  summarise(AprTempAvg = mean(TMAX[month == "Apr"]), AprPrecip = sum(Rainfall24[month == "Apr"]), AprTempAnom = mean(TMAX[month == "Apr"])-80.2, AprPrecipAnom = sum(Rainfall24[month == "Apr"])-3.53, SeasonAvgKBDI = mean(Ql[month == "May" | month == "Jun" | month == "Jul"])) %>%
+  summarise(PrecipAnomKBDI = cor(AprPrecipAnom, SeasonAvgKBDI), TempAnomKBDI = cor(AprTempAnom, SeasonAvgKBDI))
+```
+
 April Precip Anomaly is negatively correlated to May Average KBDI (-.669). The further below the average rainfall total, the higher likelihood of a high May KBDI average.
 April Temp Anomaly is positively correlated to May Average KBDI (+0.193). This is a low correlation coefficient and departure from the average April temperature does not appear as significant as the departure from the average April rainfall.
 ```{r}
@@ -1312,16 +1323,6 @@ TLH.df %>%
   group_by(Year) %>%
   summarise(PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| month == "Apr"])-17.46, MayKBDI = mean(Ql[month == "May"])) %>%
   summarise(correlation = cor(PrecipAnom,MayKBDI))
-```
-
-What is the correlation for the entire fire season when comparing precip and temp deficits to fire season KBDI?
-```{r}
-TLH.df %>%
-  filter(month == "Apr" | month == "May" | month == "Jun" | month == "Jul") %>%
-  filter(Year >= 1991 & Year < 2020) %>%
-  group_by(Year) %>%
-  summarise(AprTempAvg = mean(TMAX[month == "Apr"]), AprPrecip = sum(Rainfall24[month == "Apr"]), AprTempAnom = mean(TMAX[month == "Apr"])-80.2, AprPrecipAnom = sum(Rainfall24[month == "Apr"])-3.53, SeasonAvgKBDI = mean(Ql[month == "May" | month == "Jun" | month == "Jul"])) %>%
-  summarise(PrecipAnomKBDI = cor(AprPrecipAnom, SeasonAvgKBDI), TempAnomKBDI = cor(AprTempAnom, SeasonAvgKBDI))
 ```
 
 Explore KBDI by season
@@ -1474,7 +1475,7 @@ SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indica
 ```
 
 
-###Explore updated fire data set compared to the old data set
+###Explore updated fire data set compared to the old data set 
 
 Filters have changed between the new data set, and fires are not defined by cause = lightning. Natural is introduced as a new classification. Are lightning fires the equivalent of natural fires?
 
