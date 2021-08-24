@@ -1492,13 +1492,19 @@ group fires/ year and sum up the total acres burned during each month
 ```{r}
 testgroup <- allFires.sf %>%
   group_by(FIRE_YEAR, month(DISCOVERY_)) %>%
-  summarise(monthAcers = sum(FIRE_SIZE))
+  summarise(monthAcers = sum(FIRE_SIZE)) #%>%
+  #mutate(acersBurned = sum(FIRE_SIZE) %in% c(5,6,7,8,9,10,11,12,1,2,3,4)))
 ```
 
 Functions to explore
 group_split
 between_time
 
+```{r}
+testgroup1 <- testgroup %>%
+  group_by(FIRE_YEAR, month(DISCOVERY_) %in% c(5,6,7,8,9,10,11,12,1,2,3,4)) %>%
+  summarise(acersBurned = sum(monthAcers))
+```
 
 
 
