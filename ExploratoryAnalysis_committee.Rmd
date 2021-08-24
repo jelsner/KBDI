@@ -1463,7 +1463,7 @@ AprilStats$Compare2 <- AprilStats$SeasonFires - AprilStats$PredFires2
 ###Ideas/ adjustments from meeting on 8/23/2021
 
 What other factors may influence the occurrence of fires during the fire season outside of soil dryness and el nino?
-Could the number of fires over the previous year influence the number of fires in the upcoming season? Explore all fires outside of natural fires. How might the area burned over the last year be relevant?
+Could the number of fires over the previous year influence the number of fires in the upcoming season? Explore all fires inluding those categorized outside of natural fires. How might the area burned over the last year be relevant?
 
 Create fire data set for all fires in the ANF including human caused.
 ```{r}
@@ -1471,13 +1471,34 @@ allFires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", 
   filter(STATE == "FL") %>%
   st_transform(crs = st_crs(anfbounds.sf)) %>%
   st_intersection(anfbounds.sf) #%>%
-  #select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, #LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
+  #select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, FIPS_NAME, FIPS_CODE, Shape)
 ```
 
+Select columns in separate line so it does not take as long to load.
 ```{r}
 allFires.sf <- allFires.sf %>%
-select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
+select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, FIPS_NAME, FIPS_CODE, Shape)
 ```
+
+Change date column format
+```{r}
+allFires.sf$DISCOVERY_DATE <- as.Date(allFires.sf$DISCOVERY_DATE)
+
+allFires.sf <- allFires.sf %>%
+  rename(DISCOVERY_ = DISCOVERY_DATE)
+```
+
+group fires/ year and sum up the total acres burned during each month
+```{r}
+testgroup <- allFires.sf %>%
+  group_by(FIRE_YEAR, month(DISCOVERY_)) %>%
+  summarise(monthAcers = sum(FIRE_SIZE))
+```
+
+Functions to explore
+group_split
+between_time
+
 
 
 
