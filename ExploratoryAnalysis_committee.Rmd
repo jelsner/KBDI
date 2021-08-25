@@ -1463,7 +1463,7 @@ AprilStats$Compare2 <- AprilStats$SeasonFires - AprilStats$PredFires2
 ###Ideas/ adjustments from meeting on 8/23/2021
 
 What other factors may influence the occurrence of fires during the fire season outside of soil dryness and el nino?
-Could the number of fires over the previous year influence the number of fires in the upcoming season? Explore all fires inluding those categorized outside of natural fires. How might the area burned over the last year be relevant?
+Could the number of fires over the previous year influence the number of fires in the upcoming season? Explore all fires including those categorized outside of natural fires. How might the area burned over the last year be relevant?
 
 Create fire data set for all fires in the ANF including human caused.
 ```{r}
@@ -1492,18 +1492,21 @@ group fires/ year and sum up the total acres burned during each month
 ```{r}
 testgroup <- allFires.sf %>%
   group_by(FIRE_YEAR, month(DISCOVERY_)) %>%
-  summarise(monthAcers = sum(FIRE_SIZE)) #%>%
-  #mutate(acersBurned = sum(FIRE_SIZE) %in% c(5,6,7,8,9,10,11,12,1,2,3,4)))
+  summarise(monthAcers = sum(FIRE_SIZE)) %>%
+  rename(month = "month(DISCOVERY_)")
 ```
 
 Functions to explore
 group_split
 between_time
 
+
+follow example:
+PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| month == "Apr"])-17.46,
 ```{r}
 testgroup1 <- testgroup %>%
-  group_by(FIRE_YEAR, month(DISCOVERY_) %in% c(5,6,7,8,9,10,11,12,1,2,3,4)) %>%
-  summarise(acersBurned = sum(monthAcers))
+  group_by(FIRE_YEAR) %>%
+  summarise(acersBurned = sum(monthAcers[month == "1" | month == "2" | month == "3"] #+ sum(monthAcers[FIRE_YEAR == FIRE_YEAR -1 | month == "5"])
 ```
 
 
