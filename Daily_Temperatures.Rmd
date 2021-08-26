@@ -472,48 +472,60 @@ arrows <-
 p6/p5
 ```
 
-Personalize your weather history. Use daily data from locations where you lived. Start with my weather history. Daily data starting with October 16, 1959 from Milwaukee then from August 1, 1990 from Tallahassee.
-```{r}
-MKE.df <- read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
-  mutate(Date = as.Date(DATE)) |>
-  mutate(Year = year(Date), 
-         Month = month(Date, label = TRUE, abbr = TRUE),
-         Day = day(Date),
-         doy = yday(Date),
-         MaxTemp = TMAX,
-         MinTemp = TMIN) |>
-  filter(Date >= as.Date("1959-10-16") & Date < as.Date("1990-08-01")) |>
-  select(STATION, NAME, Date, Year, Month, Day, doy, MaxTemp, MinTemp, PRCP)
-
-TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
-  mutate(Date = as.Date(DATE)) |>
-  mutate(Year = year(Date), 
-         Month = month(Date, label = TRUE, abbr = TRUE),
-         Day = day(Date),
-         doy = yday(Date),
-         MaxTemp = TMAX,
-         MinTemp = TMIN) |>
-  filter(Date >= as.Date("1990-08-01")) |>
-  select(STATION, NAME, Date, Year, Month, Day, doy, MaxTemp, MinTemp, PRCP)
-
-LifeHistory.df <- rbind(MKE.df, TLH.df)
-
-ggplot(data = LifeHistory.df,
-       mapping = aes(x = Date, y = MaxTemp)) +
-  geom_line()
-
-```
+Personalized weather history. Use daily data from locations where you lived. Start with my weather history. Daily data starting with October 16, 1959 from Milwaukee then from August 1, 1990 from Tallahassee.
 
 Cumulative daily anomalies. 1. Compute the average doy temperature  for each lived location, 2. Subtract average doy from the calendar day temperature conditional on lived location to create a lived anomaly. 3. Start with the birth date and sum the lived anomaly for each day of life.
 
 ```{r}
-LivedAnomalies.df <- 
-  LifeHistory.df |>
-  group_by(doy, NAME) |>
-  summarize(AvgByDoYandPlace = mean(MaxTemp, na.rm = TRUE)) |>
-  left_join(LifeHistory.df) |>
-  mutate(Anomaly = MaxTemp - AvgByDoYandPlace,
-         Cum)
+MKE_BirthClimate.df <- 
+  read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
+  mutate(Date = as.Date(DATE),
+         DoY = yday(Date)) |>
+  filter(Date < as.Date("1959-10-16")) |>
+  group_by(DoY) |>
+  summarize(AvgDoY = mean(TMAX, na.rm = TRUE)) 
+
+TLH_BirthClimate.df <- 
+  read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
+  mutate(Date = as.Date(DATE),
+         DoY = yday(Date)) |>
+  filter(Date < as.Date("1959-10-16")) |>
+  group_by(DoY) |>
+  summarize(AvgDoY = mean(TMAX, na.rm = TRUE)) 
+
+MKE.df <-
+  read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
+  mutate(Date = as.Date(DATE),
+         DoY = yday(Date)) |>
+  filter(Date >= as.Date("1959-10-16") & Date < as.Date("1990-08-01")) |>
+  select(STATION, Date, DoY, TMAX) |>
+  left_join(MKE_BirthClimate.df)
+
+TLH.df <-
+  read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
+  mutate(Date = as.Date(DATE),
+         DoY = yday(Date)) |>
+  filter(Date >= as.Date("1990-08-01") & Date < as.Date("2021-01-01")) |>
+#  filter(Date >= as.Date("1959-10-16") & Date < as.Date("2021-01-01")) |>
+  select(STATION, Date, DoY, TMAX) |>
+  left_join(TLH_BirthClimate.df)
+
+LocationHistory.df <- rbind(MKE.df, TLH.df) |>
+  mutate(Anomaly = TMAX - AvgDoY,
+         Anomaly = replace_na(Anomaly, 0),
+         AnomalyF = as.factor(Anomaly >= 0))
+LocationHistory.df$CumAnom <- cumsum(LocationHistory.df$Anomaly)
+
+ggplot(data = LocationHistory.df,
+       mapping = aes(x = Date, y = CumAnom / nrow(LocationHistory.df), color = AnomalyF)) +
+#  geom_line(size = 2) +
+  geom_point(shape = ".", size = 1) +
+  scale_color_manual(values = c("blue", "red"),
+                     guide = 'none') +
+  theme_minimal() +
+  labs(title = "Personal lifetime cumulative temperature anomalies (F/day)",
+       subtitle = "Day-of-year averages based on data prior to my birth at locations where I lived",
+       x = "", y = "")
 ```
 
 ```{r}
