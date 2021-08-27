@@ -1506,9 +1506,33 @@ PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| mont
 ```{r}
 testgroup1 <- testgroup %>%
   group_by(FIRE_YEAR) %>%
-  summarise(acersBurned = sum(monthAcers[month == "1" | month == "2" | month == "3"] #+ sum(monthAcers[FIRE_YEAR == FIRE_YEAR -1 | month == "5"])
+  summarise(acersBurned = sum(monthAcers[month == "1" | month == "2" | month == "3"])) #+ sum(monthAcers[FIRE_YEAR == FIRE_YEAR -1 | month == "5"])
 ```
 
+
+
+find a way to create a int and update i then convert that date to a string. Create a variable to represent that sting and plug into as.interval
+```{r}
+period <- period(years = 1)
+
+i <- 1991
+x <- 1
+
+for(i in 1991:2019) {
+toString(i)
+burnedGroups[x] <- as.interval(period, ymd(paste(i, "04-01", sep="-")))
+
+strtoi("i")
+
+i <- i+1
+x <- x+1
+}
+```
+
+Now find a way to group fires by the new periods and sum the total burned area for that period.
+```{r}
+
+```
 
 
 ###El Nino
