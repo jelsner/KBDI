@@ -1501,12 +1501,23 @@ group_split
 between_time
 
 
+```{r}
+testgroup4 <- allFires.sf %>%
+  group_by(FIRE_YEAR, month(DISCOVERY_)) %>%
+  summarise(acersBurned = sum(FIRE_SIZE[month == "1" | month == "2" | month == "3"])) + mutate((FIRE_YEAR = FIRE_YEAR -1(sum(FIRE_SIZE[month == "5"]))))
+```
+
 follow example:
 PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| month == "Apr"])-17.46,
 ```{r}
 testgroup1 <- testgroup %>%
-  group_by(FIRE_YEAR) %>%
-  summarise(acersBurned = sum(monthAcers[month == "1" | month == "2" | month == "3"])) #+ sum(monthAcers[FIRE_YEAR == FIRE_YEAR -1 | month == "5"])
+  group_by(FIRE_YEAR, FIRE_YEAR+1) %>%
+  summarise(acersBurned = sum(monthAcers[month == "1" | month == "2" | month == "3"])) + sum(monthAcers[FIRE_YEAR+1] & monthAcers[month == "4"])
+```
+
+
+```{r}
+
 ```
 
 
@@ -1527,11 +1538,20 @@ strtoi("i")
 i <- i+1
 x <- x+1
 }
+
+burnPeriods <- data.frame(burnedGroups)
+
+#burnPeriods$Start <- 
+
+
+
 ```
+
 
 Now find a way to group fires by the new periods and sum the total burned area for that period.
 ```{r}
-
+testgroup1 <- allFires.sf %>%
+  group_by(burnedGroups)
 ```
 
 
