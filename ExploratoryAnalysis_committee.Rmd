@@ -1496,6 +1496,62 @@ testgroup <- allFires.sf %>%
   rename(month = "month(DISCOVERY_)")
 ```
 
+Follow Guidance from Dr. Elsner's email.
+```{r}
+allFires.sf <- allFires.sf %>%
+  mutate(InSeason = DISCOVERY_ >= as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30")) & DISCOVERY_ <= as.Date(paste0(as.character(FIRE_YEAR+1), "-03", "-31"))) %>%
+  #rearrange order of columns
+  select(FOD_ID:DISCOVERY_, InSeason, NWCG_CAUSE_CLASSIFICATION:Shape)
+```
+
+Rearranging to get sting of date range rather than true/false
+```{r}
+allFires.sf <- allFires.sf %>%
+  mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-1"))) %>%
+  mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-03", "-31"))) %>%
+  unite(col = "burnedGroupInterval", c("burnedGroupStart", "burnedGroupEnd"), sep = " -- ") %>%
+  #rearrange order of columns
+  select(FOD_ID:DISCOVERY_, burnedGroupInterval, NWCG_CAUSE_CLASSIFICATION:Shape)
+```
+
+Group data by burned periods and sum the total acres burned over that period
+Note this does not include fires in the first 3 months of the data set
+```{r}
+burnedAcers <- allFires.sf %>%
+  group_by(burnedGroupInterval) %>%
+  summarise(acresBurned = sum(FIRE_SIZE)) %>%
+  #create column to define the year the data will be used to forecast for
+  mutate(forecastYear = substr(burnedGroupInterval, 15, 18)) %>%
+  #reorder columns
+  select(forecastYear, burnedGroupInterval:acresBurned) %>%
+  #convert forecastYear to an int/ double so it will merge
+  transform(forecastYear = as.numeric(forecastYear))
+```
+
+merge this data frame with the number of lightning wildfires that occurred in the Apalachicola National Forest for each year.
+seasonFires data set has grouped the number of fires that occurred each season
+```{r}
+countfiresandburned.df <- left_join(x = burnedAcers, y = seasonFires, by = c("forecastYear" = "Year"))
+
+countfiresandburned.df$nFIRES <- replace_na(countfiresandburned.df$nFIRES, 0)
+
+
+```
+
+Explore how the number of acres burned over the past year (April - March) may influence the number of lightning wildfires that occur.
+Follow linear regression model from modeling April KBDI
+```{r}
+burnedGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = countfiresandburned.df)
+
+pred_burnedGLM <- predict(object = burnedGLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+summary(burnedGLM)
+
+cor(countfiresandburned.df$acersBurned, countfiresandburned.df$nFIRES)
+```
+
 Functions to explore
 group_split
 between_time
