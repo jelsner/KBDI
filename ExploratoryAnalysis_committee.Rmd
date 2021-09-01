@@ -1517,7 +1517,7 @@ allFires.sf <- allFires.sf %>%
 Group data by burned periods and sum the total acres burned over that period
 Note this does not include fires in the first 3 months of the data set
 ```{r}
-burnedAcers <- allFires.sf %>%
+burnedAcres <- allFires.sf %>%
   group_by(burnedGroupInterval) %>%
   summarise(acresBurned = sum(FIRE_SIZE)) %>%
   #create column to define the year the data will be used to forecast for
@@ -1531,15 +1531,16 @@ burnedAcers <- allFires.sf %>%
 merge this data frame with the number of lightning wildfires that occurred in the Apalachicola National Forest for each year.
 seasonFires data set has grouped the number of fires that occurred each season
 ```{r}
-countfiresandburned.df <- left_join(x = burnedAcers, y = seasonFires, by = c("forecastYear" = "Year"))
+countfiresandburned.df <- left_join(x = burnedAcres, y = seasonFires, by = c("forecastYear" = "Year"))
 
 countfiresandburned.df$nFIRES <- replace_na(countfiresandburned.df$nFIRES, 0)
-
-
 ```
 
 Explore how the number of acres burned over the past year (April - March) may influence the number of lightning wildfires that occur.
 Follow linear regression model from modeling April KBDI
+
+The model finds that the number of acres burned over the past year is not statistically significant
+There is no evidence of a relationship between the number of acres burned and the number of natural fires that occur during the fire season. Correlation Coefficient = 0.049
 ```{r}
 burnedGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = countfiresandburned.df)
 
@@ -1549,34 +1550,38 @@ pred_burnedGLM <- predict(object = burnedGLM,
 
 summary(burnedGLM)
 
-cor(countfiresandburned.df$acersBurned, countfiresandburned.df$nFIRES)
+cor(countfiresandburned.df$acresBurned, countfiresandburned.df$nFIRES)
 ```
 
-Functions to explore
-group_split
-between_time
 
+Explore if the number of total fires (not just natural) in the months prior to the lightning season is related to the number during the season. Question: If there are a lot of fires in prior to the season, does that imply that there is abundant fuel for the season?
 
+find number of fires between Jan and March.
 ```{r}
-testgroup4 <- allFires.sf %>%
+earlyFires <- allFires.sf %>%
   group_by(FIRE_YEAR, month(DISCOVERY_)) %>%
-  summarise(acersBurned = sum(FIRE_SIZE[month == "1" | month == "2" | month == "3"])) + mutate((FIRE_YEAR = FIRE_YEAR -1(sum(FIRE_SIZE[month == "5"]))))
+  count(FIRE_YEAR) %>%
+  rename(month = 'month(DISCOVERY_)') %>%
+  group_by(FIRE_YEAR) %>%
+  summarise(earlyFires = sum(n[month == "1" | month == "2" | month == "3"])) 
 ```
 
-follow example:
-PrecipAnom = sum(Rainfall24[month == "Jan"| month == "Feb"| month == "Mar"| month == "Apr"])-17.46,
+merge the fire count data set with "seasonFires"
 ```{r}
-testgroup1 <- testgroup %>%
-  group_by(FIRE_YEAR, FIRE_YEAR+1) %>%
-  summarise(acersBurned = sum(monthAcers[month == "1" | month == "2" | month == "3"])) + sum(monthAcers[FIRE_YEAR+1] & monthAcers[month == "4"])
+comparePre.df <- left_join(x = earlyFires, y = seasonFires, by = c("FIRE_YEAR" = "Year")) %>%
+  rename(seasonFires = nFIRES, Year = FIRE_YEAR, earlyFiresShape = Shape) %>%
+  select(Year, earlyFires, seasonFires)
+
+comparePre.df$seasonFires <- replace_na(comparePre.df$seasonFires, 0)
 ```
 
-
+There is not enough evidence to suggest a relationship between the number of fires that occurred in the months prior to the fire season and the fires that occured during the fire season. Correlation Coefficient = -0.280
 ```{r}
-
+cor(comparePre.df$earlyFires, comparePre.df$seasonFires)
 ```
 
 
+--Scratch code
 
 find a way to create a int and update i then convert that date to a string. Create a variable to represent that sting and plug into as.interval
 ```{r}
@@ -1596,19 +1601,8 @@ x <- x+1
 }
 
 burnPeriods <- data.frame(burnedGroups)
-
-#burnPeriods$Start <- 
-
-
-
 ```
 
-
-Now find a way to group fires by the new periods and sum the total burned area for that period.
-```{r}
-testgroup1 <- allFires.sf %>%
-  group_by(burnedGroups)
-```
 
 
 ###El Nino
