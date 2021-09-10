@@ -24,6 +24,8 @@ library(rgeos)
 library(RColorBrewer)
 
 library(rgdal)
+
+library(XML)
 ```
 
 
@@ -1606,6 +1608,68 @@ burnPeriods <- data.frame(burnedGroups)
 
 
 ###El Nino
+Import el nino region weekly data
+https://www.cgd.ucar.edu/cas/catalog/climind/
+```{r}
+elNinoImport.df <- read.csv('https://www.cpc.ncep.noaa.gov/data/indices/ersst4.nino.mth.81-10.ascii',
+                 header = TRUE, sep = "")
+
+elNinoMarch <- elNinoImport.df %>%
+  filter(MON == "3")
+```
+
+```{r}
+elNinoMarch <- left_join(x = elNinoMarch, y = seasonFires, by = c("YR" = "Year"))
+
+elNinoMarch <- elNinoMarch %>%
+  filter(YR >= 1992 & YR <= 2018) 
+elNinoMarch$nFIRES <- replace_na(elNinoMarch$nFIRES, 0)
+
+cor(elNinoMarch$ANOM.3, elNinoMarch$nFIRES) #region3.4 = -0.148
+cor(elNinoMarch$ANOM, elNinoMarch$nFIRES) #region1.2 = -0.0176
+cor(elNinoMarch$ANOM.1, elNinoMarch$nFIRES) #region3 = -0.053
+cor(elNinoMarch$ANOM.2, elNinoMarch$nFIRES) #region4 = -0.284; has the strongest correlation, but does not show a relationship
+```
+
+
+
+
+3 month grouped el nino data: https://catalog.data.gov/dataset/climate-prediction-center-cpcoceanic-nino-index
+```{r}
+groupedElNino.df <- read.csv('https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt',
+                             header = TRUE, sep = "")
+
+groupedJFM <- groupedElNino.df %>%
+  filter(SEAS == "JJA")
+```
+
+compare number of fires in a season with the JFM anomalies
+```{r}
+elNinoFireCount <- left_join(x = groupedJFM, y = seasonFires, by = c("YR" = "Year"))
+
+elNinoFireCount <- elNinoFireCount %>%
+  filter(YR >= 1992 & YR <= 2018) 
+elNinoFireCount$nFIRES <- replace_na(elNinoFireCount$nFIRES, 0)
+
+cor(elNinoFireCount$ANOM, elNinoFireCount$nFIRES) #-0.112: No relationship
+```
+
+Trend gets stronger closer to the fire season:
+when filtering SEAS == DJF, cor = -0.090: No relationship
+''' SEAS == JFM, cor = -0.112: no relationship
+''' SEAS == FMA, cor = -0.157: No relationship
+''' SEAS == MAM, cor = -0.235: No relationship
+''' SEAS == AMJ, cor = -0.336: No relationship
+''' SEAS == MJJ, cor = -0.428: No relationship
+''' SEAS == JJA, cor = -0.464: No relationship
+
+
+NEXT STEPS
+run correlations between El Nino Values and April KBDI
+
+
+
+Code copy/pasted from ANF_Fires.rmd for later use
 Import El Nino Data
 ```{r}
 SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
