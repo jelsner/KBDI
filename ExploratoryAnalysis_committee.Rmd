@@ -1360,7 +1360,7 @@ AprilKBDI <- TLH.df %>%
   filter(month(Date) == 04) %>%
   mutate(Season = year(Date)) %>%
   group_by(Season) %>%
-  summarise(April_Avg = mean(Ql), April_Median = median(Ql), April_Min = min(Ql), April_Max = max(Ql), KBDI_LastDay = Ql[month(Date) == 04 & day(Date) == 30])
+  summarise(April_Avg = mean(Ql), April_Median = median(Ql), April_Min = min(Ql), April_Max = max(Ql), KBDI_LastDay = Ql[month(Date) == 04 & day(Date) == 30], KBDI_midApril = Ql[month(Date) == 04 & day(Date) == 15])
 ```
 
 Merge fire season fire counts with the April KBDI summaries 
@@ -1375,6 +1375,7 @@ cor(AprilStats$SeasonFires, AprilStats$April_Avg)
 cor(AprilStats$SeasonFires, AprilStats$April_Median)
 cor(AprilStats$SeasonFires, AprilStats$April_Max)
 cor(AprilStats$SeasonFires, AprilStats$KBDI_LastDay)
+cor(AprilStats$SeasonFires, AprilStats$KBDI_midApril)
 ```
 
 Predict each past season fire count using a glm and compare to what the count actually was. 
@@ -1632,15 +1633,13 @@ cor(elNinoMarch$ANOM.2, elNinoMarch$nFIRES) #region4 = -0.284; has the strongest
 ```
 
 
-
-
 3 month grouped el nino data: https://catalog.data.gov/dataset/climate-prediction-center-cpcoceanic-nino-index
 ```{r}
 groupedElNino.df <- read.csv('https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt',
                              header = TRUE, sep = "")
 
 groupedJFM <- groupedElNino.df %>%
-  filter(SEAS == "JJA")
+  filter(SEAS == "JFM")
 ```
 
 compare number of fires in a season with the JFM anomalies
@@ -1665,7 +1664,77 @@ when filtering SEAS == DJF, cor = -0.090: No relationship
 
 
 NEXT STEPS
-run correlations between El Nino Values and April KBDI
+run correlations between El Nino Values and April KBDI. This project is a two step approach. 1) how does climate influence drought? 2) how does drought influence wildfires?
+
+create a data set that holds both monthly el nino data and April KBDI data
+AprilKBDI = KBDI values in April
+elNinoMarch = El Nino anomalies for the month of march for every nino region & number of fires in the season
+```{r}
+elNinoDrought <- left_join(x = AprilKBDI, y = elNinoMarch, by = c("Season" = "YR")) %>%
+  filter(Season <= 2017)
+```
+
+Explore drought/ el Nino relationships
+```{r}
+cor(elNinoDrought$KBDI_midApril, elNinoDrought$ANOM.3) #region 3.4, cor = -.265
+cor(elNinoDrought$KBDI_midApril, elNinoDrought$ANOM.2) #region 4, cor = -.324
+cor(elNinoDrought$KBDI_midApril, elNinoDrought$ANOM.1) #region 3, cor = -.124
+cor(elNinoDrought$KBDI_midApril, elNinoDrought$ANOM) #region 1.2, cor = 0.069
+```
+
+Explore relationships with 3 month means
+AprilKBDI = KBDI values in April
+groupedJFM = grouped El Nino means January, Febuary, and March
+```{r}
+groupedElNinoDrought <- left_join(x = AprilKBDI, y = groupedJFM, by = c("Season" = "YR"))
+```
+
+Explore Feb, Mar, April grouping
+```{r}
+groupedFMA <- groupedElNino.df %>%
+  filter(SEAS == "FMA")
+
+FMAelNinoDrought <- left_join(x = AprilKBDI, y = groupedFMA, by = c("Season" = "YR"))
+```
+
+
+```{r}
+cor(groupedElNinoDrought$KBDI_midApril, groupedElNinoDrought$ANOM) #cor = -.224
+cor(FMAelNinoDrought$KBDI_midApril, FMAelNinoDrought$ANOM) #cor = -.226
+```
+
+Harrison (2004) discusses that there may be a lag in the relationship between el nino and drought by nearly a year.
+
+Perform bind_cols to set data off by one year
+First, set two data frames.
+AprilKBDI will be filtered down to 2016 b/c elNino Import.df does not have all months of 2017 and it is offset by one year.
+elNinoImport.df will need to be filtered from 1991 - 2016 and by April
+```{r}
+bind1 <- AprilKBDI %>%
+  filter(Season <= 2017)
+  
+
+bind2 <- elNinoImport.df %>%
+  filter(YR >= 1991 & YR <= 2016 & MON == 8) %>%
+  rename(NinoYear = "YR")
+
+#bind columns
+offsetYear <- bind_cols(bind1, bind2)
+
+#run correlation when el nino anomaly is lagged by one year from aprilKBDI
+cor(offsetYear$KBDI_midApril, offsetYear$ANOM.3)
+```
+FOr region 3.4
+April Offset = -.007: no relationship
+May offset = -.083
+June offset = -.223
+July offset = -.340
+Aug Offset = -.356
+Sep Offset = -.332
+Oct offset = -0.295
+Nov offset = -.301
+Dec offset = -.298
+
 
 
 
@@ -1681,6 +1750,11 @@ SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indica
          SOI = Value) %>%
   dplyr::select(Year, Month, month, SOI)
 ```
+
+
+Based on analysis there is no indication of a relationship between el Nino and April KBDI values in the Apalachicola national forest
+Explore the relationship between April KBDI and the North Atlantic Oscillation (NAO)
+
 
 
 ###Explore updated fire data set compared to the old data set 
