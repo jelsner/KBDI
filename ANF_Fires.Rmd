@@ -1,17 +1,15 @@
 ---
-title: "Lightning-Sparked Wildfires in the Apalachicola National Forest (ANF)"
+title: "Lightning-Kindled Wildfires in the Apalachicola National Forest (ANF)"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
-1. Writing is thinking, 
-2. 1 article, 1 question, 1 finding, 
-3. it's not a review of the literature, it's an argument about why we need your paper
+What is the relationship between dryness of the soil and lightning-kindled wildfire activity in the ANF on the seasonal time scale? Quantifying the statistical relationship between soil dryness and lightning-kindled wildfire activity in the ANF.
 
-What is the relationship between dryness of the soil and lightning-sparked wildfire activity in the ANF on the seasonal time scale? Quantifying the statistical relationship between soil dryness and lightning-sparked wildfire activity in the ANF.
-
-What climate factors are associated with soil dryness during the dry season?
+(1) By how much does the threat of a wildfire increase during the fire season with increases in soil dryness during the dry season?
+(2) What climate factors are associated with soil dryness during the dry season?
+(3) Is there an increasing risk of wildfires in the ANF?
 
 The increasing risk of fire in the ANF. Is the risk of fire in the ANF increasing? Why we need this paper: Uses an index that assesses the risk of fire rather than just rainfall deficit. Looks at changes during the fire season.
 
@@ -193,7 +191,7 @@ ggplot() +
 
 Are the locations of natural-caused wildfires during May, June, and July within the ANF clustered?
 
-Create a {spatstat} object containing the locations of lightning-sparked fires in the ANF during May-July. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
+Create a {spatstat} object containing the locations of lightning-kindled fires in the ANF during May-July. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
 ```{r}
 library(spatstat)
 library(maptools)
