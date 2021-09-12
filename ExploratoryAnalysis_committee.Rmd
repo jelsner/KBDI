@@ -1609,6 +1609,9 @@ burnPeriods <- data.frame(burnedGroups)
 
 
 ###El Nino
+link with el nino explaination to reference
+https://www.climate.gov/news-features/understanding-climate/el-ni%C3%B1o-and-la-ni%C3%B1a-frequently-asked-questions
+
 Import el nino region weekly data
 https://www.cgd.ucar.edu/cas/catalog/climind/
 ```{r}
@@ -1735,6 +1738,52 @@ Oct offset = -0.295
 Nov offset = -.301
 Dec offset = -.298
 
+
+Explore months beyond April
+Use each months max KBDI and correlate with that months sst anomaly
+```{r}
+monthlyMaxKBDI <- TLH.df %>%
+  group_by(Year, month) %>%
+  summarise(maxKBDI = max(Ql))
+```
+
+Clean up data to perform cbind
+filter both to the start of the fire data set - year = 1992
+monthlyMaxKBDI must be limited to the extent of the el nino data. End both datasets in 2016
+```{r}
+monthlyMaxKBDI <- monthlyMaxKBDI %>%
+  filter(Year >= 1992 & Year <= 2016)
+
+elNinoImport_filter <- elNinoImport.df %>%
+  filter(YR >= 1992 & YR <= 2016)
+
+#bind datasets
+MaxKBDIElNino <- bind_cols(monthlyMaxKBDI, elNinoImport_filter)
+```
+
+Explore correlation between Monthly Max KBDI and Monthly El Nino anomaly
+No suggestion of a relationship between a months max KBDI and the monthly sst anomaly
+```{r}
+cor(MaxKBDIElNino$maxKBDI,MaxKBDIElNino$ANOM.3) #region 3.4 cor = -.213
+cor(MaxKBDIElNino$maxKBDI,MaxKBDIElNino$ANOM.2) #region 4 cor = -.236
+cor(MaxKBDIElNino$maxKBDI,MaxKBDIElNino$ANOM.1) #region 3 cor = -.164
+cor(MaxKBDIElNino$maxKBDI,MaxKBDIElNino$ANOM) #region 1.2 cor = -.075
+```
+
+It is suggested that ENSO peaks in the late winter month/ early spring months (Jan - Mar)
+Filter dataset to these months and explore correlations
+```{r}
+jfm_KBDIelNino <- MaxKBDIElNino %>%
+  filter(month == "Jan" | month == "Feb" | month == "Mar")
+```
+
+correlations suggest a stronger relationship between a months max KBDI and its monthly sst anomaly during the winter months.
+```{r}
+cor(jfm_KBDIelNino$maxKBDI, jfm_KBDIelNino$ANOM.3) #region 3.4 cor = -.484
+cor(jfm_KBDIelNino$maxKBDI, jfm_KBDIelNino$ANOM.2) #region 4 cor = -0.523
+cor(jfm_KBDIelNino$maxKBDI, jfm_KBDIelNino$ANOM.1) #region 3 cor = -.463
+cor(jfm_KBDIelNino$maxKBDI, jfm_KBDIelNino$ANOM) #region 1.2 cor = -.382
+```
 
 
 
