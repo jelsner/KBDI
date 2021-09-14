@@ -1,5 +1,5 @@
 ---
-title: "Long-term Trends in Day-Of-Year High and Low Temperatures"
+title: "Long-term Trends in Day-Of-Year Temperatures"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -12,7 +12,7 @@ Key finding: The most significant warming trends are occurring during summer alt
 
 This increased warming averaged over decades amounts to about 
 
-While a warmer than usual day in December can be experienced as quite pleasant a warmer than usual day in July will be experienced as dreadful.
+While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadful.
 
 According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
 
@@ -24,10 +24,6 @@ Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is qu
 "For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures" "There has been widespread evidence of human influence on various aspects of temperature extremes, at global, continental, and regional scales. This includes attribution to human influence of observed changes in intensity, frequency, and duration and other relevant characteristics at global and continental scales." But very little work at individual locations. What days of the year are warming the fastest in a particular location. Requires a long-term record
 
 https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.4688 Diurnal asymmetry to the observed global warming
-
-1. Writing is thinking, 
-2. 1 article, 1 question, 1 finding, 
-3. it's not a review of the literature, it's an argument about why we need your paper
 
 We compute day-of-year trends in min and max temperature and use descriptive statistics to examine the range, distribution, and extremes of these trends.
 
@@ -60,16 +56,16 @@ AWND = Average daily wind speed (tenths of meters per second)
 
 Import the summary-of-the-day data and add columns to the data frame.
 ```{r}
-TLH.df <- read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2019 & Year >= 1973)
+  filter(Year <= 2020 & Year >= 1943)
 
-Other.df <- read_csv(file = 'Data/LVG_Daily1940-2020.csv') |>
+Other.df <- read.csv(file = 'Data/LVG_Daily1940-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
@@ -84,25 +80,26 @@ Other.df <- read_csv(file = 'Data/LVG_Daily1940-2020.csv') |>
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
+```
 
-# TLH.df <- Other.df  # Albany, GA shows more cooling days than warming days. Why? Milwaukee shows more warming days than cooling days like Tallahassee. Las Vegas shows more warming days and all warming nights.
+TLH.df <- Other.df  # Albany, GA shows more cooling days than warming days. Why? Milwaukee shows more warming days than cooling days like Tallahassee. Las Vegas shows more warming days and all warming nights.
 
+Diurnal temperature range (DTR) is an index that combines daily high and low temperatures. Since processes that result in high temperature are different than processes that result in low temperature, the metric is not useful for understanding the physics related to long-term trends in day-of-year temperature.
+```{r}
 TLH.df <- TLH.df |>
   mutate(AvgTemp = (MaxTemp + MinTemp) / 2,
          DTR = MaxTemp - MinTemp)
+```
 
+Annual mean daily highs and lows are warming since the 1970s.
+```{r}
 ( AnnualMeanTemperatures <- TLH.df %>%
   group_by(Year) |>
   summarize(AvgHighTemp = mean(MaxTemp, na.rm = TRUE),
             AvgLowTemp = mean(MinTemp, na.rm = TRUE),
             AvgMeanTemp = mean(AvgTemp, na.rm = TRUE),
             AvgDTR = mean(DTR, na.rm = TRUE)) )
-```
 
-Diurnal temperature range (DTR) is an index that combines daily high and low temperatures. Since processes that result in high temperature are different than processes that result in low temperature, the metric is not useful for understanding the physics related to long-term trends in day-of-year temperature.
-
-Plot annual mean temperatures.
-```{r}
 AnnualMeanTemperatures |>
   pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
   ggplot(mapping = aes(x = Year, y = value, color = name)) +
@@ -212,7 +209,8 @@ Statistics of day-of-year max
             Highest = max(MaxTemp, na.rm = TRUE),
             Lowest = min(MaxTemp, na.rm = TRUE),
             Q75 = quantile(MaxTemp, prob = .75, na.rm = TRUE),
-            Q25 = quantile(MaxTemp, prob = .25, na.rm = TRUE)) )
+            Q25 = quantile(MaxTemp, prob = .25, na.rm = TRUE)) |>
+   mutate(Date = as.Date(doy - 1, origin = "2020-01-01")) )
 
 StatsMax |>
   ggplot(mapping = aes(x = doy, y = Avg ) ) +
@@ -223,7 +221,39 @@ StatsMax |>
   scale_x_continuous(position = "bottom", 
                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
                      labels = month.name) +
+#  coord_polar() +
   theme_minimal() 
+```
+
+Polar coordinate plot.
+
+Theme tips from https://dominicroye.github.io/en/2021/climate-circles/
+```{r}
+labels <- c(paste0(seq(20, 100, by = 20), "°", " F"))
+
+StatsMax |>
+  ggplot() +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = Highest,
+                               ymin = Lowest,
+                               color = Avg),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
+  scale_color_distiller(palette = "RdBu", guide = "none") +
+  scale_y_continuous(limits = c(20, 105),
+                     breaks = seq(20, 100, by = 20),
+                     labels = labels) +
+  scale_x_date(date_breaks = "month", date_labels = "%B") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "Day-of-year high temperatures: average (dot) and range",
+       subtitle = "Tallahassee, FL, (1943-2020)")
 ```
             
 
