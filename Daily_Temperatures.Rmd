@@ -233,6 +233,7 @@ labels <- c(paste0(seq(20, 100, by = 20), "°", " F"))
 
 StatsMax |>
   ggplot() +
+  geom_hline(yintercept = 100, color = "gray70") +
   geom_linerange(mapping = aes(x = Date,
                                ymax = Highest,
                                ymin = Lowest,
