@@ -5,6 +5,8 @@ editor_options:
   chunk_output_type: console
 ---
 
+From https://cran.r-project.org/web/packages/ggdag/vignettes/intro-to-ggdag.html
+
 ```{r}
 library(tidyverse)
 library(ggplot2)
