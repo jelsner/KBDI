@@ -134,9 +134,6 @@ summary(model5)
 
 KBDI computed from data at TLH is highly correlated with area-averaged Fmoist and burn index.
 
-
-
-
 Get a the pentad (5-day) PDSI from 1980 to 2019.
 ```{r}
 data <- getGridMET(ANF_Boundary.sf, 
