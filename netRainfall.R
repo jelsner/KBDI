@@ -1,14 +1,14 @@
 # The script estimates net rainfall from 24-hr (daily) totals in inches. 
 # No missing values are allowed.
-netRainfall <- function(arg1) {
-  PR <- lag(arg1)
+netRainfall <- function(Rainfall24) {
+  PR <- lag(Rainfall24)
   PR[1] <- 0
   
   CumR <- 0
   NetR <- numeric()
   
-  for(i in 1:length(arg1)) {
-    R24 <- arg1[i]
+  for(i in 1:length(Rainfall24)) {
+    R24 <- Rainfall24[i]
     
     if ( R24 == 0) {
       NetR[i] <- 0

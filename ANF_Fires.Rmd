@@ -109,7 +109,7 @@ From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/_metadata_RDS
 
 Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2018. It is the fourth update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as a Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG), including an updated wildfire-cause standard (approved August 2020). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. In addition to incorporating data for 2016-2018, some previously unavailable nonfederal wildfire records for the period 1999-2015 were acquired either directly from the state fire services (NH, NJ) or indirectly from an updated National Association of State Foresters database (AR, AZ, CA, CO, FL, HI, ID, IL, OK, SD) and added. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 2.17 million geo-referenced wildfire records, representing a total of 165 million acres burned during the 27-year period. Identifiers necessary to link the point-based, final-fire-reporting information to published large-fire-perimeter and operational-situation-reporting datasets are included.
 
-See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/ Not used.
+NOT USED: See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/
 ```{r, eval=FALSE}
 Fires2.sf <- st_read(dsn = "NIFC_ANF_firesshapefile",
                      layer = "NIFCboundedfires")
@@ -184,7 +184,7 @@ ggplot() +
                      direction = 1,
                      name = "Size Class") +
   theme_bw() +
-  labs(title = "Location of natural-caused0 wildfires in the Apalachicola National Forest (1992-2018)",
+  labs(title = "Location of natural-caused wildfires in the Apalachicola National Forest (1992-2018)",
        subtitle = "Darker color points indicates the fire resulted in a larger burn area",
        caption = "Data source: Short, Karen (2021)")
 ```
@@ -347,7 +347,7 @@ cor.test(df$nFires[-1], df$totalAcresBurned[-24])
 
 No significant inter-seasonal autocorrelation. Significant correlation between number of fires and burned area as expected.
 
-Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to EF rating.
+Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to what we did for predicting tornado EF rating.
 ```{r}
 NaturalFires.sf %>%
   group_by(SizeF) %>%
@@ -465,10 +465,10 @@ TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
 Plot monthly values of average daily high temperature and average month rainfall.
 ```{r}
 df <- TLH.df %>%
-  filter(Year >= 1943 & Year <= 2019) %>%
+  filter(Year >= 1943 & Year <= 2020) %>%
   group_by(month) %>%
   summarize(totalRain = sum(Rainfall24mm),
-            avgMonthlyTotalRain = totalRain/76,
+            avgMonthlyTotalRain = totalRain/(2020 - 1943 + 1),
             avgDailyHighTemp = mean(MaxTemp))
 
 p1 <- ggplot(data = df,
@@ -505,65 +505,17 @@ Compute daily values of the KBDI. Original paper outlining the rationale and how
 
 Step one: Compute net rainfall on each day. Units are inches.
 ```{r}
-Rainfall24 <- TLH.df$Rainfall24
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
-
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[i]
-  if (R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if(R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-  else if (R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-TLH.df$NetR <- NetR
+source("netRainfall.R")
+TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
 ```
 
-Step two: Compute daily drought index. Units of temperature are degrees F.
+Step two: Compute daily drought index. Units of temperature are degrees F. Q is set initially to 400. The influence of this start value diminishes to zero after a few months R is the annual average rainfall for TLH in inches
 ```{r}
-Q <- 500  # the influence of this start value diminishes to zero after a few months
-R <- AnnualRainfall # average annual rainfall for TLH in inches
-
-MaxTemp <- TLH.df$MaxTemp
-
-Ql <- numeric()
-DeltaQl <- numeric()
-for(i in 1:length(Rainfall24)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-  Q <- ifelse(Q < 0, 0, Q) 
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-
-TLH.df$Ql <- Ql
-TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
-TLH.df$DeltaQl <- DeltaQl
-TLH.df$DroughtIndex <- floor(Ql/100)
-
-TLH.df <- TLH.df %>%
- dplyr::filter(Year >= 1943 & Year <= 2020) # Only full years after the daily Q values have converged
-range(TLH.df$Ql)
+source("droughtIndex.R")
+DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
+TLH.df$Ql <- DI$Ql
+TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
+TLH.df$DroughtIndex <- DI$DroughtIndex
 ```
 
 Note: There is a package to compute the standardized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for the Palmer Drought Severity Index (PDSI).
@@ -625,19 +577,6 @@ TLH.df %>%
        caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
 ```
 
-Side-by-side daily distribution plots (early vs late) by month. 1946:1980, 1981:2019
-```{r, eval=FALSE}
-TLH.df %>%
-  mutate(Epoch = Year > 1980) %>%
-  ggplot(aes(x = Qlm, color = Epoch)) +
-  geom_freqpoly(size = 1, bins = 8) +
-  scale_color_manual(labels = c("1943-1980", "1981-2020"), values = c("black", "sandybrown")) +
-  scale_x_continuous(limits = c(0, 250), breaks = c(0, 100, 200)) +
-  ylab("Number of days") + xlab("Daily soil moisture deficit (mm)") +
-  facet_wrap(~ month, ncol = 12) +
-  theme_minimal()
-```
-
 Repeat using data from Apalachicola (see `compare.rmd`). https://www.ncdc.noaa.gov/  > I want to search for data at a particular location > DATA TOOLS > Final a Station
 
 Linear trend model. Statistical significance of the trend by month.
@@ -670,7 +609,7 @@ Avg <- TLH.df %>%
 cor(Trends.df$estimate, Avg)  # negative as expected since upward trends are occurring in months with less rainfall
 ```
 
-Soil moisture deficits are increasing at .4 mm/year on average during April. Which amounts to 4 mm/decade.
+Soil moisture deficits are increasing at .3 mm/year on average during April. Which amounts to 3 mm/decade.
 
 What is the correlation between PRCP, TMAX and Qlm grouped by month?
 ```{r}
