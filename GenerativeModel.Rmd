@@ -62,19 +62,7 @@ fit2 <- quap(
 precis(fit2)
 ```
 
-
-
-Hamiltonian Monte Carlo with `ulam()`.
-
-It is named Stanisław Ulam, who was one of the parents of the Monte Carlo method and is the namesake of the Stan project as well. It is pronounced something like [OO-lahm], not like [YOU-lamm].
-
-It takes the same kind of input as `quap()`.
-```{r}
-fit_stan <- ulam(f,
-                 data = list(y = c(-3, 2, 0, 1, 1.5)) )
-```
-
-Wildfires in the ANF. The data are organized and merged in the file `ANF_Fires.Rmd`. 
+The data are organized in the file `ANF_Fires.Rmd`. 
 ```{r}
 library(tidyverse)
 
@@ -82,4 +70,30 @@ SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
   mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
 
 W <- SeasonalData.df$nFires
+
+f3 <- alist(
+  y ~ dpois(lambda),
+  lambda ~ dgamma(shape = 100, scale = 40)
+)
+
+fit3 <- quap( 
+    f3, 
+    data = list(y = W), 
+    start = list(lambda = 1)
+)
+
+precis(fit3)
+
+extract.samples(fit3, n = 10)
+sim(fit3, n = 2)
+```
+
+Hamiltonian Monte Carlo with `ulam()`.
+
+It is named Stanisław Ulam, who was one of the parents of the Monte Carlo method and is the namesake of the Stan project as well. It is pronounced something like [OO-lahm], not like [YOU-lamm].
+
+It takes the same kind of input as `quap()`.
+```{r}
+fit_stan <- ulam(f3,
+                 data = list(y = W) )
 ```
