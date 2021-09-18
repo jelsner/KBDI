@@ -316,6 +316,9 @@ TrendsMax |>
   arrange(desc(statistic))
 ```
 
+## Slope graph showing top ten upward doy trends and top ten downward doy trends.
+https://cran.r-project.org/web/packages/CGPfunctions/vignettes/Using-newggslopegraph.html
+
 Histogram of trends
 ```{r}
 library(scales)
