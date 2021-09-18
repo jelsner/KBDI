@@ -17,6 +17,7 @@ While a warmer than usual day in December will be experienced as quite pleasant 
 According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
 
 But how individuals and communities experience climate change is local.
+
 People of all political leanings highly value listening, openness, and talking about science in the context of society and community. Heslop, C., Dudo, A., and Copple, J. (August, 2021). Communicating science across political divides. Center for Media Engagement. https://mediaengagement.org/research/communicating-science- across-political-divides
 
 Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is quantified using 90% uncertainty intervals. The 90% uncertainty interval, reported in square brackets [x to y], is estimated to have a 90% likelihood of covering the value that is being estimated. The range encompasses the median value and there is an estimated 10% combined likelihood of the value being below the lower end of the range (x) and above its upper end (y). Often the distribution will be considered symmetric about the corresponding best estimate, but this is not always the case."
@@ -26,6 +27,8 @@ Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is qu
 https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.4688 Diurnal asymmetry to the observed global warming
 
 We compute day-of-year trends in min and max temperature and use descriptive statistics to examine the range, distribution, and extremes of these trends.
+
+How has each day changed over the years?
 
 What days of the year have warmed the most? What days of the year have cooled the most? 
 
@@ -502,6 +505,21 @@ arrows <-
 
 p6/p5
 ```
+
+## Hierarchical model
+
+Make a tibble composed of tibbles with `group_by()` followed by `nest()`.
+```{r}
+by_doy <- TLH.df |>
+  group_by(doy) |>
+  nest()
+
+head(by_doy)
+
+by_doy$data[[1]]
+```
+
+
 
 Personalized weather history. Use daily data from locations where you lived. Start with my weather history. Daily data starting with October 16, 1959 from Milwaukee then from August 1, 1990 from Tallahassee.
 
