@@ -8,11 +8,11 @@ editor_options:
 Tallahassee is hot and getting hotter. Examples
 https://iopscience.iop.org/article/10.1088/2515-7620/ab27cf
 
-Key finding: The most significant warming trends are occurring during summer although the largest trends are during fall and winter.
+Key finding of this research: The most significant warming trends are occurring during summer although the largest changes occur during fall and winter.
 
 This increased warming averaged over decades amounts to about 
 
-While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadful.
+While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadfully uncomfortable and potential quite dangerous to health.
 
 According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
 
@@ -224,11 +224,10 @@ StatsMax |>
   scale_x_continuous(position = "bottom", 
                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
                      labels = month.name) +
-#  coord_polar() +
   theme_minimal() 
 ```
 
-Polar coordinate plot.
+## Polar coordinate plot.
 
 Theme tips from https://dominicroye.github.io/en/2021/climate-circles/
 ```{r}
@@ -259,7 +258,6 @@ StatsMax |>
   labs(title = "Day-of-year high temperatures: average (dot) and range",
        subtitle = "Tallahassee, FL, (1943-2020)")
 ```
-            
 
 Non-normality in daily high and low temperatures
 ```{r}
@@ -508,7 +506,7 @@ p6/p5
 
 ## Hierarchical model
 
-Make a tibble composed of tibbles with `group_by()` followed by `nest()`.
+First make a tibble composed of tibbles with `group_by()` followed by `nest()`.
 ```{r}
 by_doy <- TLH.df |>
   group_by(doy) |>
@@ -519,233 +517,25 @@ head(by_doy)
 by_doy$data[[1]]
 ```
 
-
-
-Personalized weather history. Use daily data from locations where you lived. Start with my weather history. Daily data starting with October 16, 1959 from Milwaukee then from August 1, 1990 from Tallahassee.
-
-Cumulative daily anomalies. 1. Compute the average doy temperature  for each lived location, 2. Subtract average doy from the calendar day temperature conditional on lived location to create a lived anomaly. 3. Start with the birth date and sum the lived anomaly for each day of life.
-
+Next fit a linear model to the first doy.
 ```{r}
-MKE_BirthClimate.df <- 
-  read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
-  mutate(Date = as.Date(DATE),
-         DoY = yday(Date)) |>
-  filter(Date < as.Date("1959-10-16")) |>
-  group_by(DoY) |>
-  summarize(AvgDoY = mean(TMAX, na.rm = TRUE)) 
 
-TLH_BirthClimate.df <- 
-  read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
-  mutate(Date = as.Date(DATE),
-         DoY = yday(Date)) |>
-  filter(Date < as.Date("1959-10-16")) |>
-  group_by(DoY) |>
-  summarize(AvgDoY = mean(TMAX, na.rm = TRUE)) 
+fit0.1 <- lm(formula = MaxTemp ~ Year, 
+           data = by_doy$data[[1]])
+fit0.2 <- update(fit0.1,
+                 newdata = by_doy$data[[2]])
 
-MKE.df <-
-  read_csv(file = 'Data/MKE_Daily1938-2020.csv') |>
-  mutate(Date = as.Date(DATE),
-         DoY = yday(Date)) |>
-  filter(Date >= as.Date("1959-10-16") & Date < as.Date("1990-08-01")) |>
-  select(STATION, Date, DoY, TMAX) |>
-  left_join(MKE_BirthClimate.df)
+library(brms)
 
-TLH.df <-
-  read_csv(file = 'Data/TLH_Daily1940-2020.csv') |>
-  mutate(Date = as.Date(DATE),
-         DoY = yday(Date)) |>
-  filter(Date >= as.Date("1990-08-01") & Date < as.Date("2021-01-01")) |>
-#  filter(Date >= as.Date("1959-10-16") & Date < as.Date("2021-01-01")) |>
-  select(STATION, Date, DoY, TMAX) |>
-  left_join(TLH_BirthClimate.df)
+fit1 <-
+  brm(data = by_doy$data[[1]],
+      formula = MaxTemp ~ Year,
+      prior = prior(normal(0, 10), class = b),
+      iter = 4000, chains = 4, cores = 4,
+      seed = 31415)
 
-LocationHistory.df <- rbind(MKE.df, TLH.df) |>
-  mutate(Anomaly = TMAX - AvgDoY,
-         Anomaly = replace_na(Anomaly, 0),
-         AnomalyF = as.factor(Anomaly >= 0))
-LocationHistory.df$CumAnom <- cumsum(LocationHistory.df$Anomaly)
-
-ggplot(data = LocationHistory.df,
-       mapping = aes(x = Date, y = CumAnom / nrow(LocationHistory.df), color = AnomalyF)) +
-#  geom_line(size = 2) +
-  geom_point(shape = ".", size = 1) +
-  scale_color_manual(values = c("blue", "red"),
-                     guide = 'none') +
-  theme_minimal() +
-  labs(title = "Personal lifetime cumulative temperature anomalies (F/day)",
-       subtitle = "Day-of-year averages based on data prior to my birth at locations where I lived",
-       x = "", y = "")
+fit2 <-
+  update(fit1, 
+         newdata = by_doy$data[[2]])
 ```
 
-```{r}
-( Trends <- 
-    LifeHistory.df |> 
-    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
-    group_by(doy, NAME) |>
-    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
-    filter(term == "Year") |>
-    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
-           estimate = estimate * 10,
-           std.error = std.error * 10,
-           ymax = estimate + std.error,
-           ymin = estimate - std.error) )
-sampleSize <- 
-    LifeHistory.df |>
-    group_by(doy, NAME) |>
-    summarize(sampleSize = n()) |>
-    pull(sampleSize)
-
-Trends$sampleSize <- sampleSize
-
-sum(Trends$estimate > 0)
-sum(Trends$estimate < 0)
-sum(Trends$estimate > 0) / length(Trends$estimate) * 100
-
-Trends |>
-  ggplot(mapping = aes(y = estimate, x = NAME, color = estimate)) +
-    stat_slab(color = "gray80", fill = "gray80", scale = .5) +
-    geom_point(shape = "_", size = 4) + 
-    scale_color_gradient2(low = "blue",
-                          mid = "white",
-                          high = "red",
-                          midpoint = 0,
-                          guide = 'none') +
-    scale_y_continuous(limits = c(NA, NA)) +
-    theme_minimal() +
-    labs(x = "", y = "", title = "Day-of-year trends in high temperatures (°C/decade)")
-
-
-Trends |>
-  group_by(doy) |>
-  summarize(AvgTrend = weighted.mean(estimate, sampleSize)) |>
-  ggplot(mapping = aes(x = doy, y = AvgTrend, color = AvgTrend)) +
-   scale_y_continuous(limits = c(-2.5, 2.5)) +
-   geom_hline(yintercept = 0, color = "gray70") +
-   scale_color_gradient2(low = "blue",
-                         high = "red",
-                         midpoint = 0,
-                         guide = 'none') +
-   geom_point() +
-   scale_x_continuous(position = "bottom", 
-                      breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
-                     labels = month.name) +
-  theme_minimal()
-  
-
-ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
-  scale_y_continuous(limits = c(-1.5, 1.5)) +
-  geom_hline(yintercept = 0, color = "gray70") +
-  scale_color_distiller(palette = "RdBu", 
-                        limits = c(-1, 1) * max(abs(TrendsMax$statistic)),
-                        guide = 'none') +
-  geom_point() + 
-  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
-  scale_x_continuous(position = "bottom", 
-                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
-                     labels = month.name) +
-  theme_minimal() +
-  labs(title = "Long-term (1943-2020) trends in day-of-year high temperatures (°C/decade), Tallahassee, Florida", 
-       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
-       x = "", y = "") )
-
-```
-
-
-
-Use `ggdist` package from Matthew Kay.
-```{r}
-TLH.df |>
-  ggplot(mapping = aes(x = doy, y = MaxTemp)) +
-  stat_pointinterval(show_point = FALSE) +
-  scale_color_brewer() +
-  scale_x_continuous(position = "top", 
-                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
-                     labels = month.name) +
-  theme_minimal()
-
-Trends |>
-  ggplot(mapping = aes(y = estimate)) 
-```
-
-Note if you use the `GSODR` package. MAX - Maximum temperature reported during the day converted to Celsius to tenths--time of max temp report varies by country and region, so this will sometimes not be the max for the calendar day. Missing = NA;
-```{r}
-# install.packages("GSODR")
-library(GSODR)
-
-near_stations <- nearest_stations(LAT =  30.3965, #42.9476,
-                                  LON = -84.3503,
-                                  distance = 3)
-
-#data <- get_GSOD(years = 2000:2019, station = "726400-14839")
-data <- get_GSOD(years = 1943:2020, station = "722140-93805")
-data2 <- get_GSOD(years = 1943:2020, station = "999999-93805")
-str(data)
-
-data |> 
-  group_by(YDAY) |>
-  summarize(AvgMax = mean(MAX, na.rm = TRUE)) |>
-ggplot(mapping = aes(x = YDAY, y = AvgMax)) +
-  geom_line()
-
-TLH2.df <- data |>
-  select(Date = YEARMODA,
-         Year = YEAR,
-         Month = MONTH,
-         doy = YDAY,
-         MAX,
-         MIN) |>
-  mutate(MaxTemp = MAX * 1.8 + 32,
-         MinTemp = MIN * 1.8 + 32) |>
-  filter(Year <= 2020 & Year >= 1943)
-
-AnnualMeanTemperatures <- TLH2.df %>%
-  group_by(Year) |>
-  summarize(AvgHighTemp = mean(MaxTemp, na.rm = TRUE),
-            AvgLowTemp = mean(MinTemp, na.rm = TRUE)) 
-AnnualMeanTemperatures |>
-  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
-  ggplot(mapping = aes(x = Year, y = value, color = name)) +
-  scale_y_continuous(limits = c(NA, NA)) +
-  scale_color_discrete(guide = "none") +
-    geom_point() +
-    geom_smooth() +
-  theme_minimal() +
-  labs(title = "Annual mean daily high and low temperatures (°F)",
-       subtitle = "Tallahasee, Florida (1943-2020)",
-       x = "", y = "")
-
-
-TrendsMax <- 
-  TLH2.df |> 
-    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
-    group_by(doy) |>
-    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
-    filter(term == "Year") |>
-    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
-           estimate = estimate * 10,
-           std.error = std.error * 10,
-           ymax = estimate + std.error,
-           ymin = estimate - std.error,
-           Daily = "High") 
-
-sum(TrendsMax$estimate > 0)
-sum(TrendsMax$estimate < 0)
-sum(TrendsMax$estimate > 0) / length(TrendsMax$estimate) * 100
-
-TrendsMax |>
-  ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
-  scale_y_continuous(limits = c(-1.5, 1.5)) +
-  geom_hline(yintercept = 0, color = "gray70") +
-  scale_color_distiller(palette = "RdBu", 
-                        limits = c(-1, 1) * max(abs(TrendsMax$statistic)),
-                        guide = 'none') +
-  geom_point() + 
-  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
-  scale_x_continuous(position = "bottom", 
-                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
-                     labels = month.name) +
-  theme_minimal() +
-  labs(title = "Long-term (1943-2020) trends in day-of-year high temperatures (°C/decade), Tallahassee, Florida", 
-       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
-       x = "", y = "")
-```
