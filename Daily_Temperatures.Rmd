@@ -295,25 +295,16 @@ Compute long-term trends in day-of-year high temperatures.
 ```{r}
 ( Trends <- 
   TLH.df |> 
-    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+#    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
     group_by(doy) |>
     do(tidy(lm(MaxTemp ~ Year, data = .))) |>
     filter(term == "Year") |>
     mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
-           estimate = estimate * 10,
-           std.error = std.error * 10,
+           estimate = estimate,
+           std.error = std.error,
            ymax = estimate + std.error,
            ymin = estimate - std.error,
            Daily = "High") )
-
-( Trends <-
-    TLH.df |>
-    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
-    nest(data = -doy) |>
-    mutate(fit = map(data, ~lm(MaxTemp ~ Year, data = .x)),
-           tidied = map(fit, tidy),
-           augmented = map(fit, augment)) |>
-    unnest(tidied) )
 
 sum(Trends$estimate > 0)
 sum(Trends$estimate < 0)
@@ -365,8 +356,6 @@ Make the graph
 ```{r}
 library(CGPfunctions)
 
-newggslopegraph(Changes, Year, Temperature, DayMonth)
-
 custom_colors <- 
   Changes |>
   group_by(DayMonth) |>
@@ -389,20 +378,34 @@ Histogram of trends
 ```{r}
 library(scales)
 
-TrendsMax |>
-  mutate(bins = cut(estimate, seq(-1, 1, by = .1))) |>
+breaks_x <- seq(-12, 12, by = 2)
+labels_x <- c(paste0(seq(-12, 12, by = 2), "°", " F"))
+
+breaks_y <- 366 * seq(.05, .25, by = .05)
+labels_y <- c(paste0(seq(.05, .25, by = .05) * 100, "%"))
+
+Trends |>
+  mutate(Change = estimate * (2020 - 1943 + 1),
+         bins = cut(Change, seq(-12, 12, by = 1))) |>
   group_by(bins) |>
-  ggplot(mapping = aes(x = estimate)) +
-    geom_histogram(binwidth = .1, 
+  ggplot(mapping = aes(x = Change)) +
+    geom_histogram(binwidth = 1, 
                    color = "white",
                    fill = "gray70",
-                   center = .05) +
-    geom_rug(mapping = aes(color = estimate)) +
+                   center = .5) +
+    geom_rug(mapping = aes(color = Change)) +
+    scale_y_continuous(breaks = breaks_y,
+                       labels = labels_y) +
+    scale_x_continuous(breaks = breaks_x,
+                       labels = labels_x) +
     scale_color_gradient2(low = muted("blue"),
                           mid = "white",
                           high = muted("red"),
                           midpoint = 0,
                           guide = 'none') +
+    labs(title = "More days of the year have warmed than cooled in Tallahassee, FL",
+         subtitle = "Percentage of all days of the year that have warmed (and cooled) binned by 1° F change: 1943-2020",
+         x = "", y = "") +
     theme_minimal()
 ```
 
