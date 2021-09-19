@@ -275,7 +275,6 @@ TLH.df |>
 
 normTest <- 
   TLH.df |>
-#  filter(Year >= 1990) |>
   group_by(doy) |>
   summarize(pvalueS = shapiro.test(MaxTemp)$p.value,
             pvalueAD = ad.test(MaxTemp)$p.value) |>
@@ -294,10 +293,9 @@ normTest |>
 
 Compute long-term trends in day-of-year high temperatures.
 ```{r}
-( TrendsMax <- 
+( Trends <- 
   TLH.df |> 
     mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
-#  filter(Year >= 1990) |>
     group_by(doy) |>
     do(tidy(lm(MaxTemp ~ Year, data = .))) |>
     filter(term == "Year") |>
@@ -308,16 +306,84 @@ Compute long-term trends in day-of-year high temperatures.
            ymin = estimate - std.error,
            Daily = "High") )
 
-sum(TrendsMax$estimate > 0)
-sum(TrendsMax$estimate < 0)
-sum(TrendsMax$estimate > 0) / length(TrendsMax$estimate) * 100
+( Trends <-
+    TLH.df |>
+    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+    nest(data = -doy) |>
+    mutate(fit = map(data, ~lm(MaxTemp ~ Year, data = .x)),
+           tidied = map(fit, tidy),
+           augmented = map(fit, augment)) |>
+    unnest(tidied) )
 
-TrendsMax |> 
+sum(Trends$estimate > 0)
+sum(Trends$estimate < 0)
+sum(Trends$estimate > 0) / length(Trends$estimate) * 100
+
+Trends |> 
   arrange(desc(statistic))
 ```
 
-## Slope graph showing top ten upward doy trends and top ten downward doy trends.
+## Slope graph showing top ten upward doy trends and top ten downward doy trends
 https://cran.r-project.org/web/packages/CGPfunctions/vignettes/Using-newggslopegraph.html
+
+Predict values from the linear model for 1950 and 2020. Use these values for start and end of the slopes. Note: need to `ungroup()` first otherwise the `slice()` function will operate on each group.
+```{r}
+Up <-
+  Trends |>
+  ungroup() |>
+  slice_max(estimate, n = 5) |>
+  pull(doy)
+
+Down <-
+  Trends |>
+  ungroup() |>
+  slice_min(estimate, n = 5) |>
+  pull(doy)
+
+Largest <- c(Up, Down)
+
+Changes <- TLH.df |> 
+  filter(doy %in% Largest) |>
+  nest(data = -doy) |>
+    mutate(fit = map(data, ~lm(MaxTemp ~ Year, data = .x)),
+           augmented = map(fit, augment)) |>
+    unnest(augmented) |>
+  filter(Year %in% c(1950, 2020)) |>
+  mutate(Year = factor(Year, levels = c(1950, 2020), ordered = TRUE),
+         Temperature = round(.fitted, 0),
+         Date = as.Date(doy - 1, origin = "2020-01-01"),
+         DayMonth = paste(day(Date), month.name[month(Date)]) )|>
+  select(DayMonth, Year, Temperature) |>
+  group_by(DayMonth) |>
+  mutate(Difference = Temperature[Year == 2020] - Temperature[Year == 1950],
+         Trend = case_when(Difference < 0 ~ "blue",
+                           TRUE ~ "red")) |>
+  as.data.frame()
+```
+
+Make the graph
+```{r}
+library(CGPfunctions)
+
+newggslopegraph(Changes, Year, Temperature, DayMonth)
+
+custom_colors <- 
+  Changes |>
+  group_by(DayMonth) |>
+  summarize(Color = last(Trend)) |>
+  tibble::deframe()
+
+newggslopegraph(Changes, 
+                Year, 
+                Temperature, 
+                DayMonth,
+                Title = "Trends",
+                SubTitle = NULL,
+                Caption = NULL,
+                LineThickness = .5,
+                YTextSize = 4,
+                LineColor = custom_colors)
+```
 
 Histogram of trends
 ```{r}
