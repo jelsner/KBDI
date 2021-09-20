@@ -381,17 +381,17 @@ library(scales)
 breaks_x <- seq(-12, 12, by = 2)
 labels_x <- c(paste0(seq(-12, 12, by = 2), "°", " F"))
 
-breaks_y <- 366 * seq(.05, .25, by = .05)
-labels_y <- c(paste0(seq(.05, .25, by = .05) * 100, "%"))
+breaks_y <- 366 * seq(0, .2, by = .05)
+labels_y <- c("0", paste0(seq(.05, .2, by = .05) * 100, "%"))
 
 Trends |>
   mutate(Change = estimate * (2020 - 1943 + 1),
-         bins = cut(Change, seq(-12, 12, by = 1))) |>
-  group_by(bins) |>
-  ggplot(mapping = aes(x = Change)) +
+         Colors = case_when(Change < 0 ~ "A",
+                           TRUE ~ "B")) |>
+  ggplot(mapping = aes(x = Change, fill = Colors)) +
     geom_histogram(binwidth = 1, 
                    color = "white",
-                   fill = "gray70",
+#                   fill = "gray80",
                    center = .5) +
     geom_rug(mapping = aes(color = Change)) +
     scale_y_continuous(breaks = breaks_y,
@@ -403,10 +403,14 @@ Trends |>
                           high = muted("red"),
                           midpoint = 0,
                           guide = 'none') +
-    labs(title = "More days of the year have warmed than cooled in Tallahassee, FL",
-         subtitle = "Percentage of all days of the year that have warmed (and cooled) binned by 1° F change: 1943-2020",
+    scale_fill_manual(values = c(muted("blue"), muted("red")),
+                      guide = "none") +
+    geom_hline(yintercept = breaks_y, color = "white") +
+    labs(title = "More days have warmed than cooled in Tallahassee, FL",
+         subtitle = "Percentage of all days of the year that have warmed (or cooled) binned by 1° F change: 1943-2020",
          x = "", y = "") +
-    theme_minimal()
+    theme_minimal() +
+    theme(panel.grid = element_blank())
 ```
 
 Plot largest trends.
