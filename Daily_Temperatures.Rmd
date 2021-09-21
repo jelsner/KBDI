@@ -347,8 +347,8 @@ Changes <- TLH.df |>
   select(DayMonth, Year, Temperature) |>
   group_by(DayMonth) |>
   mutate(Difference = Temperature[Year == 2020] - Temperature[Year == 1950],
-         Trend = case_when(Difference < 0 ~ "blue",
-                           TRUE ~ "red")) |>
+         Trend = case_when(Difference < 0 ~ muted("blue"),
+                           TRUE ~ muted("red"))) |>
   as.data.frame()
 ```
 
@@ -364,10 +364,10 @@ custom_colors <-
 
 newggslopegraph(Changes, 
                 Year, 
-                Temperature, 
+                Temperature,
                 DayMonth,
-                Title = "Trends",
-                SubTitle = NULL,
+                Title = "Days of the year that have warmed and cooled the most in Tallahassee, Florida",
+                SubTitle = "Daily high temperature (° F). Based on data over the period 1943-2020",
                 Caption = NULL,
                 LineThickness = .5,
                 YTextSize = 4,
@@ -436,8 +436,51 @@ labels <- c(paste0(seq(40, 100, by = 20), "°", " F"))
   labs(x = "", y = "") )
 ```
 
-Plot trends.
+Plot trends using polar coordinate plot. Here trends are F/year with ymax, ymin +/- 1 s.e.
 ```{r}
+labels <- c(paste0(seq(-.2, .2, by = .1), "° F/yr"))
+
+Trends |>
+  ggplot() +
+  geom_hline(yintercept = 0, color = "gray70") +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = ymax,
+                               ymin = ymin,
+                               color = estimate),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = estimate), color = "white", size = .5) +
+  scale_color_distiller(palette = "RdBu", guide = "none") +
+  scale_y_continuous(limits = c(-.2, .2),
+                     breaks = seq(-.2, .2, by = .1),
+                     labels = labels) +
+  scale_x_date(date_breaks = "month", date_labels = "%B") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "Day-of-year trends in high temperatures: average (dot) and range",
+       subtitle = "Tallahassee, FL, (1943-2020)")
+```
+
+Plot trends on a line graph with annotation
+```{r}
+TrendsMax <- 
+  TLH.df |> 
+    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+    group_by(doy) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate * 10,
+           std.error = std.error * 10,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error,
+           Daily = "High")
+
 ( p4 <- TrendsMax |>
   ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
   scale_y_continuous(limits = c(-1.5, 1.5)) +
@@ -580,7 +623,38 @@ arrows <-
 p6/p5
 ```
 
-## Hierarchical model
+## Multilevel model
+```{r}
+library(brms)
+```
+
+From: https://paul-buerkner.github.io/brms/articles/brms_distreg.html
+
+Data
+```{r}
+dat_smooth <- mgcv::gamSim(eg = 6, n = 200, scale = 2, verbose = FALSE)
+head(dat_smooth)
+
+max_temp <- 
+  TLH.df |>
+  select(MaxTemp, Year, doy) |>
+  mutate(doyF = as.factor(doy))
+```
+
+Models
+```{r}
+fit_smooth2 <- brm(
+  bf(y ~ s(x1) + s(x2) + (1|fac), sigma ~ s(x0) + (1|fac)),
+  data = dat_smooth, family = gaussian(),
+  chains = 2, control = list(adapt_delta = 0.95)
+)
+
+summary(fit_smooth2)
+
+plot(conditional_effects(fit_smooth2), points = TRUE, ask = FALSE)
+```
+
+
 
 First make a tibble composed of tibbles with `group_by()` followed by `nest()`.
 ```{r}
@@ -593,25 +667,36 @@ head(by_doy)
 by_doy$data[[1]]
 ```
 
-Next fit a linear model to the first doy.
+Next fit a linear model to the first doy. Could not get the `update()` function to work. Crashes the session!
 ```{r}
-
 fit0.1 <- lm(formula = MaxTemp ~ Year, 
            data = by_doy$data[[1]])
-fit0.2 <- update(fit0.1,
-                 newdata = by_doy$data[[2]])
 
 library(brms)
 
-fit1 <-
+fit1.1 <-
   brm(data = by_doy$data[[1]],
       formula = MaxTemp ~ Year,
       prior = prior(normal(0, 10), class = b),
       iter = 4000, chains = 4, cores = 4,
-      seed = 31415)
+      seed = 31415,
+      file = "fits/fit1.1")
 
-fit2 <-
-  update(fit1, 
-         newdata = by_doy$data[[2]])
+fit1.2 <-
+  update(fit1.1, 
+         newdata = by_doy$data[[2]],
+         control = list(adapt_delta = .9),
+         file = "fits/fit1.2")
+
+fit1.2 <-
+  brm(data = by_doy$data[[2]],
+      formula = MaxTemp ~ Year,
+      prior = prior(normal(0, 10), class = b),
+      iter = 4000, chains = 4, cores = 4,
+      seed = 31415)
 ```
+
+remove.packages("rethinking")
+remove.packages("rstan")
+
 
