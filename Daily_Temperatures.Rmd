@@ -1,5 +1,5 @@
 ---
-title: "Long-term Trends in Day-Of-Year Temperatures"
+title: "Exploratory Analysis of Long-term Trends in Day-Of-Year Temperatures"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -622,81 +622,3 @@ arrows <-
 
 p6/p5
 ```
-
-## Multilevel model
-```{r}
-library(brms)
-```
-
-From: https://paul-buerkner.github.io/brms/articles/brms_distreg.html
-
-Data
-```{r}
-dat_smooth <- mgcv::gamSim(eg = 6, n = 200, scale = 2, verbose = FALSE)
-head(dat_smooth)
-
-max_temp <- 
-  TLH.df |>
-  select(MaxTemp, Year, doy) |>
-  mutate(doyF = as.factor(doy))
-```
-
-Models
-```{r}
-fit_smooth2 <- brm(
-  bf(y ~ s(x1) + s(x2) + (1|fac), sigma ~ s(x0) + (1|fac)),
-  data = dat_smooth, family = gaussian(),
-  chains = 2, control = list(adapt_delta = 0.95)
-)
-
-summary(fit_smooth2)
-
-plot(conditional_effects(fit_smooth2), points = TRUE, ask = FALSE)
-```
-
-
-
-First make a tibble composed of tibbles with `group_by()` followed by `nest()`.
-```{r}
-by_doy <- TLH.df |>
-  group_by(doy) |>
-  nest()
-
-head(by_doy)
-
-by_doy$data[[1]]
-```
-
-Next fit a linear model to the first doy. Could not get the `update()` function to work. Crashes the session!
-```{r}
-fit0.1 <- lm(formula = MaxTemp ~ Year, 
-           data = by_doy$data[[1]])
-
-library(brms)
-
-fit1.1 <-
-  brm(data = by_doy$data[[1]],
-      formula = MaxTemp ~ Year,
-      prior = prior(normal(0, 10), class = b),
-      iter = 4000, chains = 4, cores = 4,
-      seed = 31415,
-      file = "fits/fit1.1")
-
-fit1.2 <-
-  update(fit1.1, 
-         newdata = by_doy$data[[2]],
-         control = list(adapt_delta = .9),
-         file = "fits/fit1.2")
-
-fit1.2 <-
-  brm(data = by_doy$data[[2]],
-      formula = MaxTemp ~ Year,
-      prior = prior(normal(0, 10), class = b),
-      iter = 4000, chains = 4, cores = 4,
-      seed = 31415)
-```
-
-remove.packages("rethinking")
-remove.packages("rstan")
-
-

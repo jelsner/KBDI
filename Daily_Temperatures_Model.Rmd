@@ -1,42 +1,9 @@
 ---
-title: "Long-term Trends in Day-Of-Year Temperatures"
+title: "Model of Long-term Trends in Day-Of-Year Temperatures"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-
-Tallahassee is hot and getting hotter. Examples
-https://iopscience.iop.org/article/10.1088/2515-7620/ab27cf
-
-Key finding of this research: The most significant warming trends are occurring during summer although the largest changes occur during fall and winter.
-
-This increased warming averaged over decades amounts to about 
-
-While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadfully uncomfortable and potential quite dangerous to health.
-
-According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
-
-But how individuals and communities experience climate change is local.
-
-People of all political leanings highly value listening, openness, and talking about science in the context of society and community. Heslop, C., Dudo, A., and Copple, J. (August, 2021). Communicating science across political divides. Center for Media Engagement. https://mediaengagement.org/research/communicating-science- across-political-divides
-
-Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is quantified using 90% uncertainty intervals. The 90% uncertainty interval, reported in square brackets [x to y], is estimated to have a 90% likelihood of covering the value that is being estimated. The range encompasses the median value and there is an estimated 10% combined likelihood of the value being below the lower end of the range (x) and above its upper end (y). Often the distribution will be considered symmetric about the corresponding best estimate, but this is not always the case."
-
-"For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures" "There has been widespread evidence of human influence on various aspects of temperature extremes, at global, continental, and regional scales. This includes attribution to human influence of observed changes in intensity, frequency, and duration and other relevant characteristics at global and continental scales." But very little work at individual locations. What days of the year are warming the fastest in a particular location. Requires a long-term record
-
-https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.4688 Diurnal asymmetry to the observed global warming
-
-We compute day-of-year trends in min and max temperature and use descriptive statistics to examine the range, distribution, and extremes of these trends.
-
-How has each day changed over the years?
-
-What days of the year have warmed the most? What days of the year have cooled the most? 
-
-show the biggest long-term (climate) trends in max/min temperatures? Corollary: what day(s) of the year do not show a normal distribution in max/min temperatures?
-
-Why is this important? Climate change on the scale relevant to our daily lives.
-
-The paper is exploratory. We do not have a hypothesis in mind though we do expect to see more days with upward than downward trends with perhaps a greater number of days with upward trends in low temperatures compared to the number of days with upward trends in high temperatures.
 
 R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 
