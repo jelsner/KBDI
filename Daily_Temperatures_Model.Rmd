@@ -11,12 +11,27 @@ R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
 ```{r}
 library(tidyverse)
 library(lubridate)
-library(brms)
 ```
 
-## Get TLH airport daily weather data
+## Structural time-series model
+```{r}
+library(bsts)
+```
 
-Import the summary-of-the-day data and add columns to the data frame.
+From: https://www.unofficialgoogledatascience.com/2017/07/fitting-bayesian-structural-time-series.html
+
+Test model
+```{r}
+data(iclaims)     # bring the initial.claims data into scope
+
+ss <- AddLocalLinearTrend(list(), initial.claims$iclaimsNSA)
+ss <- AddSeasonal(ss, initial.claims$iclaimsNSA, nseasons = 52)
+model1 <- bsts(initial.claims$iclaimsNSA,
+               state.specification = ss,
+               niter = 1000)
+```
+
+Daily high temperature. Prepare data as a {zoo} object.
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
@@ -25,12 +40,79 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 1943)
+  filter(Year <= 2020 & Year >= 2005)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
+
+x <- data.frame(MaxTemp = TLH.df$MaxTemp, Year = TLH.df$Year, doy = TLH.df$doy)
+TLH.z <- zoo(x, order.by = TLH.df$Date)
 ```
+
+Model
+```{r}
+y <- TLH.z$MaxTemp
+ss <- list()
+ss <- bsts::AddLocalLinearTrend(ss, y)
+ss <- bsts::AddSeasonal(ss, y, nseasons = 21, season.duration = 366)
+model1 <- bsts(y,
+               state.specification = ss,
+               niter = 200)
+
+plot(model1)
+plot(model1, "components")
+
+ss <- list()
+ss <- bsts::AddLocalLinearTrend(ss, TLH.z$MaxTemp)
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
+model2 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 500,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
+model3 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 500,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddAr(ss, TLH.z$MaxTemp, lags = 14)
+model4 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddAr(ss, TLH.z$MaxTemp, lags = 1)
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
+model5 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 7)
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
+model6 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddAr(ss, TLH.z$MaxTemp, lags = 1)
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
+model7 <- bsts(MaxTemp ~ doy,  #this doesn't make sense
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+
+```
+
+
 
 ## Multilevel model
 
@@ -38,26 +120,77 @@ From: https://paul-buerkner.github.io/brms/articles/brms_distreg.html
 
 Data
 ```{r}
+library(brms)
+
 dat_smooth <- mgcv::gamSim(eg = 6, n = 200, scale = 2, verbose = FALSE)
 head(dat_smooth)
+```
 
+Model
+```{r}
+fit_smooth <- brm(
+  bf(y ~ s(x1) + s(x2) + (1|fac), sigma ~ s(x0) + (1|fac)),
+  data = dat_smooth, family = gaussian(),
+  chains = 2, control = list(adapt_delta = 0.95)
+)
+```
+
+Summaries and plots
+```{r}
+summary(fit_smooth)
+plot(conditional_effects(fit_smooth), points = TRUE, ask = FALSE)
+```
+
+Posterior samples of the parameters.
+```{r}
+ps <- fit_smooth |>
+  posterior::as_draws_df()
+```
+
+Posterior samples of the outcome.
+```{r}
+pp <- fit_smooth |>
+  brms::posterior_predict() |>
+  as.data.frame()
+```
+
+See `PredictionModel.Rmd`.
+
+Repeat with daily high temperature data. Problem: The random effect is not seasonal. The first day knows nothing about the 366th day. Should use a structural time series model?
+
+Prepare data to match `dat_smooth`.
+```{r}
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
+  mutate(Date = as.Date(DATE)) |>
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN) |>
+  filter(Year <= 2020 & Year >= 1981)
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
+TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
+TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
+```
+
+Data
+```{r}
 max_temp <- 
   TLH.df |>
   select(MaxTemp, Year, doy) |>
   mutate(doyF = as.factor(doy))
 ```
 
-Models
+Model
 ```{r}
-fit_smooth2 <- brm(
-  bf(y ~ s(x1) + s(x2) + (1|fac), sigma ~ s(x0) + (1|fac)),
-  data = dat_smooth, family = gaussian(),
+fit_smooth <- brm(
+  bf(MaxTemp ~ s(Year) + (1|doy), sigma ~ s(Year) + (1|doy)),
+  data = max_temp, family = gaussian(),
   chains = 2, control = list(adapt_delta = 0.95)
 )
 
-summary(fit_smooth2)
-
-plot(conditional_effects(fit_smooth2), points = TRUE, ask = FALSE)
+plot(conditional_effects(fit_smooth), points = FALSE, ask = FALSE)
 ```
 
 
