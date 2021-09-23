@@ -13,25 +13,7 @@ library(tidyverse)
 library(lubridate)
 ```
 
-## Structural time-series model
-```{r}
-library(bsts)
-```
-
-From: https://www.unofficialgoogledatascience.com/2017/07/fitting-bayesian-structural-time-series.html
-
-Test model
-```{r}
-data(iclaims)     # bring the initial.claims data into scope
-
-ss <- AddLocalLinearTrend(list(), initial.claims$iclaimsNSA)
-ss <- AddSeasonal(ss, initial.claims$iclaimsNSA, nseasons = 52)
-model1 <- bsts(initial.claims$iclaimsNSA,
-               state.specification = ss,
-               niter = 1000)
-```
-
-Daily high temperature. Prepare data as a {zoo} object.
+Daily high temperature data.
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
@@ -40,14 +22,11 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 1990)
+  filter(Year <= 2020 & Year >= 1943)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
-
-x <- data.frame(MaxTemp = TLH.df$MaxTemp, Year = TLH.df$Year, doy = TLH.df$doy)
-TLH.z <- zoo(x, order.by = TLH.df$Date)
 ```
 
 Trends in the data
@@ -66,8 +45,39 @@ Trends <-
            ymin = estimate - std.error)
 ```
 
+## Linear mixed effects models
+
+```{r}
+library(lme4)
+
+fit1 <- lmer(MaxTemp ~ Year + (Year  | doy), data = max_temp)
+
+```
+
+
+## Structural time-series model
+```{r}
+library(bsts)
+```
+
+From: https://www.unofficialgoogledatascience.com/2017/07/fitting-bayesian-structural-time-series.html
+
+Test model
+```{r}
+data(iclaims)     # bring the initial.claims data into scope
+
+ss <- AddLocalLinearTrend(list(), initial.claims$iclaimsNSA)
+ss <- AddSeasonal(ss, initial.claims$iclaimsNSA, nseasons = 52)
+model1 <- bsts(initial.claims$iclaimsNSA,
+               state.specification = ss,
+               niter = 1000)
+```
+
 Models
 ```{r}
+x <- data.frame(MaxTemp = TLH.df$MaxTemp, Year = TLH.df$Year, doy = TLH.df$doy)
+TLH.z <- zoo(x, order.by = TLH.df$Date)
+
 y <- TLH.z$MaxTemp
 ss <- list()
 ss <- bsts::AddLocalLinearTrend(ss, y)
@@ -213,8 +223,12 @@ fit3 <- brm(
 
 plot(conditional_effects(fit3), points = FALSE, ask = FALSE)
 
+max_temp <-
+  max_temp |>
+  mutate(MaxTempS = scale(MaxTemp))
+
 fit4 <- brm(
-  bf(MaxTemp ~ (1 + Year|doy), sigma ~ (1|doy)),
+  bf(MaxTempS ~ YearS * doyF + (YearS|doyF)),
   data = max_temp, family = gaussian(),
   chains = 2, control = list(adapt_delta = 0.95)
 )
@@ -223,7 +237,9 @@ plot(conditional_effects(fit4), points = FALSE, ask = FALSE)
 ```
 
 Compare with lmer models
-
+```{r}
+library(lme4)
+```
 
 
 First make a tibble composed of tibbles with `group_by()` followed by `nest()`.
@@ -265,8 +281,3 @@ fit1.2 <-
       iter = 4000, chains = 4, cores = 4,
       seed = 31415)
 ```
-
-remove.packages("rethinking")
-remove.packages("rstan")
-
-
