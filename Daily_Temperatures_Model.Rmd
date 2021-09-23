@@ -40,7 +40,7 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 2005)
+  filter(Year <= 2020 & Year >= 1990)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
@@ -50,61 +50,82 @@ x <- data.frame(MaxTemp = TLH.df$MaxTemp, Year = TLH.df$Year, doy = TLH.df$doy)
 TLH.z <- zoo(x, order.by = TLH.df$Date)
 ```
 
-Model
+Trends in the data
+```{r}
+library(broom)
+
+Trends <- 
+  TLH.df |> 
+    group_by(doy) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate,
+           std.error = std.error,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error)
+```
+
+Models
 ```{r}
 y <- TLH.z$MaxTemp
 ss <- list()
 ss <- bsts::AddLocalLinearTrend(ss, y)
-ss <- bsts::AddSeasonal(ss, y, nseasons = 21, season.duration = 366)
+ss <- bsts::AddSeasonal(ss, y, nseasons = 31, season.duration = 366)
 model1 <- bsts(y,
                state.specification = ss,
                niter = 200)
 
-plot(model1)
-plot(model1, "components")
+#plot(model1)
+#plot(model1, "components")
 
 ss <- list()
 ss <- bsts::AddLocalLinearTrend(ss, TLH.z$MaxTemp)
-ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
-model2 <- bsts(MaxTemp ~ Year,
+model2 <- bsts(TLH.z$MaxTemp,
                state.specification = ss,
-               niter = 500,
-               data = TLH.z)
+               niter = 200)
 
 ss <- list()
-ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
-model3 <- bsts(MaxTemp ~ Year,
-               state.specification = ss,
-               niter = 500,
-               data = TLH.z)
-
-ss <- list()
-ss <- bsts::AddAr(ss, TLH.z$MaxTemp, lags = 14)
-model4 <- bsts(MaxTemp ~ Year,
-               state.specification = ss,
-               niter = 200,
-               data = TLH.z)
-
-ss <- list()
-ss <- bsts::AddAr(ss, TLH.z$MaxTemp, lags = 1)
-ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
-model5 <- bsts(MaxTemp ~ Year,
-               state.specification = ss,
-               niter = 200,
-               data = TLH.z)
-
-ss <- list()
-ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 7)
-ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 31, season.duration = 366)
 model6 <- bsts(MaxTemp ~ Year,
                state.specification = ss,
                niter = 200,
                data = TLH.z)
 
 ss <- list()
-ss <- bsts::AddAr(ss, TLH.z$MaxTemp, lags = 1)
-ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 21, season.duration = 366)
-model7 <- bsts(MaxTemp ~ doy,  #this doesn't make sense
+ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 14)
+model3 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 14)
+ss <- bsts::AddSeasonal(ss, TLH.z$MaxTemp, nseasons = 31, season.duration = 366)
+model4 <- bsts(MaxTemp ~ Year,
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+CompareBstsModels(list("Model 7" = model7,
+                       "Model 3" = model3),
+                  colors = c("black", "green"))
+```
+
+```{r}
+ss <- list()
+ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 14)
+model7 <- bsts(MaxTemp ~ doy, 
+               state.specification = ss,
+               niter = 200,
+               data = TLH.z)
+
+ss <- list()
+ss <- bsts::AddLocalLevel(ss, TLH.z$MaxTemp)
+ss <- bsts::AddDynamicRegression(ss, TLH.z$MaxTemp ~ TLH.z$Year)
+#ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 14)
+
+model7 <- bsts(TLH.z$MaxTemp, 
                state.specification = ss,
                niter = 200,
                data = TLH.z)
@@ -178,20 +199,30 @@ Data
 ```{r}
 max_temp <- 
   TLH.df |>
-  select(MaxTemp, Year, doy) |>
+  dplyr::select(MaxTemp, Year, doy) |>
   mutate(doyF = as.factor(doy))
 ```
 
 Model
 ```{r}
-fit_smooth <- brm(
-  bf(MaxTemp ~ s(Year) + (1|doy), sigma ~ s(Year) + (1|doy)),
+fit3 <- brm(
+  bf(MaxTemp ~ Year + (1 + Year|doy), sigma ~ (1|doy)),
   data = max_temp, family = gaussian(),
   chains = 2, control = list(adapt_delta = 0.95)
 )
 
-plot(conditional_effects(fit_smooth), points = FALSE, ask = FALSE)
+plot(conditional_effects(fit3), points = FALSE, ask = FALSE)
+
+fit4 <- brm(
+  bf(MaxTemp ~ (1 + Year|doy), sigma ~ (1|doy)),
+  data = max_temp, family = gaussian(),
+  chains = 2, control = list(adapt_delta = 0.95)
+)
+
+plot(conditional_effects(fit4), points = FALSE, ask = FALSE)
 ```
+
+Compare with lmer models
 
 
 
