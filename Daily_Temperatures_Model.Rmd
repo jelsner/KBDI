@@ -22,11 +22,18 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 1943)
+  filter(Year <= 2020 & Year >= 1990)
 
 TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 67 # Quincy
+
+TLH.df <-
+  TLH.df |>
+  select(MaxTemp, Year, doy, Date) |>
+  mutate(MaxTempS = scale(MaxTemp),
+         YearS = scale(Year),
+         doyS = scale(doy))
 ```
 
 Trends in the data
@@ -50,8 +57,25 @@ Trends <-
 ```{r}
 library(lme4)
 
-fit1 <- lmer(MaxTemp ~ Year + (Year  | doy), data = max_temp)
+fit1 <- lmer(MaxTemp ~  ( Year  | doy), 
+             data = TLH.df)
 
+library(blme)
+
+fit1.0 <- blmer(MaxTemp ~ Year + (Year | doy), 
+                data = TLH.df)
+
+library(brms)
+
+fit1.1 <-
+  brm(data = TLH.df,
+      formula = MaxTempS ~ YearS + (0 + YearS | doyS),
+      prior = prior(normal(0, 10), class = b),
+      iter = 2000, chains = 2, cores = 4,
+      seed = 31415)
+
+ps <- fit1.1 |>
+  posterior::as_draws_df()
 ```
 
 
@@ -103,8 +127,8 @@ model6 <- bsts(MaxTemp ~ Year,
                data = TLH.z)
 
 ss <- list()
-ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 14)
-model3 <- bsts(MaxTemp ~ Year,
+ss <- bsts::AddAutoAr(ss, TLH.z$MaxTemp, lags = 1)
+model3 <- bsts(MaxTemp ~ Year * doy,
                state.specification = ss,
                niter = 200,
                data = TLH.z)
