@@ -67,7 +67,7 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          MinTemp = TMIN,
          Rainfall24 = PRCP,
          Rainfall24mm = Rainfall24 * 25.4,
-         Wind = AWND) |> # wind values appear to be mph
+         Wind = AWND * .44704) |> # wind values appear to be mph
   filter(Year <= 2020)
 
 Other.df <- read.csv(file = 'Data/LVG_Daily1940-2020.csv') |>
@@ -87,7 +87,7 @@ TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
 TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 73 
 TLH.df$Rainfall24[is.na(TLH.df$PRCP)] <- c(.1, .3, 0, .1, 0)
 TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
-TLH.df$Wind[TLH.df$Date == "2018-11-28"] <- 5 
+TLH.df$Wind[TLH.df$Date == "2018-11-28"] <- 5 * .44704
 TLH.df <-
   TLH.df |>
   filter(Year >= 1943) |>
@@ -131,7 +131,8 @@ Annual mean daily highs and lows are warming since the 1970s.
             AvgLowTemp = mean(MinTemp, na.rm = TRUE),
             AvgMeanTemp = mean(AvgTemp, na.rm = TRUE),
             AvgDTR = mean(DTR, na.rm = TRUE),
-            AvgQlm = mean(Qlm)) )
+            AvgQlm = mean(Qlm),
+            AvgWind = mean(Wind, na.rm = TRUE)) )
 
 AnnualMeans |>
   pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
@@ -148,12 +149,23 @@ AnnualMeans |>
 
 AnnualMeans |>
   ggplot(mapping = aes(x = Year, y = AvgQlm)) +
-  scale_y_continuous(limits = c(NA, NA)) +
+  scale_y_continuous(limits = c(0, 200)) +
     geom_point() +
     geom_smooth() +
   theme_minimal() +
   labs(title = "Annual mean soil moisture deficit (mm)",
        subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+
+AnnualMeans |>
+  filter(Year >= 1984) |>
+  ggplot(mapping = aes(x = Year, y = AvgWind)) +
+  scale_y_continuous(limits = c(0, 5)) +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual average mean daily wind speed (m/s)",
+       subtitle = "Tallahasee, Florida (1984-2020)",
        x = "", y = "")
 
 AnnualMeans |>
@@ -167,17 +179,16 @@ AnnualMeans |>
        x = "", y = "")
 ```
 
-Histogram of daily high temperature.
+Histograms of daily weather conditions
 ```{r}
-labels <- c(paste0(seq(30, 100, by = 10), "°", " F"))
-
+labels1 <- c(paste0(seq(30, 100, by = 10), "°", " F"))
 p1 <- TLH.df |> 
 ggplot(mapping = aes(x = MaxTemp)) + 
   geom_histogram(binwidth = 1, 
                  mapping = aes(fill = ..count..)) +
-  scale_fill_viridis_c(guide = "none") +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
   scale_x_continuous(breaks = seq(30, 100, by = 10),
-                     labels = labels) +
+                     labels = labels1) +
   theme_minimal() +
   labs(title = "Frequency of daily high temperatures",
        subtitle = "Tallahassee, Florida (1943-2020)",
@@ -197,19 +208,15 @@ p1 +
     data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
     arrow = arrow(length = unit(.08, "inch")), size = .5,
     color = "gray20", curvature = -.3)
-```
 
-Histogram of daily low temperature.
-```{r}
-labels <- c(paste0(seq(10, 80, by = 10), "°", " F"))
-
+labels2 <- c(paste0(seq(10, 80, by = 10), "°", " F"))
 p2 <- TLH.df |> 
 ggplot(mapping = aes(x = MinTemp)) + 
   geom_histogram(binwidth = 1, 
                  mapping = aes(fill = ..count..)) +
-  scale_fill_viridis_c(guide = "none") +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
   scale_x_continuous(breaks = seq(10, 80, by = 10),
-                     labels = labels) +
+                     labels = labels2) +
   theme_minimal() +
   labs(title = "Frequency of daily low temperatures",
        subtitle = "Tallahassee, Florida (1943-2020)",
@@ -230,14 +237,14 @@ p2 +
     arrow = arrow(length = unit(.08, "inch")), size = .5,
     color = "gray20", curvature = -.3)
 
-labels <- c(paste0(seq(0, 50, by = 10), "°", " F"))
+labels3 <- c(paste0(seq(0, 50, by = 10), "°", " F"))
 TLH.df |> 
 ggplot(mapping = aes(x = DTR)) + 
   geom_histogram(binwidth = 1, 
                  mapping = aes(fill = ..count..)) +
-  scale_fill_viridis_c(guide = "none") +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
   scale_x_continuous(breaks = seq(0, 50, by = 10),
-                     labels = labels) +
+                     labels = labels3) +
   theme_minimal() +
   labs(title = "Frequency of DTR",
        subtitle = "Tallahassee, Florida (1943-2020)",
@@ -249,14 +256,15 @@ TLH.df |>
                    mapping = aes(fill = ..count..))
 
 TLH.df |>
+  filter(Year >= 1984) |>
   ggplot(mapping = aes(x = Wind)) +
-    geom_histogram(binwidth = 1,  # 1 mph
+    geom_histogram(binwidth = .5,  # .2 m/s
                    mapping = aes(fill = ..count..))
  
   
 ```
 
-Day-of-year statistics by variable
+Day-of-year statistics by variable. Use complementary colors. https://twitter.com/iamscicomm/status/1442557946320367616
 ```{r}
 TLH_long.df <- 
   TLH.df |> 
@@ -286,11 +294,24 @@ StatsDoY |>
                      labels = month.name) +
   facet_wrap(~ Variable, scales = "free_y") +
   theme_minimal() 
+
+StatsDoY |>
+  filter(Variable == "Wind") |>
+  ggplot(mapping = aes(x = Date, y = Avg ) ) +
+  scale_y_continuous(limits = c(NA, NA)) +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = Lowest, ymax = Highest)) +
+  geom_errorbar(mapping = aes(ymin = Q25, ymax = Q75), width = .5) +
+# scale_x_continuous(position = "bottom", 
+#                    breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+#                   labels = month.name) +
+  scale_x_date(date_breaks = "month", date_labels = "%b") +
+  theme_minimal() 
 ```
 
 ## Polar coordinate plot.
 
-Theme tips from https://dominicroye.github.io/en/2021/climate-circles/
+Theme tips from https://dominicroye.github.io/en/2021/climate-circles/ Colors from https://image-color-picker.com/hex-code-picker
 ```{r}
 labels1 <- c(paste0(seq(20, 100, by = 20), "°", " F"))
 p1 <- StatsDoY |>
@@ -304,7 +325,8 @@ p1 <- StatsDoY |>
                                size = 1,
                                alpha = 1) +
   geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
-  scale_color_distiller(palette = "RdBu", guide = "none") +
+#  scale_color_distiller(palette = "RdBu", guide = "none") +
+  scale_color_gradient(low = "#1F96DE", high = "#DE671F", guide = "none") +
   scale_y_continuous(limits = c(20, 105),
                      breaks = seq(20, 100, by = 20),
                      labels = labels1) +
@@ -330,7 +352,7 @@ p2 <- StatsDoY |>
                                size = 1,
                                alpha = 1) +
   geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
-  scale_color_distiller(palette = "RdBu", guide = "none") +
+  scale_color_gradient(low = "#1F77DE", high = "#DE861F", guide = "none") +
   scale_y_continuous(limits = c(0, 90),
                      breaks = seq(0, 80, by = 20),
                      labels = labels2) +
@@ -356,8 +378,8 @@ p3 <- StatsDoY |>
                                alpha = 1) +
   geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
 #  geom_hline(yintercept = 100, color = "gray90") +
-  scale_color_gradientn(colors = terrain.colors(5),
-                       guide = 'none') +
+#  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
+  scale_color_gradient(low = "#1FDE6E", high = "#DE1F8F", guide = "none") +
   scale_y_continuous(limits = c(-10, 150),
                      breaks = seq(0, 150, by = 50),
                      labels = labels3) +
@@ -383,7 +405,7 @@ p4 <- StatsDoY |>
                                alpha = 1) +
   geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
 #  geom_hline(yintercept = 5, color = "gray90") +
-  scale_color_distiller(palette = "Purples", direction = 1, guide = "none") +
+  scale_color_gradient(low = "#DECB1F", high = "#1F32DE", guide = "none") +
   scale_y_continuous(limits = c(-2, 12),
                      breaks = seq(0, 10, by = 5),
                      labels = labels4) +
@@ -400,6 +422,8 @@ p4 <- StatsDoY |>
 (p1 + p2)
 (p3 + p4)
 ```
+
+x-axis labels are at first of the month.
 
 Non-normality in daily high and low temperatures
 ```{r}
