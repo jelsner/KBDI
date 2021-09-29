@@ -1365,8 +1365,9 @@ AprilKBDI <- TLH.df %>%
 
 Merge fire season fire counts with the April KBDI summaries 
 ```{r}
-AprilStats <- left_join(x = seasonFires, y = AprilKBDI, by = c("Year" = "Season")) %>%
-  rename(Season = Year, SeasonFires = nFIRES)
+AprilStats <- left_join(x = AprilKBDI, y = seasonFires, by = c("Season" = "Year")) %>%
+  rename(SeasonFires = nFIRES) %>%
+  replace_na(list(SeasonFires = 0))
 ```
 
 When exploring the relationship between April KBDI values and the number of fires that occurred in the proceeding season a correlation coefficient of about 0.55 is found, with the best response to the KBDI median and KBDI mean.
@@ -1556,6 +1557,74 @@ summary(burnedGLM)
 cor(countfiresandburned.df$acresBurned, countfiresandburned.df$nFIRES)
 ```
 
+Rather than comparing the area burned to the number of fires that occurred, compare the residuals between the model residuals.
+Join data sets so data can be visualized better
+```{r}
+tocompareModels <- left_join(countfiresandburned.df, AprilStats, by = c("forecastYear" = "Season")) %>%
+  filter(forecastYear <= 2018) %>%
+  select(forecastYear:nFIRES, April_Min:KBDI_midApril)
+```
+
+
+
+First, build a model to represent the predicted number of fires based on the KBDI on the 15th of April. The previous models run to this point were focused on average KBDI. We do not want to explore KBDI as an average and instead will represent one day of KBDI.
+
+```{r}
+April15GLM <- glm(formula = nFIRES ~ KBDI_midApril, family = poisson, data = tocompareModels)
+
+pred_April15GLM <- predict(object = April15GLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+#summary(April15GLM)
+
+lowerAprilStats <- pred_April15GLM$fit - (1.96*pred_April15GLM$se.fit)
+upperAprilStats <- pred_April15GLM$fit + (1.96*pred_April15GLM$se.fit)
+
+ggplot(mapping = aes(x = tocompareModels$KBDI_midApril, y = pred_April15GLM$fit)) +
+  geom_ribbon(aes(ymin = lowerAprilStats, ymax = upperAprilStats), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Number of Fires") +
+  xlab("April 15th KBDI") +
+  labs(
+    title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April 15th KBDI",
+    subtitle = "With 95% Confidence Interval",
+    caption = "April 1992-2018")
+```
+
+Build a model to predict the number of fires based on burned area
+```{r}
+burnedareaGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = tocompareModels)
+
+pred_burnedareaGLM <- predict(object = burnedareaGLM,
+                              type = "response",
+                              se.fit = TRUE)
+
+lowerBurnedArea <- burnedareaGLM$fit - (1.96*pred_burnedareaGLM$se.fit)
+upperBurnedArea <- burnedareaGLM$fit + (1.96*pred_burnedareaGLM$se.fit)
+
+ggplot(mapping = aes(x = tocompareModels$acresBurned, y = pred_burnedareaGLM$fit)) +
+  geom_ribbon(aes(ymin = lowerBurnedArea, ymax = upperBurnedArea), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Number of Fires") +
+  xlab("Burned Acres") +
+  labs(
+    title = "Predicted Number of Fires for the Upcoming Fire Season\nBased the Area Burned Over the Past Year",
+    subtitle = "With 95% Confidence Interval",
+    caption = "1993-2018")
+
+#summary(burnedareaGLM)
+```
+
+Explore if there is a correlation between the model residuals from the two models.
+```{r}
+cor(resid(April15GLM),resid(burnedareaGLM))
+#cor(se.fit(pred_April15GLM),se.fit(pred_burnedareaGLM))
+```
+
+
+
+
 
 Explore if the number of total fires (not just natural) in the months prior to the lightning season is related to the number during the season. Question: If there are a lot of fires in prior to the season, does that imply that there is abundant fuel for the season?
 
@@ -1582,6 +1651,7 @@ There is not enough evidence to suggest a relationship between the number of fir
 ```{r}
 cor(comparePre.df$earlyFires, comparePre.df$seasonFires)
 ```
+
 
 
 --Scratch code
