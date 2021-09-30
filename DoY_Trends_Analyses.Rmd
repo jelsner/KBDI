@@ -541,18 +541,18 @@ Trends |>
 ## Slope graph showing top ten upward doy trends and top ten downward doy trends
 https://cran.r-project.org/web/packages/CGPfunctions/vignettes/Using-newggslopegraph.html
 
-Predict values from the linear model for 1950 and 2020. Use these values for start and end of the slopes. Note: need to `ungroup()` first otherwise the `slice()` function will operate on each group.
+Predict values from the linear model for 1948 and 2020. Use these values for start and end of the slopes. Note: need to `ungroup()` first otherwise the `slice()` function will operate on each group.
 ```{r}
 Up <-
   Trends |>
-  filter(Variable == "MinTemp") |>
+  filter(Variable == "Wind") |>
   ungroup() |>
   slice_max(estimate, n = 5) |>
   pull(doy)
 
 Down <-
   Trends |>
-  filter(Variable == "MinTemp") |>
+  filter(Variable == "Wind") |>
   ungroup() |>
   slice_min(estimate, n = 5) |>
   pull(doy)
@@ -562,17 +562,17 @@ Largest <- c(Up, Down)
 Changes <- TLH.df |> 
   filter(doy %in% Largest) |>
   nest(data = -doy) |>
-    mutate(fit = map(data, ~lm(MinTemp ~ Year, data = .x)),
+    mutate(fit = map(data, ~lm(Wind ~ Year, data = .x)),
            augmented = map(fit, augment)) |>
     unnest(augmented) |>
-  filter(Year %in% c(1948, 2020)) |> # start and end must be leap years
-  mutate(Year = factor(Year, levels = c(1948, 2020), ordered = TRUE),
-         Temperature = round(.fitted, 0),
+  filter(Year %in% c(1984, 2020)) |> # start and end must be leap years
+  mutate(Year = factor(Year, levels = c(1984, 2020), ordered = TRUE),
+         Variable = round(.fitted, 1),
          Date = as.Date(doy - 1, origin = "2020-01-01"),
          DayMonth = paste(day(Date), month.name[month(Date)]) ) |>
-  select(DayMonth, Year, Temperature) |>
+  select(DayMonth, Year, Variable) |>
   group_by(DayMonth) |>
-  mutate(Difference = Temperature[Year == 2020] - Temperature[Year == 1948],
+  mutate(Difference = Variable[Year == 2020] - Variable[Year == 1984],
          Trend = case_when(Difference < 0 ~ "#1FDEBF",
                            TRUE ~ "#DE1F3E")) |>
   as.data.frame()
@@ -590,10 +590,14 @@ custom_colors <-
 
 newggslopegraph(Changes, 
                 Year, 
-                Temperature,
+                Variable,
                 DayMonth,
-                Title = "Nights of the year that have warmed and cooled the most in Tallahassee, Florida",
-                SubTitle = "Daily low temperature (° F). Based on data over the period 1943-2020",
+#                Title = "Nights of the year that have warmed and cooled the most in Tallahassee, Florida",
+#                SubTitle = "Daily low temperature (° F). Based on data over the period 1943-2020",
+#                Title = "Days of the year with the greatest (least) change in moisture deficit",
+#                SubTitle = "Daily moisture deficit (mm). Based on data over the period 1943-2020",
+                Title = "Days of the year that have become the most windier (calmer)",
+                SubTitle = "Daily wind speed (m/s). Based on data over the period 1984-2020",
                 Caption = NULL,
                 LineThickness = .5,
                 YTextSize = 4,
@@ -604,13 +608,18 @@ Histogram of trends
 ```{r}
 library(scales)
 
-breaks_x <- seq(-12, 12, by = 2)
-labels_x <- c(paste0(seq(-12, 12, by = 2), "°", " F"))
+Trends |> 
+  filter(Variable == "MaxTemp") |> 
+  pull(estimate) |> 
+  range() * (2020 - 1943 + 1)
 
+breaks_x <- seq(-12, 12, by = 2)
+labels_x <- c(paste0(breaks_x, "°", " F"))
 breaks_y <- 366 * seq(0, .2, by = .05)
 labels_y <- c("0", paste0(seq(.05, .2, by = .05) * 100, "%"))
 
 Trends |>
+  filter(Variable == "MaxTemp") |>
   mutate(Change = estimate * (2020 - 1943 + 1),
          Colors = case_when(Change < 0 ~ "A",
                            TRUE ~ "B")) |>
@@ -629,11 +638,51 @@ Trends |>
                           high = muted("red"),
                           midpoint = 0,
                           guide = 'none') +
-    scale_fill_manual(values = c(muted("blue"), muted("red")),
-                      guide = "none") +
+   scale_fill_manual(values = c(muted("blue"), muted("red")),
+                     guide = "none") +
     geom_hline(yintercept = breaks_y, color = "white") +
     labs(title = "More days have warmed than cooled in Tallahassee, FL",
-         subtitle = "Percentage of all days of the year that have warmed (or cooled) binned by 1° F change: 1943-2020",
+         subtitle = "Percentage of all days of the year that have warmed (and cooled) binned by 1° F change: 1943-2020",
+         x = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid = element_blank())
+
+Trends |> 
+  filter(Variable == "Qlm") |> 
+  pull(estimate) |> 
+  range() * (2020 - 1943 + 1)
+
+breaks_x <- seq(-50, 50, by = 10)
+labels_x <- c(paste0(breaks_x, " mm"))
+labels_x[6] <- "0"
+
+breaks_y <- seq(0, 14, by = 2)
+labels_y <- breaks_y
+
+Trends |>
+  filter(Variable == "Qlm") |>
+  mutate(Change = estimate * (2020 - 1943 + 1),
+         Colors = case_when(Change < 0 ~ "A",
+                           TRUE ~ "B")) |>
+  ggplot(mapping = aes(x = Change, fill = Colors)) +
+    geom_histogram(binwidth = 1, 
+                   color = "white",
+                   center = .5) +
+    geom_rug(mapping = aes(color = Change)) +
+    scale_y_continuous(breaks = breaks_y,
+                       labels = labels_y) +
+    scale_x_continuous(breaks = breaks_x,
+                       labels = labels_x) +
+    scale_color_gradient2(low = "#1F3BDE",
+                          mid = "white",
+                          high = "#DEC21F",
+                          midpoint = 0,
+                          guide = 'none') +
+   scale_fill_manual(values = c("#1F3BDE", "#DEC21F"),
+                     guide = "none") +
+    geom_hline(yintercept = breaks_y, color = "white") +
+    labs(title = "More days have dried than moistened in Tallahassee, FL",
+         subtitle = "Number of days of the year that have dried (and moistened) binned by 1 mm change",
          x = "", y = "") +
     theme_minimal() +
     theme(panel.grid = element_blank())
