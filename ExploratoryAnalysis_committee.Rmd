@@ -1961,6 +1961,3 @@ Fires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", lay
   st_intersection(ANF_Boundary.sf)
 ```
 
-
-
-
