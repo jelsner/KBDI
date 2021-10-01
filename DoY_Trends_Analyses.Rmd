@@ -1,0 +1,790 @@
+---
+title: "Exploratory Analysis of Long-term Trends in Day-Of-Year Weather"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Introduction
+
+Tallahassee is hot and getting hotter. Examples: https://iopscience.iop.org/article/10.1088/2515-7620/ab27cf
+
+Key findings of the current research: The most significant warming trends are occurring during summer although the largest changes occur during fall and winter. This increased warming averaged over decades amounts to about 
+
+While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadfully uncomfortable and potential quite dangerous to health.
+
+According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
+
+But how individuals and communities experience climate change is local.
+
+People of all political leanings highly value listening, openness, and talking about science in the context of society and community. Heslop, C., Dudo, A., and Copple, J. (August, 2021). Communicating science across political divides. Center for Media Engagement. https://mediaengagement.org/research/communicating-science- across-political-divides
+
+Quote: "Throughout the WGI report and unless stated otherwise, uncertainty is quantified using 90% uncertainty intervals. The 90% uncertainty interval, reported in square brackets [x to y], is estimated to have a 90% likelihood of covering the value that is being estimated. The range encompasses the median value and there is an estimated 10% combined likelihood of the value being below the lower end of the range (x) and above its upper end (y). Often the distribution will be considered symmetric about the corresponding best estimate, but this is not always the case." This is confusing.
+
+"For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures" "There has been widespread evidence of human influence on various aspects of temperature extremes, at global, continental, and regional scales. This includes attribution to human influence of observed changes in intensity, frequency, and duration and other relevant characteristics at global and continental scales." But very little work at individual locations. What days of the year are warming the fastest in a particular location. Requires a long-term record
+
+https://rmets.onlinelibrary.wiley.com/doi/10.1002/joc.4688 Diurnal asymmetry to the observed global warming. Night-time temperatures have increased more rapidly than day-time temperatures.
+
+We compute day-of-year trends in weather variables and use descriptive statistics to examine the range, distribution, and extremes of these trends.
+
+How has each day changed over the years? What days of the year have warmed the most? What days of the year have cooled the most? What days of the year have dried the most?
+
+Show the biggest long-term (climate) trends in max/min temperatures? Corollary: what day(s) of the year do not show a normal distribution in max/min temperatures?
+
+Why is this important? Climate change on the scale relevant to our daily lives.
+
+The paper is exploratory. We do not have a hypothesis in mind though we do expect to see more days with upward than downward trends with perhaps a greater number of days with upward trends in low temperatures compared to the number of days with upward trends in high temperatures.
+
+R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
+
+## Get the required packages
+```{r}
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(broom)
+library(patchwork)
+library(ggdist)
+```
+
+## Get TLH airport daily weather data
+
+NWS Tallahassee daily weather data:
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw
+AWND = Average daily wind speed (tenths of meters/second)
+PGTM = Peak gust time
+
+Import the summary-of-the-day data and add columns to the data frame.
+```{r}
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
+  mutate(Date = as.Date(DATE)) |>
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24mm = Rainfall24 * 25.4,
+         Wind = AWND * .44704) |> # wind values appear to be mph
+  filter(Year <= 2020)
+
+Other.df <- read.csv(file = 'Data/LVG_Daily1940-2020.csv') |>
+  mutate(Date = as.Date(DATE)) |>
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Wind = AWND) |>
+  filter(Year <= 2020 & Year >= 1943)
+
+# Missing data filled in from NCDC daily summaries https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily or https://www.wunderground.com/history/daily/KTLH/date/2018-11-28
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
+TLH.df$MinTemp[TLH.df$Date == "2005-07-08"] <- 72
+TLH.df$MinTemp[TLH.df$Date == "2002-10-08"] <- 73 
+TLH.df$Rainfall24[is.na(TLH.df$PRCP)] <- c(.1, .3, 0, .1, 0)
+TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
+TLH.df$Wind[TLH.df$Date == "2018-11-28"] <- 5 * .44704
+TLH.df <-
+  TLH.df |>
+  filter(Year >= 1943) |>
+  select(Date, Year, month, doy, 
+         MaxTemp, MinTemp, Rainfall24, Rainfall24mm, Wind)
+```
+
+## Compute daily values of the KBDI and dryness. 
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with a minor correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
+
+Step one: Compute net rainfall on each day. Units need to be in inches.
+```{r}
+source("netRainfall.R")
+TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
+```
+
+Step two: Compute daily drought index. Units of temperature are degrees F. Q is set initially to 400. The influence of this start value diminishes to zero after a few months R is the annual average rainfall for TLH in inches based on daily totals.
+```{r}
+source("droughtIndex.R")
+DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
+TLH.df$Ql <- DI$Ql
+TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
+TLH.df$DroughtIndex <- DI$DroughtIndex
+```
+
+TLH.df <- Other.df  # Albany, GA shows more cooling days than warming days. Why? Milwaukee shows more warming days than cooling days like Tallahassee. Las Vegas shows more warming days and all warming nights.
+
+Diurnal temperature range (DTR) is an index that combines daily high and low temperatures. Since the physical processes that result in high temperature are different than the processes that result in low temperature, the metric is not useful for understanding the physics related to long-term trends in day-of-year temperature.
+```{r}
+TLH.df <- TLH.df |>
+  mutate(AvgTemp = (MaxTemp + MinTemp) / 2,
+         DTR = MaxTemp - MinTemp)
+```
+
+Annual mean daily highs and lows are warming since the 1970s.
+```{r}
+( AnnualMeans <- TLH.df %>%
+  group_by(Year) |>
+  summarize(AvgHighTemp = mean(MaxTemp, na.rm = TRUE),
+            AvgLowTemp = mean(MinTemp, na.rm = TRUE),
+            AvgMeanTemp = mean(AvgTemp, na.rm = TRUE),
+            AvgDTR = mean(DTR, na.rm = TRUE),
+            AvgQlm = mean(Qlm),
+            AvgWind = mean(Wind, na.rm = TRUE)) )
+
+AnnualMeans |>
+  pivot_longer(cols = c(AvgHighTemp, AvgLowTemp)) |>
+  ggplot(mapping = aes(x = Year, y = value, color = name)) +
+  scale_y_continuous(limits = c(NA, NA)) +
+  scale_color_manual(values = c(muted("red"), muted("blue")), 
+                     guide = "none") +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual mean daily high and low temperatures (°F)",
+       subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+
+AnnualMeans |>
+  ggplot(mapping = aes(x = Year, y = AvgQlm)) +
+  scale_y_continuous(limits = c(0, 200)) +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual mean soil moisture deficit (mm)",
+       subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+
+AnnualMeans |>
+  filter(Year >= 1984) |>
+  ggplot(mapping = aes(x = Year, y = AvgWind)) +
+  scale_y_continuous(limits = c(0, 5)) +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual average mean daily wind speed (m/s)",
+       subtitle = "Tallahasee, Florida (1984-2020)",
+       x = "", y = "")
+
+AnnualMeans |>
+  ggplot(mapping = aes(x = Year, y = AvgDTR)) +
+  scale_y_continuous(limits = c(NA, NA)) +
+    geom_point() +
+    geom_smooth() +
+  theme_minimal() +
+  labs(title = "Annual mean DTR (°F)",
+       subtitle = "Tallahasee, Florida (1943-2020)",
+       x = "", y = "")
+```
+
+Histograms of daily weather conditions
+```{r}
+labels1 <- c(paste0(seq(30, 100, by = 10), "°", " F"))
+p1 <- TLH.df |> 
+ggplot(mapping = aes(x = MaxTemp)) + 
+  geom_histogram(binwidth = 1, 
+                 mapping = aes(fill = ..count..)) +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
+  scale_x_continuous(breaks = seq(30, 100, by = 10),
+                     labels = labels1) +
+  theme_minimal() +
+  labs(title = "Frequency of daily high temperatures",
+       subtitle = "Tallahassee, Florida (1943-2020)",
+       x = "", y = "")
+
+arrows <- 
+  tibble(
+    x1 = c(75),
+    x2 = c(89),
+    y1 = c(1025), 
+    y2 = c(1200)
+  )
+
+p1 +
+  annotate("text", x = 60, y = 1000, label = "The most common high temperature is 90° F") +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray20", curvature = -.3)
+
+labels2 <- c(paste0(seq(10, 80, by = 10), "°", " F"))
+p2 <- TLH.df |> 
+ggplot(mapping = aes(x = MinTemp)) + 
+  geom_histogram(binwidth = 1, 
+                 mapping = aes(fill = ..count..)) +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
+  scale_x_continuous(breaks = seq(10, 80, by = 10),
+                     labels = labels2) +
+  theme_minimal() +
+  labs(title = "Frequency of daily low temperatures",
+       subtitle = "Tallahassee, Florida (1943-2020)",
+       x = "", y = "")
+
+arrows <- 
+  tibble(
+    x1 = c(50),
+    x2 = c(71),
+    y1 = c(1250), 
+    y2 = c(1460)
+  )
+
+p2 +
+  annotate("text", x = 48, y = 1200, label = "The most common low temperature is 72° F") +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray20", curvature = -.3)
+
+labels3 <- c(paste0(seq(0, 50, by = 10), "°", " F"))
+TLH.df |> 
+ggplot(mapping = aes(x = DTR)) + 
+  geom_histogram(binwidth = 1, 
+                 mapping = aes(fill = ..count..)) +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
+  scale_x_continuous(breaks = seq(0, 50, by = 10),
+                     labels = labels3) +
+  theme_minimal() +
+  labs(title = "Frequency of DTR",
+       subtitle = "Tallahassee, Florida (1943-2020)",
+       x = "", y = "")
+
+TLH.df |>
+  ggplot(mapping = aes(x = Qlm)) +
+    geom_histogram(binwidth = 2,  # 2 mm
+                   mapping = aes(fill = ..count..))
+
+TLH.df |>
+  filter(Year >= 1984) |>
+  ggplot(mapping = aes(x = Wind)) +
+    geom_histogram(binwidth = .5,  # .2 m/s
+                   mapping = aes(fill = ..count..))
+ 
+  
+```
+
+Day-of-year statistics by variable. Use complementary colors. https://twitter.com/iamscicomm/status/1442557946320367616
+```{r}
+TLH_long.df <- 
+  TLH.df |> 
+  select(Date, Year, month, doy, MaxTemp, MinTemp, Qlm, Wind) |>
+  pivot_longer(cols = c(MaxTemp, MinTemp, Qlm, Wind),
+               names_to = "Variable",
+               values_to = "Value")
+
+( StatsDoY <- 
+  TLH_long.df |>
+  group_by(doy, Variable) |>
+  summarize(Avg = mean(Value, na.rm = TRUE),
+            Highest = max(Value, na.rm = TRUE),
+            Lowest = min(Value, na.rm = TRUE),
+            Q75 = quantile(Value, prob = .75, na.rm = TRUE),
+            Q25 = quantile(Value, prob = .25, na.rm = TRUE)) |>
+   mutate(Date = as.Date(doy - 1, origin = "2020-01-01")) )
+
+StatsDoY |>
+  ggplot(mapping = aes(x = doy, y = Avg ) ) +
+  scale_y_continuous(limits = c(NA, NA)) +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = Lowest, ymax = Highest)) +
+  geom_errorbar(mapping = aes(ymin = Q25, ymax = Q75), width = .5) +
+  scale_x_continuous(position = "bottom", 
+                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  facet_wrap(~ Variable, scales = "free_y") +
+  theme_minimal() 
+
+StatsDoY |>
+  filter(Variable == "Wind") |>
+  ggplot(mapping = aes(x = Date, y = Avg ) ) +
+  scale_y_continuous(limits = c(NA, NA)) +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = Lowest, ymax = Highest)) +
+  geom_errorbar(mapping = aes(ymin = Q25, ymax = Q75), width = .5) +
+# scale_x_continuous(position = "bottom", 
+#                    breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+#                   labels = month.name) +
+  scale_x_date(date_breaks = "month", date_labels = "%b") +
+  theme_minimal() 
+```
+
+## Polar coordinate plot.
+
+Theme tips from https://dominicroye.github.io/en/2021/climate-circles/ Colors from https://image-color-picker.com/hex-code-picker
+```{r}
+labels1 <- c(paste0(seq(20, 100, by = 20), "°", " F"))
+p1 <- StatsDoY |>
+  filter(Variable == "MaxTemp") |>
+  ggplot() +
+#  geom_hline(yintercept = 100, color = "gray70") +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = Highest,
+                               ymin = Lowest,
+                               color = Avg),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
+#  scale_color_distiller(palette = "RdBu", guide = "none") +
+  scale_color_gradient(low = "#1F96DE", high = "#DE671F", guide = "none") +
+  scale_y_continuous(limits = c(20, 105),
+                     breaks = seq(20, 100, by = 20),
+                     labels = labels1) +
+  scale_x_date(date_breaks = "month", date_labels = "%b") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "High temperature")
+
+labels2 <- c(paste0(seq(0, 80, by = 20), "°", " F"))
+p2 <- StatsDoY |>
+  filter(Variable == "MinTemp") |>
+  ggplot() +
+#  geom_hline(yintercept = 70, color = "gray70") +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = Highest,
+                               ymin = Lowest,
+                               color = Avg),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
+  scale_color_gradient(low = "#1F77DE", high = "#DE861F", guide = "none") +
+  scale_y_continuous(limits = c(0, 90),
+                     breaks = seq(0, 80, by = 20),
+                     labels = labels2) +
+  scale_x_date(date_breaks = "month", date_labels = "%b") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "Low temperature")
+
+labels3 <- c(paste0(seq(0, 150, by = 50), " mm"))
+p3 <- StatsDoY |>
+  filter(Variable == "Qlm") |>
+  ggplot() +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = Q75,
+                               ymin = Q25,
+                               color = Avg),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
+#  geom_hline(yintercept = 100, color = "gray90") +
+#  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
+  scale_color_gradient(low = "#1FDE6E", high = "#DE1F8F", guide = "none") +
+  scale_y_continuous(limits = c(-10, 150),
+                     breaks = seq(0, 150, by = 50),
+                     labels = labels3) +
+  scale_x_date(date_breaks = "month", date_labels = "%b") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "Moisture deficit")
+
+labels4 <- c(paste0(seq(0, 10, by = 5), " mph"))
+p4 <- StatsDoY |>
+  filter(Variable == "Wind") |>
+  ggplot() +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = Q75,
+                               ymin = Q25,
+                               color = Avg),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = Avg), color = "white", size = .5) +
+#  geom_hline(yintercept = 5, color = "gray90") +
+  scale_color_gradient(low = "#DECB1F", high = "#1F32DE", guide = "none") +
+  scale_y_continuous(limits = c(-2, 12),
+                     breaks = seq(0, 10, by = 5),
+                     labels = labels4) +
+  scale_x_date(date_breaks = "month", date_labels = "%b") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "Average wind speed")
+
+(p1 + p2)
+(p3 + p4)
+```
+
+x-axis labels are at first of the month.
+
+Non-normality in daily high and low temperatures
+```{r}
+library(moments)
+library(nortest)
+
+TLH.df |>
+  group_by(doy) |>
+  summarize( AvgByDoY = mean(MaxTemp),
+             SDByDoY = sd(MaxTemp),
+             SkewByDoY = skewness(MaxTemp) ) |>
+  ggplot(mapping = aes(x = doy, y = AvgByDoY)) +
+    geom_point() +
+    geom_smooth()
+
+normTest <- 
+  TLH.df |>
+  group_by(doy) |>
+  summarize(pvalueS = shapiro.test(MaxTemp)$p.value,
+            pvalueAD = ad.test(MaxTemp)$p.value) |>
+  mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+         Month = month(Date))
+
+normTest$doy[normTest$pvalueS > .05]
+normTest$doy[normTest$pvalueAD > .05]
+
+normTest |>
+  group_by(Month) |>
+  summarize(nNormalDaysS = sum(pvalueS > .05),
+            nNormalDaysAD = sum(pvalueAD > .05))
+  
+```
+
+Compute long-term trends in day-of-year high temperatures.
+```{r}
+( Trends <- 
+  TLH.df |> 
+#    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+    group_by(doy) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate,
+           std.error = std.error,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error,
+           Daily = "High") )
+
+sum(Trends$estimate > 0)
+sum(Trends$estimate < 0)
+sum(Trends$estimate > 0) / length(Trends$estimate) * 100
+
+Trends |> 
+  arrange(desc(statistic))
+```
+
+## Slope graph showing top ten upward doy trends and top ten downward doy trends
+https://cran.r-project.org/web/packages/CGPfunctions/vignettes/Using-newggslopegraph.html
+
+Predict values from the linear model for 1950 and 2020. Use these values for start and end of the slopes. Note: need to `ungroup()` first otherwise the `slice()` function will operate on each group.
+```{r}
+Up <-
+  Trends |>
+  ungroup() |>
+  slice_max(estimate, n = 5) |>
+  pull(doy)
+
+Down <-
+  Trends |>
+  ungroup() |>
+  slice_min(estimate, n = 5) |>
+  pull(doy)
+
+Largest <- c(Up, Down)
+
+Changes <- TLH.df |> 
+  filter(doy %in% Largest) |>
+  nest(data = -doy) |>
+    mutate(fit = map(data, ~lm(MaxTemp ~ Year, data = .x)),
+           augmented = map(fit, augment)) |>
+    unnest(augmented) |>
+  filter(Year %in% c(1950, 2020)) |>
+  mutate(Year = factor(Year, levels = c(1950, 2020), ordered = TRUE),
+         Temperature = round(.fitted, 0),
+         Date = as.Date(doy - 1, origin = "2020-01-01"),
+         DayMonth = paste(day(Date), month.name[month(Date)]) )|>
+  select(DayMonth, Year, Temperature) |>
+  group_by(DayMonth) |>
+  mutate(Difference = Temperature[Year == 2020] - Temperature[Year == 1950],
+         Trend = case_when(Difference < 0 ~ muted("blue"),
+                           TRUE ~ muted("red"))) |>
+  as.data.frame()
+```
+
+Make the graph
+```{r}
+library(CGPfunctions)
+
+custom_colors <- 
+  Changes |>
+  group_by(DayMonth) |>
+  summarize(Color = last(Trend)) |>
+  tibble::deframe()
+
+newggslopegraph(Changes, 
+                Year, 
+                Temperature,
+                DayMonth,
+                Title = "Days of the year that have warmed and cooled the most in Tallahassee, Florida",
+                SubTitle = "Daily high temperature (° F). Based on data over the period 1943-2020",
+                Caption = NULL,
+                LineThickness = .5,
+                YTextSize = 4,
+                LineColor = custom_colors)
+```
+
+Histogram of trends
+```{r}
+library(scales)
+
+breaks_x <- seq(-12, 12, by = 2)
+labels_x <- c(paste0(seq(-12, 12, by = 2), "°", " F"))
+
+breaks_y <- 366 * seq(0, .2, by = .05)
+labels_y <- c("0", paste0(seq(.05, .2, by = .05) * 100, "%"))
+
+Trends |>
+  mutate(Change = estimate * (2020 - 1943 + 1),
+         Colors = case_when(Change < 0 ~ "A",
+                           TRUE ~ "B")) |>
+  ggplot(mapping = aes(x = Change, fill = Colors)) +
+    geom_histogram(binwidth = 1, 
+                   color = "white",
+#                   fill = "gray80",
+                   center = .5) +
+    geom_rug(mapping = aes(color = Change)) +
+    scale_y_continuous(breaks = breaks_y,
+                       labels = labels_y) +
+    scale_x_continuous(breaks = breaks_x,
+                       labels = labels_x) +
+    scale_color_gradient2(low = muted("blue"),
+                          mid = "white",
+                          high = muted("red"),
+                          midpoint = 0,
+                          guide = 'none') +
+    scale_fill_manual(values = c(muted("blue"), muted("red")),
+                      guide = "none") +
+    geom_hline(yintercept = breaks_y, color = "white") +
+    labs(title = "More days have warmed than cooled in Tallahassee, FL",
+         subtitle = "Percentage of all days of the year that have warmed (or cooled) binned by 1° F change: 1943-2020",
+         x = "", y = "") +
+    theme_minimal() +
+    theme(panel.grid = element_blank())
+```
+
+Plot largest trends.
+```{r}
+labels <- c(paste0(seq(40, 100, by = 20), "°", " F"))
+
+( p3 <- TLH.df |>
+  filter(doy %in% c(26, 350, 192)) |>
+  mutate(Day = factor(case_when(Day = doy == 26 ~ "26 January\n Most cooling",
+                         Day = doy == 350 ~ "15/16 December\n Most warming",
+                         Day = doy == 192 ~ "10/11 July\n Most significant warming"), 
+                      levels = c("26 January\n Most cooling", 
+                                 "10/11 July\n Most significant warming", "15/16 December\n Most warming"))) |>
+  select(Year, MaxTemp, Date, doy, Day) |>
+  ggplot(mapping = aes(x = Year, y = MaxTemp)) +
+    geom_smooth(method = lm, mapping = aes(color = Day)) +
+    geom_point(color = "gray70") +
+  facet_wrap(~ Day) +
+  scale_x_continuous(breaks = seq(50, 2010, by = 20)) +
+  scale_y_continuous(limits = c(35, 105), breaks = seq(40, 100, by = 20), labels = labels) +
+  scale_color_manual(values = c("skyblue", "red3", "salmon"), guide = "none") +
+  theme_minimal() +
+  labs(x = "", y = "") )
+```
+
+Plot trends using polar coordinate plot. Here trends are F/year with ymax, ymin +/- 1 s.e.
+```{r}
+labels <- c(paste0(seq(-.2, .2, by = .1), "° F/yr"))
+
+Trends |>
+  ggplot() +
+  geom_hline(yintercept = 0, color = "gray70") +
+  geom_linerange(mapping = aes(x = Date,
+                               ymax = ymax,
+                               ymin = ymin,
+                               color = estimate),
+                               size = 1,
+                               alpha = 1) +
+  geom_point(mapping = aes(x = Date, y = estimate), color = "white", size = .5) +
+  scale_color_distiller(palette = "RdBu", guide = "none") +
+  scale_y_continuous(limits = c(-.2, .2),
+                     breaks = seq(-.2, .2, by = .1),
+                     labels = labels) +
+  scale_x_date(date_breaks = "month", date_labels = "%B") +
+  coord_polar(start = pi) +
+  theme_dark() +
+  theme(axis.text = element_text(colour = "white"),
+        axis.title = element_blank(),
+        plot.background = element_rect(fill = "gray50"),
+        plot.title = element_text(color = "white"),
+        plot.subtitle = element_text(color = "white")) +
+  labs(title = "Day-of-year trends in high temperatures: average (dot) and range",
+       subtitle = "Tallahassee, FL, (1943-2020)")
+```
+
+Plot trends on a line graph with annotation
+```{r}
+TrendsMax <- 
+  TLH.df |> 
+    mutate(MaxTemp = (MaxTemp - 32) * 5/9) |>
+    group_by(doy) |>
+    do(tidy(lm(MaxTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate * 10,
+           std.error = std.error * 10,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error,
+           Daily = "High")
+
+( p4 <- TrendsMax |>
+  ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
+  scale_y_continuous(limits = c(-1.5, 1.5)) +
+  geom_hline(yintercept = 0, color = "gray70") +
+  scale_color_distiller(palette = "RdBu", 
+                        limits = c(-1, 1) * max(abs(TrendsMax$statistic)),
+                        guide = 'none') +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
+  scale_x_continuous(position = "bottom", 
+                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  theme_minimal() +
+  labs(title = "Long-term (1943-2020) trends in day-of-year high temperatures (°C/decade), Tallahassee, Florida", 
+       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
+       x = "", y = "") )
+```
+
+Annotate the plot with text and arrows. http://jenrichmond.rbind.io/post/idhtg-how-to-annotate-plots/
+```{r}
+arrows <- 
+  tibble(
+    x1 = c(46, 130, 300),
+    x2 = c(26.5, 191.5, 349.5),
+    y1 = c(-.95, .75, 1.15), 
+    y2 = c(-.525, .48, .8)
+  )
+
+( p4 <- p4 + 
+  annotate("text", x = 46, y = -1, label = "Most cooling: 26 January") +
+  annotate("text", x = 130, y = .8, label = "Most significant warming: 10/11 July") +
+  annotate("text", x = 300, y = 1.2, label = "Most warming: 15/16 December") +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray50", curvature = .3) )
+
+library(patchwork)
+
+p4/p3
+```
+
+Compute long-term trends in day-of-year low temperatures.
+```{r}
+( TrendsMin <- 
+  TLH.df |> 
+    mutate(MinTemp = (MinTemp - 32) * 5/9) |>
+#  filter(Year >= 1990) |>
+    group_by(doy) |>
+    do(tidy(lm(MinTemp ~ Year, data = .))) |>
+    filter(term == "Year") |>
+    mutate(Date = as.Date(doy - 1, origin = "2020-01-01"),
+           estimate = estimate * 10,
+           std.error = std.error * 10,
+           ymax = estimate + std.error,
+           ymin = estimate - std.error,
+           Daily = "Low") )
+
+sum(TrendsMin$estimate > 0)
+sum(TrendsMin$estimate < 0)
+sum(TrendsMin$estimate > 0) / length(TrendsMin$estimate) * 100
+
+TrendsMin |> 
+  arrange(desc(statistic))
+```
+
+```{r}
+Trends <- rbind(TrendsMax, TrendsMin)
+Trends |>
+  ggplot(mapping = aes(y = estimate, x = Daily, color = estimate)) +
+    stat_slab(color = "gray80", fill = "gray80", scale = .5) +
+    geom_point(shape = "_", size = 4) + 
+#    stat_halfeye() +
+    scale_color_gradient2(low = "blue",
+                          mid = "white",
+                          high = "red",
+                          midpoint = 0,
+                          guide = 'none') +
+    scale_y_continuous(limits = c(-1.5, 1.5)) +
+    theme_minimal() +
+    labs(x = "", y = "", title = "Day-of-year trends in high and low temperatures (°C/decade)")
+```
+
+```{r}
+labels <- c(paste0(seq(20, 80, by = 20), "°", " F"))
+
+( p5 <- TLH.df |>
+  filter(doy %in% c(26, 335, 193)) |>
+  mutate(Day = factor(case_when(Day = doy == 26 ~ "26 January\n Most cooling",
+                         Day = doy == 335 ~ "30 November/1 December\n Most warming",
+                         Day = doy == 193 ~ "11/12 July\n Most significant warming"), 
+                      levels = c("26 January\n Most cooling", 
+                                 "11/12 July\n Most significant warming", 
+                                 "30 November/1 December\n Most warming"))) |>
+  select(Year, MinTemp, Date, doy, Day) |>
+  ggplot(mapping = aes(x = Year, y = MinTemp)) +
+    geom_smooth(method = lm, mapping = aes(color = Day)) +
+    geom_point(color = "gray70") +
+  facet_wrap(~ Day) +
+  scale_x_continuous(breaks = seq(1950, 2010, by = 20)) +
+  scale_y_continuous(limits = c(15, 85), breaks = seq(20, 80, by = 20), labels = labels) +
+  scale_color_manual(values = c("skyblue", "red3", "salmon"), guide = "none") +
+  theme_minimal() +
+  labs(x = "", y = "") )
+
+( p6 <- Trends |>
+  ggplot(mapping = aes(x = doy, y = estimate, color = statistic) ) +
+  scale_y_continuous(limits = c(-1.2, 1.2)) +
+  geom_hline(yintercept = 0, color = "gray70") +
+  scale_color_distiller(palette = "RdBu", 
+                        limits = c(-1, 1) * max(abs(Trends$statistic)),
+                        guide = 'none') +
+  geom_point() + 
+  geom_errorbar(mapping = aes(ymin = ymin, ymax = ymax)) +
+  scale_x_continuous(position = "bottom", 
+                     breaks = c(1, 32, 61, 92, 122, 153, 183, 214, 245, 275, 306, 336) + 13,
+                     labels = month.name) +
+  theme_minimal() +
+  labs(title = "Long-term (1943-2020) trends in day-of-year low temperatures (°C/decade), Tallahassee, Florida", 
+       subtitle = "Darker colors indicate greater evidence against a no-change hypothesis", 
+       x = "", y = "") )
+
+arrows <- 
+  tibble(
+    x1 = c(56, 160, 300),
+    x2 = c(26.5, 192.5, 335),
+    y1 = c(-1.1, .75, 1.15), 
+    y2 = c(-.815, .287, .671)
+  )
+
+( p6 <- p6 + 
+  annotate("text", x = 66, y = -1.15, label = "Most cooling: 26 January") +
+  annotate("text", x = 130, y = .8, label = "Most significant warming: 11/12 July") +
+  annotate("text", x = 300, y = 1.2, label = "Most warming: 30 November/1 December") +
+  geom_curve(
+    data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+    arrow = arrow(length = unit(.08, "inch")), size = .5,
+    color = "gray50", curvature = .3) )
+
+p6/p5
+```

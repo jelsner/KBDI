@@ -1,0 +1,99 @@
+---
+title: "Generative model"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Create a generative model for natural wildfire risk.
+
+Use McElreath's {rethinking} package. See https://github.com/rmcelreath/rethinking
+
+```{r}
+devtools::install_github("rmcelreath/rethinking")
+```
+
+Almost any ordinary generalized linear model can be specified with `quap()`. To use quadratic approximation:
+```{r}
+library(rethinking)
+
+f <- alist(
+    y ~ dnorm(mu, sigma),
+    mu ~ dnorm(0, 10),
+    sigma ~ dexp(1)
+)
+
+fit <- quap( 
+    f, 
+    data = list(y = c(-3, 2)), 
+    start = list(mu = 0, sigma = 1)
+)
+
+precis(fit)
+```
+
+This tells us that with two data values y = -3 and 2 the best estimate for mu is -.49 and the best estimate for sigma is 1.81, given the model.
+
+The object `fit` holds the result. For a summary of marginal posterior distributions, use `summary(fit)` or `precis(fit)`.
+```{r}
+summary(fit)
+```
+
+We simulate posterior values with the `sim()` function.
+```{r}
+sim(fit, n = 20)
+```
+
+Each row is a posterior sample and each column is an element of the data vector (2-D) since there are only two data values.
+
+Poisson counts.
+```{r}
+f2 <- alist(
+  y ~ dpois(lambda),
+  lambda ~ dgamma(shape = 2, scale = 10)
+)
+
+fit2 <- quap( 
+    f2, 
+    data = list(y = c(0, 1, 2, 3)), 
+    start = list(lambda = 1)
+)
+
+precis(fit2)
+```
+
+The data are organized in the file `ANF_Fires.Rmd`. 
+```{r}
+library(tidyverse)
+
+SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
+  mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
+
+W <- SeasonalData.df$nFires
+
+f3 <- alist(
+  y ~ dpois(lambda),
+  lambda ~ dgamma(shape = 100, scale = 40)
+)
+
+fit3 <- quap( 
+    f3, 
+    data = list(y = W), 
+    start = list(lambda = 1)
+)
+
+precis(fit3)
+
+extract.samples(fit3, n = 10)
+sim(fit3, n = 2)
+```
+
+Hamiltonian Monte Carlo with `ulam()`.
+
+It is named Stanisław Ulam, who was one of the parents of the Monte Carlo method and is the namesake of the Stan project as well. It is pronounced something like [OO-lahm], not like [YOU-lamm].
+
+It takes the same kind of input as `quap()`.
+```{r}
+fit_stan <- ulam(f3,
+                 data = list(y = W) )
+```
