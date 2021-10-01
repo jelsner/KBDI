@@ -1,8 +1,8 @@
 # Computes the Keetch-Byram Drought Index (KDBI) from net 24-hr rainfall in inches and daily high temperature in F. 
 # No missing values are allowed
 droughtIndex <- function(Q, R, MaxTemp, NetR) {
-  Q <- 269  # starting value
-  R <- 59.23 # annual rainfall amount at location of interest
+#  Q <- 269  # starting value
+#  R <- 59.23 # annual rainfall amount at location of interest
   
   Ql <- numeric()
   DeltaQl <- numeric()
