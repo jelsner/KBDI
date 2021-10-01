@@ -299,7 +299,22 @@ Compute day-of-year statistics by variable. Four variables times 366 days = 1464
             Q75 = quantile(Value, prob = .75, na.rm = TRUE),
             Q25 = quantile(Value, prob = .25, na.rm = TRUE)) |>
   mutate(Date = as.Date(doy - 1, origin = "2020-01-01")) )
+
+( StatsMonthly <-
+    TLH_long.df |>
+    group_by(month, Year, Variable) |>
+    mutate(Variance = var(Value),
+           ValueLag = lag(Value, n = 1),
+           AC1 = cor(Value, ValueLag, use = "pairwise")) )
+
+StatsMonthly |>
+  ggplot(mapping = aes(x = Year, y = Variance)) +
+  geom_line() +
+  geom_smooth(method = lm) +
+  facet_wrap(~ Variable + month, scales = "free_y")
 ```
+
+No significant changes in daily variances or lag-one autocorrelations.
 
 Plot day-of-year statistics by variable. All at once. Use complementary colors. https://twitter.com/iamscicomm/status/1442557946320367616 Colors from https://image-color-picker.com/hex-code-picker
 ```{r}
