@@ -11,6 +11,8 @@ Tallahassee is hot and getting hotter. Examples: https://iopscience.iop.org/arti
 
 Key findings of the current research: The most significant warming trends are occurring during summer although the largest changes occur during fall and winter. This increased warming averaged over decades amounts to about 
 
+day-to-day temperature variability
+
 While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadfully uncomfortable and potential quite dangerous to health.
 
 According to the 6th IPCC assessment, the observed warming in 2010-2019 relative to 1850-1900 is 1.07C. For hot extremes, the evidence is mostly drawn from changes in metrics based on daily maximum temperatures.
@@ -70,14 +72,13 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          Wind = AWND * .44704) |> # wind values appear to be mph so convert to m/s
   filter(Year <= 2020)
 
-Other.df <- read.csv(file = 'Data/LVG_Daily1940-2020.csv') |>
+Other.df <- read.csv(file = 'Data/MKE_Daily1938-2020.csv') |>
   mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
          MaxTemp = TMAX,
-         MinTemp = TMIN,
-         Wind = AWND) |>
+         MinTemp = TMIN) |>
   filter(Year <= 2020 & Year >= 1943)
 
 # Missing data filled in from NCDC daily summaries https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily or https://www.wunderground.com/history/daily/KTLH/date/2018-11-28
@@ -286,12 +287,19 @@ TLH_long.df <-
   pivot_longer(cols = c(MaxTemp, MinTemp, Qlm, Wind),
                names_to = "Variable",
                values_to = "Value")
+
+Other_long.df <- 
+  Other.df |> 
+  select(Date, Year, month, doy, MaxTemp, MinTemp) |>
+  pivot_longer(cols = c(MaxTemp, MinTemp),
+               names_to = "Variable",
+               values_to = "Value")
 ```
 
 Compute day-of-year statistics by variable. Four variables times 366 days = 1464 rows.
 ```{r}
 ( StatsDoY <- 
-  TLH_long.df |>
+  Other_long.df |>
   group_by(doy, Variable) |>
   summarize(Avg = mean(Value, na.rm = TRUE),
             Highest = max(Value, na.rm = TRUE),
@@ -301,7 +309,7 @@ Compute day-of-year statistics by variable. Four variables times 366 days = 1464
   mutate(Date = as.Date(doy - 1, origin = "2020-01-01")) )
 
 ( StatsMonthly <-
-    TLH_long.df |>
+    Other_long.df |>
     group_by(month, Year, Variable) |>
     mutate(Variance = var(Value),
            ValueLag = lag(Value, n = 1),
