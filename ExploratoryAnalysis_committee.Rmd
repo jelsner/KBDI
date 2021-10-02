@@ -1622,7 +1622,38 @@ cor(resid(April15GLM),resid(burnedareaGLM))
 #cor(se.fit(pred_April15GLM),se.fit(pred_burnedareaGLM))
 ```
 
+Create a model for both KBDI and Acres burned
+In model summary, acresBurned is not reflected as statistically significant. correlation of residuals is 0.839. Should acresBurned be included in the model?
+```{r}
+draftModelGLM <- glm(formula = nFIRES ~ KBDI_midApril + acresBurned, family = poisson, data = tocompareModels)
 
+summary(draftModelGLM)
+
+pred_draftModelGLM <- predict(object = draftModelGLM,
+                              type = "response",
+                              se.fit = TRUE)
+```
+
+Compare residuals from each model
+```{r}
+compareResid <- tocompareModels %>%
+  select(forecastYear, nFIRES) %>%
+  st_set_geometry(NULL) %>%
+  mutate(KBDIresid = resid(April15GLM)) %>%
+  mutate(KBDIpred = pred_April15GLM$fit) %>%
+  mutate(BurnedResid = resid(burnedareaGLM)) %>%
+  mutate(Burnedpred = pred_burnedareaGLM$fit) %>%
+  mutate(combinedResid = resid(draftModelGLM)) %>%
+  mutate(combinepred = pred_draftModelGLM$fit)
+```
+
+Residual Correlation
+cor of acres burned and combined model = 0.835
+cor of KBDI and combined model = 0.998
+```{r}
+cor(resid(burnedareaGLM),resid(draftModelGLM))
+cor(resid(April15GLM),resid(draftModelGLM))
+```
 
 
 
