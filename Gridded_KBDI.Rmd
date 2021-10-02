@@ -24,16 +24,16 @@ library(prism)
 library(ggthemes)
 ```
 
-Start with one year. 2019.
+Start with one year. 2017.
 
 ## PRISM data
 
-Download daily PRISM data using functions from the {prism} package. About 35 minutes per year per variable of daily data at home internet speeds. Temperatures are in C and precipitation is in mm.
+Download daily PRISM data using functions from the {prism} package. About 35 (23) minutes per year per variable of daily data at home (apartment) internet speeds. Temperatures are in C and precipitation is in mm.
 ```{r}
 prism_set_dl_dir("Data/PRISM/")
 
 t0 <- proc.time()
-get_prism_dailys(type = "ppt",
+get_prism_dailys(type = "tmax",
                  minDate = "2017-01-01",
                  maxDate = "2017-12-31")
 proc.time() - t0
@@ -42,7 +42,7 @@ proc.time() - t0
 Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
 ```{r}
 t0 <- 2017
-t1 <- 2019
+t1 <- 2017
 dates <- seq(as_date(paste0(t0, "-01-01")), 
              as_date(paste0(t1, "-12-31")), 
              by = "day")
@@ -57,9 +57,9 @@ folder_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil/")
 file_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil.bil")
 file_list2 <- paste0("Data/", "PRISM/", folder_names2, file_names2)
 
-tmax <- read_stars(file_list, along = list(time = dates)) %>%
+tmax <- read_stars(file_list, along = list(time = dates)) |>
   setNames("Tmax_C")
-ppt <- read_stars(file_list2, along = list(time = dates)) %>%
+ppt <- read_stars(file_list2, along = list(time = dates)) |>
   setNames("Precip_mm")
 TP.st <- c(tmax, ppt)
 
@@ -68,27 +68,27 @@ TP.st
 
 Crop to ANF boundary
 ```{r}
-ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
-  filter(NFSLANDU_2 == "Apalachicola National Forest") %>%
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
+  filter(NFSLANDU_2 == "Apalachicola National Forest") |>
   st_transform(crs = st_crs(TP.st))
 
 ANF_BBox.sfc <- 
-  ANF_Boundary.sf %>%
-  st_bbox() %>%
+  ANF_Boundary.sf |>
+  st_bbox() |>
   st_as_sfc()
 
 TP.st <- 
-  TP.st %>%
+  TP.st |>
   st_crop(ANF_BBox.sfc,
           crop = TRUE)
 ```
 
 Check with plot
 ```{r}
-X <- filter(TP.st, time >= ymd("2019-01-01"), time <= ymd("2019-01-31"))
+X <- filter(TP.st, time >= ymd("2017-08-01"), time <= ymd("2017-08-31"))
 
 ggplot() +  
-  geom_stars(data = X[1], alpha = .8, downsample = c(1, 1, 1)) + 
+  geom_stars(data = X["Tmax_C"], alpha = .8, downsample = c(1, 1, 1)) + 
   facet_wrap("time") +
   scale_fill_distiller(palette = "RdBu") +
   coord_equal() +
@@ -100,14 +100,53 @@ ggplot() +
 Compute KBDI at each grid location. Start by converting temperatures in C to F and precipitation in mm to inches
 ```{r}
 TP.st <- 
-  TP.st %>%
+  TP.st |>
   mutate(MaxTemp = Tmax_C * 1.8 + 32,
          MaxTemp = replace_na(MaxTemp, mean(MaxTemp)),
          Rainfall24 = Precip_mm * .03937,
          Rainfall24 = replace_na(Rainfall24, 0))
 ```
 
-Compute net rainfall on each at each grid point.
+Compute daily net rainfall at each grid point.
+```{r}
+source("netRainfall.R")
+
+NetR.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
+for(i in 1:dim(TP.st)[1]){
+  for(j in 1:dim(TP.st)[2]){
+    NetR.a[i, j, ] <- netRainfall(Rainfall24 = TP.st$Rainfall24[i, j, ])
+  }
+}
+TP.st$NetR <- NetR.a
+```
+
+Compute daily drought index at each grid point.
+```{r}
+source("droughtIndex.R")
+
+R <- 59.23 # average annual rainfall for TLH in inches
+Ql.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
+DI.a <- array(NA, dim = dim(TP.st))
+
+for(i in 1:dim(TP.st)[1]){
+  for(j in 1:dim(TP.st)[2]){
+    DI <- droughtIndex(Q = 400, 
+                       R = 60, 
+                       MaxTemp = TP.st$MaxTemp[i, j, ], 
+                       NetR = TP.st$NetR[i, j, ])
+Ql.a[i, j, ] <- DI$Ql
+DI.a[i, j, ] <- DI$DroughtIndex
+  }
+}
+
+TP.st$Ql <- Ql.a
+TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
+TP.st$DroughtIndex <- DI.a
+```
+
+
+
+Compute net rainfall at each grid point.
 ```{r}
 NetR.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
 
