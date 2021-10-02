@@ -1,0 +1,16 @@
+---
+title: "SEDAAG"
+author: "Zach"
+date: "10/2/2021"
+output: html_document
+---
+
+This file will document/organize work flow as it will be presented at the SEDAAG conference
+
+
+##Abstract
+Seasonal Prediction of Natural Fires in the Apalachicola National Forest
+
+Anthropogenic climate change is shifting the risk of wildfires worldwide. The influence of climate change on fire hazards are diverse and complex and varying by region. Understandably, literature on the U.S. wildfire threat holds a western centric viewpoint. In this study we investigate the fire threat in the Southeast United States. In particular, we examine the association between soil dryness and lightning-ignited wildfires in the Apalachicola National Forest (ANF) located in the Florida Big Bend region. We quantify, for the first time, the relationship between pre-fire season dryness and the number of fires during the fire season with a statistical model. We show that lightning-ignited wildfires are frequent, seasonal events. We define the fire season as occurring from May to July when over 80% of natural fires since 1992 have occurred. We show a strong relationship between dryness in the forest duff layer during April and the number of natural wildfires during the subsequent May through July time period. We estimate soil dryness in the duff layer using the Keetch-Byram Drought Index (KBDI) which is a measure of moisture deficit based on temperature and net rainfall easily computed using daily summary of the day values from first-order weather stations. Given the strong relationship between the KBDI and the number of wildfires we suggest that a skillful seasonal prediction model of fire-season severity might be possible.
+
+
