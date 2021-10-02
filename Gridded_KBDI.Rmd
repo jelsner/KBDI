@@ -74,6 +74,7 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
 
 ANF_BBox.sfc <- 
   ANF_Boundary.sf |>
+  st_buffer(dist = 4000) |>
   st_bbox() |>
   st_as_sfc()
 
@@ -97,7 +98,7 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
-Compute KBDI at each grid location. Start by converting temperatures in C to F and precipitation in mm to inches
+Convert temperatures in C to F and precipitation in mm to inches for use in KBDI calculations.
 ```{r}
 TP.st <- 
   TP.st |>
@@ -124,14 +125,12 @@ Compute daily drought index at each grid point.
 ```{r}
 source("droughtIndex.R")
 
-R <- 59.23 # average annual rainfall for TLH in inches
 Ql.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
 DI.a <- array(NA, dim = dim(TP.st))
-
 for(i in 1:dim(TP.st)[1]){
   for(j in 1:dim(TP.st)[2]){
-    DI <- droughtIndex(Q = 400, 
-                       R = 60, 
+    DI <- droughtIndex(Q = 400, # start value
+                       R = 60, # avg annual rainfall in inches
                        MaxTemp = TP.st$MaxTemp[i, j, ], 
                        NetR = TP.st$NetR[i, j, ])
 Ql.a[i, j, ] <- DI$Ql
@@ -144,91 +143,14 @@ TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
 TP.st$DroughtIndex <- DI.a
 ```
 
-
-
-Compute net rainfall at each grid point.
+Check with a plot
 ```{r}
-NetR.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
-
-for(i in 1:dim(TP.st)[1]){
-  for(j in 1:dim(TP.st)[2]){
-Rainfall24 <- TP.st$Rainfall24[i, j, ]
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
-
-CumR <- 0
-NetR <- numeric()
-
-for(t in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[t]
-  if (R24 == 0) {
-    NetR[t] <- 0
-    CumR <- 0
-  } 
-  else if(R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[t] > .2 | CumR > .2) NetR[t] <- R24
-      else if (CumR > .2) NetR[t] <- CumR - .2
-      else NetR[t] <- 0
-    }
-  else if (R24 > .2) {
-      if (CumR <= .2) {
-      NetR[t] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[t] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-NetR.a[i, j, ] <- NetR
-}
-}
-
-TP.st$NetR <- NetR.a
-```
-
-Compute daily drought index.
-```{r}
-R <- 59.23 # average annual rainfall for TLH in inches
-
-Ql.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
-
-for(i in 1:dim(TP.st)[1]){
-  for(j in 1:dim(TP.st)[2]){
-Q <- 269  
-NetR <- TP.st$NetR[i, j,  ]
-MaxTemp <- TP.st$MaxTemp[i, j, ]
-
-Ql <- numeric()
-DeltaQl <- numeric()
-for(t in 1:length(NetR)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[t]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[t] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[t] * 100)
-  Q <- ifelse(Q < 0, 0, Q) 
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-
-Ql.a[i, j, ] <- Ql
-}
-}
-
-TP.st$Ql <- Ql.a
-TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
-TP.st$DroughtIndex <- floor(TP.st$Ql/100)
-```
-
-Check with plot
-```{r}
-X <- filter(TP.st, time >= ymd("2019-10-01"), time <= ymd("2019-10-31"))
+X <- filter(TP.st, time >= ymd("2017-10-01"), time <= ymd("2017-10-31"))
 
 ggplot() +  
-  geom_stars(data = X[7], alpha = .8, downsample = c(1, 1, 1)) + 
+  geom_stars(data = X["Qlm"], alpha = .8, downsample = c(1, 1, 1)) + 
   facet_wrap("time") +
-  scale_fill_distiller(palette = "RdBu") +
+  scale_fill_gradient(low = "#1FDE6E", high = "#DE1F8F") +
   coord_equal() +
   theme_map() +
   theme(legend.position = "bottom") +
@@ -237,10 +159,10 @@ ggplot() +
 
 Compute Qlm using the TLH data. 
 ```{r}
-TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
+TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
                    stringsAsFactors = FALSE,
-                   header = TRUE) %>%
-  mutate(Date = as.Date(DATE)) %>%
+                   header = TRUE) |>
+  mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
@@ -248,84 +170,34 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940.csv',
          MinTemp = TMIN,
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
-         Rainfall24mm = Rainfall24 * 25.4) %>%
-  filter(Year >= 2017 & Year <= 2019)
+         Rainfall24mm = Rainfall24 * 25.4) |>
+  filter(Year >= 2017 & Year <= 2017)
 
-Rainfall24 <- TLH.df$Rainfall24
-PR <- dplyr::lag(Rainfall24)
-PR[1] <- 0
+TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
 
-CumR <- 0
-NetR <- numeric()
-
-for(i in 1:length(Rainfall24)) {
-  R24 <- Rainfall24[i]
-  if (R24 == 0) {
-    NetR[i] <- 0
-    CumR <- 0
-  } 
-  else if(R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-  else if (R24 > .2) {
-      if (CumR <= .2) {
-      NetR[i] <- CumR + R24 - .2
-      CumR <- CumR + R24
-      }
-      else {
-      NetR[i] <- R24
-      CumR <- CumR + R24
-      }
-  }
-}
-
-TLH.df$NetR <- NetR
-
-Q <- 269  
-R <- 59.23 # average annual rainfall for TLH in inches
-
-MaxTemp <- TLH.df$MaxTemp
-
-Ql <- numeric()
-DeltaQl <- numeric()
-for(i in 1:length(Rainfall24)){
-  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
-  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-  Q <- ifelse(Q < 0, 0, Q) 
-  Ql <- c(Ql, Q)
-  DeltaQl <- c(DeltaQl, DeltaQ)
-}
-
-TLH.df$Ql <- Ql
-TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
-TLH.df$DeltaQl <- DeltaQl
-TLH.df$DroughtIndex <- floor(Ql/100)
+DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
+TLH.df$Ql <- DI$Ql
+TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
+TLH.df$DroughtIndex <- DI$DroughtIndex
 ```
 
 Loop over all grid locations computing the correlation between the Qlm computed using TLH data and the Qlm's computed using PRISM data.
 ```{r}
 R.a <- array(NA, dim = dim(TP.st)[1:2])
-
 for(i in 1:dim(TP.st)[1]){
   for(j in 1:dim(TP.st)[2]){
-    
-Qlm <- TP.st$Qlm[i, j, ]
-
-cc <- cor(Qlm, TLH.df$Qlm)
-
-R.a[i, j] <- cc
-}
+    Qlm <- TP.st$Qlm[i, j, ]
+    cc <- cor(Qlm, TLH.df$Qlm)
+    R.a[i, j] <- cc
+  }
 }
 
 R.st <- st_as_stars(R.a)
-
-attr(R.st, "dimensions")$y$delta = -1
+attr(R.st, "dimensions")$y <- attr(TP.st, "dimensions")$y # replace dimensions
+attr(R.st, "dimensions")$x <- attr(TP.st, "dimensions")$x
 
 ggplot() +  
-  geom_stars(data = R.st[1], alpha = .8, downsample = c(1, 1, 1)) + 
+  geom_stars(data = R.st["A1"], alpha = .8, downsample = c(1, 1, 1)) + 
   scale_fill_distiller(limits = c(0, 1), palette = "Blues", direction = 1) +
   coord_equal() +
   theme_map() +
@@ -333,6 +205,18 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
-Redimension the correlation data and create a proper map.
+```{r}
+library(tmap)
+
+tm_shape(R.st) +
+  tm_raster() +
+tm_shape(ANF_Boundary.sf) +
+  tm_borders(col = "white")
+```
+
+
+
+Use the {superpixel} package to look for patterns in the correlation.
+
 
 
