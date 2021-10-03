@@ -72,18 +72,28 @@ Crop the space-time {stars} objects to the ANF boundary
 ```{r}
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
-  st_transform(crs = st_crs(TP.st))
+  st_transform(crs = st_crs(TP.st)) 
 
-ANF_BBox.sfc <- 
-  ANF_Boundary.sf |>
-  st_buffer(dist = 4625) |>
-  st_bbox() |>
-  st_as_sfc()
+TP2.st <- TP.st[ANF_Boundary.sf]
+TP3.st <- TP.st |>
+  st_crop(ANF_Boundary.sf)
 
-TP.st <- 
-  TP.st |>
-  st_crop(ANF_BBox.sfc,
-          crop = TRUE)
+X <- filter(TP3.st["Tmax_C"], time == ymd("2017-01-01"))
+X <- round(X, digits = 0)
+plot(X, text_values = TRUE)
+plot(ANF_Boundary.sf, add = TRUE, col = "transparent")
+```
+
+Check with points.
+```{r}
+ypoints <- 49.9375 - 468:481 * .0416667
+xpoints <- -125.021 + 958:979 * .0416667
+xy <- expand.grid(xpoints, ypoints)
+
+points.sf <- st_as_sf(x = xy,                         
+                      coords = c("Var1", "Var2"),
+                      crs = st_crs(TP.st))
+plot(points.sf, add = TRUE, col = "red")
 ```
 
 Check with plot
@@ -100,7 +110,7 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
-Compute KBDI at each grid location. Start by converting temperatures in C to F and precipitation in mm to inches
+Compute KBDI for each cell. Start by converting temperatures in C to F and precipitation in mm to inches
 ```{r}
 TP.st <- 
   TP.st |>
