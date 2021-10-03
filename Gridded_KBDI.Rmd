@@ -76,10 +76,7 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
 
 ANF_BBox.sfc <- 
   ANF_Boundary.sf |>
-<<<<<<< HEAD
   st_buffer(dist = 4625) |>
-=======
->>>>>>> 6e91bbd3b1719ed1409505eb9755a57071caab42
   st_bbox() |>
   st_as_sfc()
 
