@@ -62,11 +62,13 @@ tmax <- read_stars(file_list, along = list(time = dates)) |>
 ppt <- read_stars(file_list2, along = list(time = dates)) |>
   setNames("Precip_mm")
 TP.st <- c(tmax, ppt)
-
 TP.st
+
+X <- filter(tmax, time == ymd("2017-01-01"))
+plot(X)
 ```
 
-Crop to ANF boundary
+Crop the space-time {stars} objects to the ANF boundary
 ```{r}
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
@@ -74,7 +76,7 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
 
 ANF_BBox.sfc <- 
   ANF_Boundary.sf |>
-  st_buffer(dist = 4000) |>
+  st_buffer(dist = 4625) |>
   st_bbox() |>
   st_as_sfc()
 
