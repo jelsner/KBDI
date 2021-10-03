@@ -62,26 +62,46 @@ tmax <- read_stars(file_list, along = list(time = dates)) |>
 ppt <- read_stars(file_list2, along = list(time = dates)) |>
   setNames("Precip_mm")
 TP.st <- c(tmax, ppt)
-
 TP.st
+
+X <- filter(tmax, time == ymd("2017-01-01"))
+plot(X)
 ```
 
-Crop to ANF boundary
+Crop the space-time {stars} objects to the ANF boundary
 ```{r}
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
-  st_transform(crs = st_crs(TP.st))
+  st_transform(crs = st_crs(TP.st)) 
 
+<<<<<<< HEAD
 ANF_BBox.sfc <- 
   ANF_Boundary.sf |>
   st_buffer(dist = 4000) |>
   st_bbox() |>
   st_as_sfc()
+=======
+TP.st <- TP.st[ANF_Boundary.sf]
+TP3.st <- TP.st |>
+  st_crop(ANF_Boundary.sf)
+>>>>>>> 57fd2cf5dafb4504949b99ec0ce9eff062e201d7
 
-TP.st <- 
-  TP.st |>
-  st_crop(ANF_BBox.sfc,
-          crop = TRUE)
+X <- filter(TP3.st["Tmax_C"], time == ymd("2017-01-01"))
+X <- round(X, digits = 0)
+plot(X, text_values = TRUE)
+plot(ANF_Boundary.sf, add = TRUE, col = "transparent")
+```
+
+Check with points.
+```{r}
+ypoints <- 49.9375 - 468:481 * .0416667
+xpoints <- -125.021 + 958:979 * .0416667
+xy <- expand.grid(xpoints, ypoints)
+
+points.sf <- st_as_sf(x = xy,                         
+                      coords = c("Var1", "Var2"),
+                      crs = st_crs(TP.st))
+plot(points.sf, add = TRUE, col = "red")
 ```
 
 Check with plot
@@ -98,7 +118,11 @@ ggplot() +
   theme(legend.key.width = unit(2, "cm"))
 ```
 
+<<<<<<< HEAD
 Convert temperatures in C to F and precipitation in mm to inches for use in KBDI calculations.
+=======
+Compute KBDI for each cell. Start by converting temperatures in C to F and precipitation in mm to inches
+>>>>>>> 57fd2cf5dafb4504949b99ec0ce9eff062e201d7
 ```{r}
 TP.st <- 
   TP.st |>
@@ -143,6 +167,7 @@ TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
 TP.st$DroughtIndex <- DI.a
 ```
 
+<<<<<<< HEAD
 Check with a plot
 ```{r}
 X <- filter(TP.st, time >= ymd("2017-10-01"), time <= ymd("2017-10-31"))
@@ -151,6 +176,17 @@ ggplot() +
   geom_stars(data = X["Qlm"], alpha = .8, downsample = c(1, 1, 1)) + 
   facet_wrap("time") +
   scale_fill_gradient(low = "#1FDE6E", high = "#DE1F8F") +
+=======
+Check with a map.
+```{r}
+X <- filter(TP.st, time >= ymd("2017-08-01"), time <= ymd("2017-08-31"))
+
+ggplot() +  
+  geom_stars(data = X["DroughtIndex"], alpha = .8, downsample = c(1, 1, 1)) + 
+  facet_wrap("time") +
+#  scale_fill_distiller(palette = "RdBu") +
+  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
+>>>>>>> 57fd2cf5dafb4504949b99ec0ce9eff062e201d7
   coord_equal() +
   theme_map() +
   theme(legend.position = "bottom") +
@@ -170,11 +206,18 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
          MinTemp = TMIN,
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
+<<<<<<< HEAD
          Rainfall24mm = Rainfall24 * 25.4) |>
   filter(Year >= 2017 & Year <= 2017)
 
 TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
 
+=======
+         Rainfall24mm = Rainfall24 * 25.4) %>%
+  filter(Year >= 2017 & Year <= 2019)
+
+TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
+>>>>>>> 57fd2cf5dafb4504949b99ec0ce9eff062e201d7
 DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
 TLH.df$Ql <- DI$Ql
 TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
