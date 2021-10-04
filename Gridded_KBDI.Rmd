@@ -28,7 +28,7 @@ Start with one year. 2017.
 
 ## PRISM data
 
-Download daily PRISM data using functions from the {prism} package. About 35 (23) minutes per year per variable of daily data at home (apartment) internet speeds. Temperatures are in C and precipitation is in mm.
+Download daily PRISM data using functions from the {prism} package. About 35 (23) minutes per year per variable of daily data at home (apartment) internet speeds. Temperature is in C and precipitation is in mm.
 ```{r}
 prism_set_dl_dir("Data/PRISM/")
 
@@ -74,14 +74,16 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
   st_transform(crs = st_crs(TP.st)) 
 
-TP.st <- TP.st[ANF_Boundary.sf]
-TP3.st <- TP.st |>
+TP.st <- TP.st[ANF_Boundary.sf] # same as st_crop()
+TP.st <- TP.st |>
   st_crop(ANF_Boundary.sf)
 
-X <- filter(TP3.st["Tmax_C"], time == ymd("2017-01-01"))
+X <- filter(TP.st["Tmax_C"], time == ymd("2017-01-10"))
 X <- round(X, digits = 0)
-plot(X, text_values = TRUE)
-plot(ANF_Boundary.sf, add = TRUE, col = "transparent")
+
+plot(st_geometry(ANF_Boundary.sf))
+plot(X, text_values = TRUE, add = TRUE)
+plot(st_geometry(ANF_Boundary.sf), add = TRUE, col = "transparent")
 ```
 
 Check with points.
@@ -95,6 +97,8 @@ points.sf <- st_as_sf(x = xy,
                       crs = st_crs(TP.st))
 plot(points.sf, add = TRUE, col = "red")
 ```
+
+The cells are defined by the lower-left (I think) corner but the crop function uses the middle of the cell to determine whether to include the cell.
 
 Check with plot
 ```{r}
