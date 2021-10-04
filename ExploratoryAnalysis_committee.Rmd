@@ -1906,6 +1906,44 @@ Based on analysis there is no indication of a relationship between el Nino and A
 Explore the relationship between April KBDI and the North Atlantic Oscillation (NAO)
 
 
+###Explore Predicition of Lightning
+What is the correlation between ENSO and the count of lightning strikes during the fire season?
+
+manipulate "countlightning.df" to group counts by year and month
+```{r}
+groupedlightning <- countlightning.df %>%
+  group_by(year(SEQDAY), month(SEQDAY)) %>%
+  summarize(sum(LightningCount)) %>%
+  rename(Year = "year(SEQDAY)", Month = "month(SEQDAY)", LightningStrikes = "sum(LightningCount)")
+
+fireseasonLightning <- groupedlightning %>%
+  filter(Month == 5 | Month == 6 | Month == 7) %>%
+  filter(Year <= 2012) %>%
+  group_by(Year) %>%
+  summarize(sum(LightningStrikes)) %>%
+  rename(FireSeason = "Year", LightningStrikes = "sum(LightningStrikes)")
+```
+
+filter "groupedElNino.df" for comparison with the created "fireseasonLightning" data frame
+If making fire prediction in April, soonest el nino values will be grouped on JFM
+```{r}
+NinoPreseason <- groupedElNino.df %>%
+  filter(SEAS == "JFM") %>%
+  #filter(SEAS == "FMA") %>%
+  #filter(SEAS == "MAM") %>%
+  filter(YR >= 1986 & YR <= 2012)
+```
+
+correlation between fire season lightning strikes and El Nino Anomaly = -0.110
+The correlation does not change much if it is centered on FMA (-0.118) or MAM (-0.114)
+```{r}
+cor(fireseasonLightning$LightningStrikes, NinoPreseason$ANOM)
+```
+
+
+https://psl.noaa.gov/mjo/mjoindex/ 
+Explore this link for mjo data.
+
 
 ###Explore updated fire data set compared to the old data set 
 
