@@ -24,7 +24,7 @@ library(prism)
 library(ggthemes)
 ```
 
-Start with one year. 2017.
+Start with two years: 2017 & 2018.
 
 ## Read PRISM data (.bil) files as {stars} objects
 
@@ -33,7 +33,7 @@ Download daily PRISM data using functions from the {prism} package. About 35 (23
 prism_set_dl_dir("Data/PRISM/")
 
 ts <- proc.time()
-get_prism_dailys(type = "tmax",
+get_prism_dailys(type = "ppt",
                  minDate = "2018-01-01",
                  maxDate = "2018-12-31")
 proc.time() - ts
@@ -42,7 +42,7 @@ proc.time() - ts
 Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
 ```{r}
 t0 <- 2017
-t1 <- 2017
+t1 <- 2018
 dates <- seq(as_date(paste0(t0, "-01-01")), 
              as_date(paste0(t1, "-12-31")), 
              by = "day")
@@ -64,11 +64,14 @@ ppt <- read_stars(file_list2, along = list(time = dates)) |>
 TP.st <- c(tmax, ppt)
 TP.st
 
-X <- filter(tmax, time == ymd("2017-01-01"))
+X <- filter(tmax, 
+            time == ymd("2018-01-01"))
 plot(X)
 ```
 
 ## Crop the space-time {stars} objects to the ANF boundary
+
+Read the boundary file as a vector polygon and transform the crs to that of the {stars} object. Then crop the {stars} object to the boundary.
 ```{r}
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
