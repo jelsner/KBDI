@@ -100,19 +100,30 @@ plot(points.sf, add = TRUE, col = "red")
 
 The cells are defined by the lower-left (I think) corner but the crop function uses the middle of the cell to determine whether to include the cell.
 
-Check with plot
+Check temperature variations over 30 days.
 ```{r}
-X <- filter(TP.st, time >= ymd("2017-08-01"), time <= ymd("2017-08-31"))
+X <- filter(TP.st, time >= ymd("2017-06-01"), time <= ymd("2017-06-30"))
 
 ggplot() +  
-  geom_stars(data = X["Tmax_C"], alpha = .8, downsample = c(1, 1, 1)) + 
-  facet_wrap("time") +
+  geom_stars(data = X["Tmax_C"], alpha = .8, downsample = c(0, 0, 0)) + 
+  facet_wrap(~ time) +
   scale_fill_distiller(palette = "RdBu") +
   coord_equal() +
   theme_map() +
   theme(legend.position = "bottom") +
   theme(legend.key.width = unit(2, "cm"))
+
+ggplot() +  
+  geom_stars(data = X["Precip_mm"], alpha = .8, downsample = c(0, 0, 0)) + 
+  facet_wrap(~ time) +
+  scale_fill_distiller(palette = "YlGn", direction = 1) +
+  coord_equal() +
+  theme_map() +
+  theme(legend.position = "bottom") +
+  theme(legend.key.width = unit(2, "cm"))
 ```
+
+Note the warmest area tends to be in the northeast part of the forest near the airport.
 
 Compute KBDI for each cell. Start by converting temperatures in C to F and precipitation in mm to inches
 ```{r}
@@ -159,19 +170,39 @@ TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
 TP.st$DroughtIndex <- DI.a
 ```
 
-Check with a map.
+Check with maps.
 ```{r}
-X <- filter(TP.st, time >= ymd("2017-08-01"), time <= ymd("2017-08-31"))
+X <- filter(TP.st, time >= ymd("2017-04-01"), time <= ymd("2017-04-08"))
 
-ggplot() +  
-  geom_stars(data = X["DroughtIndex"], alpha = .8, downsample = c(1, 1, 1)) + 
-  facet_wrap("time") +
-#  scale_fill_distiller(palette = "RdBu") +
-  scale_fill_gradient(low = "#1F25DE", high = "#DED81F", guide = "none") +
+p1 <- ggplot() +  
+  geom_stars(data = X["MaxTemp"], alpha = .8) + 
+  facet_wrap(~ time, ncol = 1) +
+  scale_fill_gradient(low = "#1F96DE", high = "#DE671F") +
   coord_equal() +
   theme_map() +
   theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(2, "cm"))
+  theme(legend.key.width = unit(.5, "cm"))
+
+p2 <- ggplot() +  
+  geom_stars(data = X["Rainfall24"], alpha = .8) + 
+  facet_wrap(~ time, ncol = 1) +
+  scale_fill_distiller(palette = "Greens", direction = 1) +
+  coord_equal() +
+  theme_map() +
+  theme(legend.position = "bottom") +
+  theme(legend.key.width = unit(.5, "cm"))
+
+p3 <- ggplot() +  
+  geom_stars(data = X["Qlm"], alpha = .8) + 
+  facet_wrap(~ time, ncol = 1) +
+  scale_fill_gradient(low = "#1FDE6E", high = "#DE1F8F") +
+  coord_equal() +
+  theme_map() +
+  theme(legend.position = "bottom") +
+  theme(legend.key.width = unit(.5, "cm"))
+
+library(patchwork)
+p1 + p2 + p3
 ```
 
 Compute Qlm using the TLH data. 
@@ -188,7 +219,7 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
          Rainfall24mm = Rainfall24 * 25.4) %>%
-  filter(Year >= 2017 & Year <= 2019)
+  filter(Year >= t0 & Year <= t1)
 
 TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
 DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
@@ -213,7 +244,7 @@ attr(R.st, "dimensions")$y <- attr(TP.st, "dimensions")$y # replace dimensions
 attr(R.st, "dimensions")$x <- attr(TP.st, "dimensions")$x
 
 ggplot() +  
-  geom_stars(data = R.st["A1"], alpha = .8, downsample = c(1, 1, 1)) + 
+  geom_stars(data = R.st["A1"], alpha = .8) + 
   scale_fill_distiller(limits = c(0, 1), palette = "Blues", direction = 1) +
   coord_equal() +
   theme_map() +
