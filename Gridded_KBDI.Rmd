@@ -7,11 +7,11 @@ editor_options:
 
 Compute KBDI using PRISM temp/precip data.
 1. Read PRISM .bil files as {stars} objects (see `stars.Rmd`)
-2. Filter on the ANF boundary
-3. Loop over all grid points (e.g., tp.stars["tmax", 1, 1, ] is the time series of the high temperature for grid location 1, 1).
-4. Save computed Qlm as a variable in the `tp.stars` object.
+2. Crop the space-time {stars} objects to the ANF boundary
+3. Compute KBDI at each grid cell
+4. Compute KBDI using TLH data
 5. Map correlations between gridded Qlm and TLH_Qlm 
-6. Convert space-time object to vector simple feature and merge correlations.
+6. Convert space-time object to vector simple feature and merge correlations
 
 ```{r}
 library(stars)
@@ -26,7 +26,7 @@ library(ggthemes)
 
 Start with one year. 2017.
 
-## PRISM data
+## Read PRISM data (.bil) files as {stars} objects
 
 Download daily PRISM data using functions from the {prism} package. About 35 (23) minutes per year per variable of daily data at home (apartment) internet speeds. Temperature is in C and precipitation is in mm.
 ```{r}
@@ -68,7 +68,7 @@ X <- filter(tmax, time == ymd("2017-01-01"))
 plot(X)
 ```
 
-Crop the space-time {stars} objects to the ANF boundary
+## Crop the space-time {stars} objects to the ANF boundary
 ```{r}
 ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
@@ -125,7 +125,9 @@ ggplot() +
 
 Note the warmest area tends to be in the northeast part of the forest near the airport.
 
-Compute KBDI for each cell. Start by converting temperatures in C to F and precipitation in mm to inches
+## Compute KBDI at each cell
+
+Start by converting temperatures in C to F and precipitation in mm to inches
 ```{r}
 TP.st <- 
   TP.st |>
@@ -205,7 +207,8 @@ library(patchwork)
 p1 + p2 + p3
 ```
 
-Compute Qlm using the TLH data. 
+## Compute KBDI using the TLH airport data
+
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
                    stringsAsFactors = FALSE,
@@ -227,6 +230,8 @@ TLH.df$Ql <- DI$Ql
 TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
 TLH.df$DroughtIndex <- DI$DroughtIndex
 ```
+
+## Map correlations between gridded Qlm and TLH_Qlm
 
 Loop over all grid locations computing the correlation between the Qlm computed using TLH data and the Qlm's computed using PRISM data.
 ```{r}
@@ -262,7 +267,9 @@ tm_shape(ANF_Boundary.sf) +
   tm_borders(col = "black")
 ```
 
-Space-time to vector polygons. https://r-spatial.github.io/stars/articles/stars5.html#switching-between-vector-and-raster-in-stars-objects-1
+## Convert space-time object to vector simple feature and merge correlations
+
+See https://r-spatial.github.io/stars/articles/stars5.html#switching-between-vector-and-raster-in-stars-objects-1
 ```{r}
 R.sf <-
   R.st |>
