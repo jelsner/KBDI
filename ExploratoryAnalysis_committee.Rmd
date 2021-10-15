@@ -1593,9 +1593,8 @@ ggplot(mapping = aes(x = tocompareModels$KBDI_midApril, y = pred_April15GLM$fit)
 ```
 
 Build a model to predict the number of fires based on burned area
-(Corrected to be binomial instead of poison)
 ```{r}
-burnedareaGLM <- glm(formula = nFIRES ~ acresBurned, family = binomial, data = tocompareModels)
+burnedareaGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = tocompareModels)
 
 pred_burnedareaGLM <- predict(object = burnedareaGLM,
                               type = "response",
