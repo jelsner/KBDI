@@ -3,6 +3,8 @@ title: "SEDAAG"
 author: "Zach"
 date: "10/2/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 This file will document/organize work flow as it will be presented at the SEDAAG conference
@@ -13,4 +15,140 @@ Seasonal Prediction of Natural Fires in the Apalachicola National Forest
 
 Anthropogenic climate change is shifting the risk of wildfires worldwide. The influence of climate change on fire hazards are diverse and complex and varying by region. Understandably, literature on the U.S. wildfire threat holds a western centric viewpoint. In this study we investigate the fire threat in the Southeast United States. In particular, we examine the association between soil dryness and lightning-ignited wildfires in the Apalachicola National Forest (ANF) located in the Florida Big Bend region. We quantify, for the first time, the relationship between pre-fire season dryness and the number of fires during the fire season with a statistical model. We show that lightning-ignited wildfires are frequent, seasonal events. We define the fire season as occurring from May to July when over 80% of natural fires since 1992 have occurred. We show a strong relationship between dryness in the forest duff layer during April and the number of natural wildfires during the subsequent May through July time period. We estimate soil dryness in the duff layer using the Keetch-Byram Drought Index (KBDI) which is a measure of moisture deficit based on temperature and net rainfall easily computed using daily summary of the day values from first-order weather stations. Given the strong relationship between the KBDI and the number of wildfires we suggest that a skillful seasonal prediction model of fire-season severity might be possible.
 
-#testing new file commits
+##Import libraries and data sets
+```{r}
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+library(tidycensus)
+library(dplyr)
+library(readr)
+library(sf)
+library(tmap)
+library(rgeos)
+library(RColorBrewer)
+library(rgdal)
+library(XML)
+```
+
+Daily summary of the day values from Tallahassee (TLH)
+March 1,1940 - April 20, 2020
+Includes observed 24hr precip, tmax, and tmin
+```{r}
+TLH.df <- read_csv(file = 'Data/TLH_Daily1940.csv') %>%
+  rename(Date = DATE) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4)
+
+#Fill in the missing temperature data
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+```
+
+Calculate KBDI referencing functions that have been built. Append to TLH.df
+```{r}
+source("netRainfall.R")
+TLH.df$NetR <- netRainfall(TLH.df$Rainfall24)
+
+source("droughtIndex.R")
+Q <- 269
+R <- 59.23 #Average annual rainfall for TLH in inches
+TLH.df$Ql <- droughtIndex(Q,R,TLH.df$MaxTemp,TLH.df$NetR)$Ql
+TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
+TLH.df$DroughtIndex <- droughtIndex(Q,R,TLH.df$MaxTemp,TLH.df$NetR)$DroughtIndex
+```
+
+ANF Boundaries data set
+```{r}
+if(!"S_USA.NFSLandUnit" %in% list.files()){
+  download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
+                "S_USA.NFSLandUnit.zip")
+unzip("S_USA.NFSLandUnit.zip")
+}
+
+NF_Bounds.sf <- st_read(dsn = "s_USA.NFSLandUnit.shp") %>%
+  st_transform(crs = 3086)
+
+anfbounds.sf <- NF_Bounds.sf %>%
+  filter(NFSLANDU_2 == "Apalachicola National Forest")
+```
+
+Import County Boundaries of the forest. This will make the bounds consistent across both the fire data set and the lightning data set.
+```{r}
+ANFcountyBounds.sf <- st_read(dsn = "ANFCounties.shp") %>%
+  st_transform(crs = 3086)
+```
+
+Fires data set:
+```{r}
+#if(!"Fires2018" %in% list.files()){
+  #download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GPKG.zip",
+                #"Data/updatedFireData/Fires2018.zip")
+  #unzip("Data/updatedFireData/Fires2018.zip",
+        #exdir = "Data/updatedFireData")
+#}
+
+county_LF.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
+  filter(STATE == "FL") %>%
+  st_transform(crs = st_crs(ANFcountyBounds.sf)) %>%
+  st_intersection(ANFcountyBounds.sf) %>%
+  filter(NWCG_GENERAL_CAUSE == "Natural") %>%
+  select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
+
+anf_LF.sf <- county_LF.sf %>%
+  st_transform(crs = st_crs(anfbounds.sf)) %>%
+  st_intersection(anfbounds.sf)
+
+#Reformat date column to not include time. Rename to match other merged columns
+county_LF.sf$DISCOVERY_DATE <- as.Date(county_LF.sf$DISCOVERY_DATE)
+county_LF.sf <- county_LF.sf %>%
+  rename(DISCOVERY_ = DISCOVERY_DATE)
+
+anf_LF.sf$DISCOVERY_DATE <- as.Date(anf_LF.sf$DISCOVERY_DATE)
+anf_LF.sf <- anf_LF.sf %>%
+  rename(DISCOVERY_ = DISCOVERY_DATE)
+```
+
+lightning data set
+```{r}
+#gives lighting data for each individual county based on fips code
+lightning.df <- list.files(path = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/FIPS_LightningData",
+                  pattern = "*.csv", full.names = TRUE) %>%
+  lapply(read_csv) %>%
+  bind_rows
+
+lightning.df <- lightning.df %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY)) %>%
+#missing data beyond 5/20/2013 for FIPS #12037. Remove last 5 rows from data set. This addresses the parsing failure and removes data that is NA.
+  filter(SEQDAY <=  "2013-05-20")
+
+#Combine total lightning strikes in ANF counties by date.
+lightning.df <- lightning.df %>%
+  group_by(SEQDAY) %>%
+  summarise(LightningCount = sum(FCOUNT_NLDN))
+```
+
+Viewing fires within the Apalachicola National Forest (437 observations)
+```{r}
+tmap_mode("view")
+
+tm_shape(anfbounds.sf) +
+  tm_borders()
+
+tm_shape(anf_LF.sf) +
+  tm_dots(col = "orange")
+```
+
+
+
+
+
