@@ -64,7 +64,7 @@ TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
 TLH.df$DroughtIndex <- droughtIndex(Q,R,TLH.df$MaxTemp,TLH.df$NetR)$DroughtIndex
 ```
 
-ANF Boundaries data set
+ANF Boundaries data set:
 ```{r}
 if(!"S_USA.NFSLandUnit" %in% list.files()){
   download.file("https://data.fs.usda.gov/geodata/edw/edw_resources/shp/S_USA.NFSLandUnit.zip",
@@ -86,6 +86,7 @@ ANFcountyBounds.sf <- st_read(dsn = "ANFCounties.shp") %>%
 ```
 
 Fires data set:
+bounded on counties to match the lightning data boundary. Includes Liberty, Wakulla, Franklin, and Leon. ANF is within these county boundaries.Includes all fire types.
 ```{r}
 #if(!"Fires2018" %in% list.files()){
   #download.file("https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/RDS-2013-0009.5_GPKG.zip",
@@ -94,28 +95,32 @@ Fires data set:
         #exdir = "Data/updatedFireData")
 #}
 
-county_LF.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
+county_Fires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpkg", layer = "Fires") %>%
   filter(STATE == "FL") %>%
   st_transform(crs = st_crs(ANFcountyBounds.sf)) %>%
   st_intersection(ANFcountyBounds.sf) %>%
-  filter(NWCG_GENERAL_CAUSE == "Natural") %>%
   select(FOD_ID, FIRE_NAME, FIRE_YEAR, DISCOVERY_DATE, NWCG_CAUSE_CLASSIFICATION, NWCG_GENERAL_CAUSE, FIRE_SIZE, FIRE_SIZE_CLASS, LATITUDE, LONGITUDE, NAME, FIPS_CODE, Shape)
 
-anf_LF.sf <- county_LF.sf %>%
-  st_transform(crs = st_crs(anfbounds.sf)) %>%
-  st_intersection(anfbounds.sf)
-
 #Reformat date column to not include time. Rename to match other merged columns
-county_LF.sf$DISCOVERY_DATE <- as.Date(county_LF.sf$DISCOVERY_DATE)
-county_LF.sf <- county_LF.sf %>%
-  rename(DISCOVERY_ = DISCOVERY_DATE)
-
-anf_LF.sf$DISCOVERY_DATE <- as.Date(anf_LF.sf$DISCOVERY_DATE)
-anf_LF.sf <- anf_LF.sf %>%
+county_Fires.sf$DISCOVERY_DATE <- as.Date(county_Fires.sf$DISCOVERY_DATE)
+county_Fires.sf <- county_LF.sf %>%
   rename(DISCOVERY_ = DISCOVERY_DATE)
 ```
 
-lightning data set
+Bounded to the ANF
+```{r}
+#all fires
+anf_Fires.sf <- county_Fires.sf %>%
+  st_transform(crs = st_crs(anfbounds.sf)) %>%
+  st_intersection(anfbounds.sf)
+
+#filtered to lighting fires
+anf_LF.sf <- anf_Fires.sf %>%
+  filter(NWCG_GENERAL_CAUSE == "Natural")
+```
+
+
+lightning data set:
 ```{r}
 #gives lighting data for each individual county based on fips code
 lightning.df <- list.files(path = "C:/Users/zlaw9/OneDrive/GITHUB/KDBI code/FIPS_LightningData",
@@ -148,6 +153,34 @@ tm_shape(anf_LF.sf) +
   tm_dots(col = "orange")
 ```
 
+##Exploratory Analysis
+
+Cause of Fires in the Apalachicola National Forest
+```{r}
+#table(Fires.sf$STAT_CAU_1)
+#table(anf_fires.sf$STAT_CAU_1)
+
+df <- anf_Fires.sf %>%
+  st_drop_geometry() %>%
+  group_by(STAT_CAU_1) %>%
+  summarize(nF = n(),
+            perF = nF/nrow(anf_fires.sf))
+
+ggplot(df,
+       mapping = aes(y = reorder(STAT_CAU_1, perF),
+                     x = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = FALSE) +
+  scale_x_continuous(labels = percent) +
+  ylab("") + xlab("") +
+  labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
+       subtitle = "Based on data from 1992-2015",
+       caption = "Data source: Short, Karen (2017)") +
+  theme_minimal()
+```
 
 
 
