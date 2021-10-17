@@ -20,6 +20,8 @@ Anthropogenic climate change is shifting the risk of wildfires worldwide. The in
 library(lubridate)
 library(tidyverse)
 library(ggplot2)
+#library(ggrepel)
+library(scales)
 library(patchwork)
 library(tidycensus)
 library(dplyr)
@@ -29,6 +31,7 @@ library(tmap)
 library(rgeos)
 library(RColorBrewer)
 library(rgdal)
+library(USAboundaries)
 library(XML)
 ```
 
@@ -103,7 +106,7 @@ county_Fires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpk
 
 #Reformat date column to not include time. Rename to match other merged columns
 county_Fires.sf$DISCOVERY_DATE <- as.Date(county_Fires.sf$DISCOVERY_DATE)
-county_Fires.sf <- county_LF.sf %>%
+county_Fires.sf <- county_Fires.sf %>%
   rename(DISCOVERY_ = DISCOVERY_DATE)
 ```
 
@@ -156,18 +159,69 @@ tm_shape(anf_LF.sf) +
 ##Exploratory Analysis
 
 Cause of Fires in the Apalachicola National Forest
+Natural fires account for nearly 40% of fires in the ANF
 ```{r}
-#table(Fires.sf$STAT_CAU_1)
-#table(anf_fires.sf$STAT_CAU_1)
+#table(Fires.sf$NWCG_GENERAL_CAUSE)
 
 df <- anf_Fires.sf %>%
   st_drop_geometry() %>%
-  group_by(STAT_CAU_1) %>%
+  group_by(NWCG_GENERAL_CAUSE) %>%
   summarize(nF = n(),
-            perF = nF/nrow(anf_fires.sf))
+            perF = nF/nrow(anf_Fires.sf))
 
 ggplot(df,
-       mapping = aes(y = reorder(STAT_CAU_1, perF),
+       mapping = aes(y = reorder(NWCG_GENERAL_CAUSE, perF),
+                     x = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = "none") +
+  scale_x_continuous(labels = percent) +
+  ylab("") + xlab("") +
+  labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
+       subtitle = "Based on data from 1992-2018",
+       caption = "Data source: Short, Karen (2021)") +
+  theme_minimal()
+```
+
+Locations of lightning fires in the ANF
+```{r}
+ggplot() +
+  geom_sf(data = anfbounds.sf, fill = "transparent") +
+  geom_sf(data = anf_LF.sf,
+          mapping = aes(col = FIRE_SIZE_CLASS)) +
+  scale_color_brewer(palette = "Oranges",
+                     direction = 1,
+                     name = "Size Class: Acres Burned",
+                     labels = c(
+                       "A: 0-0.25",
+                       "B: 0.26-9.9",
+                       "C: 10.0-99.9",
+                       "D: 100-299",
+                       "E: 300-999",
+                       "F: 1000-4999",
+                       "G: 5000+")) +
+  theme_bw() +
+  labs(title = "Location of natural-caused wildfires in the Apalachicola National Forest (1992-2018)",
+       subtitle = "Darker color points indicates the fire resulted in a larger burn area",
+       caption = "Data source: Short, Karen (2021)")
+```
+
+Plot the number of lightning fires per month
+Over 80% of lightning-sparked wildfires in the ANF occur during May-July
+```{r}
+df <- anf_LF.sf %>%
+  st_drop_geometry() %>%
+  mutate(MonthF = factor(month.name[month(DISCOVERY_)], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n(),
+            perF = nF/nrow(anf_LF.sf))
+
+ggplot(data = df,
+       mapping = aes(y = MonthF, 
                      x = perF,
                      fill = perF)) +
   geom_col() +
@@ -175,13 +229,88 @@ ggplot(df,
                        direction = 1,
                        guide = FALSE) +
   scale_x_continuous(labels = percent) +
-  ylab("") + xlab("") +
-  labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
-       subtitle = "Based on data from 1992-2015",
-       caption = "Data source: Short, Karen (2017)") +
-  theme_minimal()
+  xlab("") + ylab("") +
+  labs(title = "Over 80% of lightning-sparked wildfires in the Apalachicola National Forest occur during May-July",
+       subtitle = "Percentage of all lightning-sparked wildfires by month",
+       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+  theme_minimal() 
 ```
 
+Plot average monthly rainfall and max temperatures
+```{r}
+df <- TLH.df %>%
+  filter(Year >= 1941 & Year <= 2019) %>%
+  group_by(month) %>%
+  summarize(totalRain = sum(Rainfall24mm),
+            avgMonthlyTotalRain = totalRain/(2019 - 1941 + 1),
+            avgDailyHighTemp = mean(MaxTemp))
+
+p1 <- ggplot(data = df,
+             mapping = aes(x = month, y = avgMonthlyTotalRain, fill = avgMonthlyTotalRain)) +
+        geom_col() +
+        scale_fill_distiller(palette = "Greens",
+                         direction = 1, 
+                         guide = 'none') +
+        theme_dark() +
+        labs(x = "", y = "(mm)",
+             title = "Average monthly rainfall amount in the Apalachicola National Forest",
+             subtitle = "1941-2019")
 
 
+p2 <- ggplot(data = df,
+             mapping = aes(x = month, y = avgDailyHighTemp, color = avgDailyHighTemp)) +
+        geom_point(size = 4) +
+        scale_color_distiller(palette = "Oranges",
+                              direction = 1, 
+                              guide = 'none') +
+        scale_y_continuous(limits = c(60, 100)) +
+        theme_dark() +
+        labs(x = "", y = "(°F)",
+             title = "Average daily high temperature in the Apalachicola National Forest",
+             subtitle = "1941-2019")
 
+p1 / p2
+```
+
+Monthly average soil moisture deficit.
+```{r}
+TLH.df %>%
+  filter(Year >= 1941 & Year <= 2019) %>%
+  mutate(MonthF = factor(month.name[month(Date)], 
+                         levels = rev(month.name), 
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(AvgSoilMoistureDeficit = mean(Qlm)) %>%
+ggplot(mapping = aes(y = MonthF, 
+                     x = AvgSoilMoistureDeficit,
+                     fill = AvgSoilMoistureDeficit)) +
+  geom_col() +
+  scale_fill_gradientn(colors = terrain.colors(5),
+                       guide = 'none') +
+  labs(x = "", y = "",
+       title = "May through November is the dry season in the Apalachicola National Forest",
+       subtitle = "Average soil moisture deficit (mm)",
+       caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") +
+  theme_dark() 
+```
+
+Another interpretation of soil moisture plot
+```{r}
+TLH.df %>%
+  filter(Year >= 1941 & Year <= 2019) %>%
+  group_by(month, Year) %>%
+  summarise(Avg = mean(Qlm)) %>%
+  ggplot(aes(x = Year, y = Avg, color = Avg)) +
+  geom_smooth(method = lm, se = FALSE, color = "gray70") +
+  geom_point() +  
+  scale_color_gradientn(colors = terrain.colors(5), guide = "none") +
+  scale_y_continuous(limits = c(0, 201)) +
+  scale_x_continuous(limits = c(1940, 2020), breaks = c(1950, 1980, 2010)) +
+  ylab("") + xlab("") +
+  facet_wrap(~ month, ncol = 12) +
+  theme_dark() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
+       subtitle = "Monthly average soil moisture deficit (mm) by year with trend line (gray)", 
+       caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") 
+```
