@@ -108,6 +108,10 @@ county_Fires.sf <- st_read(dsn = "Data/updatedFireData/Data/FPA_FOD_20210617.gpk
 county_Fires.sf$DISCOVERY_DATE <- as.Date(county_Fires.sf$DISCOVERY_DATE)
 county_Fires.sf <- county_Fires.sf %>%
   rename(DISCOVERY_ = DISCOVERY_DATE)
+
+#county lightning fires
+county_LF.sf <- county_Fires.sf %>%
+  filter(NWCG_GENERAL_CAUSE == "Natural")
 ```
 
 Bounded to the ANF
@@ -314,3 +318,167 @@ TLH.df %>%
        subtitle = "Monthly average soil moisture deficit (mm) by year with trend line (gray)", 
        caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") 
 ```
+
+##General linear regression - Study how KBDI impacts lightning wildfire occurrence.
+
+Filter the KBDI data set to match the time frame of the fire data set (1992 - 2018)
+```{r}
+TLH_fireYrs.df <- TLH.df %>%
+  filter(Year >= 1992 & Year <= 2018)
+```
+
+create a data frame for the number of fires that occured on a given day
+```{r}
+countfires.df <- anf_LF.sf %>%
+  count(DISCOVERY_) %>%
+  rename(FireCount = n, Date = DISCOVERY_)
+```
+
+Merge the KBDI and fire count data sets
+```{r}
+KBDI_fire.df <- left_join(x = TLH_fireYrs.df, y = countfires.df, by = c("Date" = "Date")) %>%
+  select(Date, FireCount, Ql)
+
+KBDI_fire.df$fireBool <- !is.na(KBDI_fire.df$FireCount)
+```
+
+Regression Model
+```{r}
+glmQl <- glm(formula = fireBool~Ql, family = binomial, data = KBDI_fire.df)
+
+pred_glmQl <- predict(object = glmQl,
+                      type = "response",
+                      se.fit = TRUE)
+
+low_bound <- pred_glmQl$fit - (1.96*pred_glmQl$se.fit)
+up_bound <- pred_glmQl$fit + (1.96*pred_glmQl$se.fit)
+
+ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Daily Ql") +
+  labs(
+    title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2018")
+```
+
+Ql is statistically significant
+```{r}
+summary(glmQl)
+```
+
+Filtered to fire season months
+```{r}
+KBDI_fireFS.df <- KBDI_fire.df %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
+
+glmQlFS <- glm(formula = fireBool ~ Ql, family = binomial, data = KBDI_fireFS.df)
+
+pred_glmQlFS <- predict(object = glmQlFS,
+                      type = "response",
+                      se.fit = TRUE)
+
+low_bound <- pred_glmQlFS$fit - (1.96*pred_glmQlFS$se.fit)
+up_bound <- pred_glmQlFS$fit + (1.96*pred_glmQlFS$se.fit)
+
+ggplot(mapping = aes(x = KBDI_fireFS.df$Ql, y = pred_glmQlFS$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Daily Ql") +
+  labs(
+    title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values\nFiltered By Fire Season Months",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Fire Season Months (May - July) 1992 - 2018")
+```
+
+Ql is statistically significant
+```{r}
+summary(glmQlFS)
+```
+
+##General linear regression - Study how the number of lightning strikes on a given day impacts lightning wildfire occurrence
+
+In modeling with lightning, we need to use the county_LF.sf data set because the lighting data set is bounded to the county boarders
+```{r}
+count_cFires.df <- county_LF.sf %>%
+  count(DISCOVERY_) %>%
+  rename(FireCount = n, Date = DISCOVERY_)
+```
+
+Each data set must have the same time bounds
+```{r}
+count_cFiresYrs.df <- count_cFires.df %>%
+  filter(year(Date) <= 2012)
+
+lightningYrs.df <- lightning.df %>%
+  filter(year(SEQDAY) >= 1992)
+```
+
+merge lightning count data and counted fire data
+```{r}
+light_fires.df <- left_join(x = lightningYrs.df, y = count_cFiresYrs.df, by = c("SEQDAY" = "Date")) %>%
+  rename(Date = SEQDAY) %>%
+  select(Date, LightningCount, FireCount)
+
+light_fires.df$FireBool <- !is.na(light_fires.df$FireCount)
+```
+
+general linear regression
+```{r}
+glmLightning <- glm(formula = FireBool ~ LightningCount, family = binomial, data = light_fires.df)
+
+#probabilities based on glm
+pred_glmLightning <- predict(object = glmLightning,
+                             type = "response",
+                             se.fit = TRUE)
+
+#creating confidence interval
+low_bound <- pred_glmLightning$fit - (1.96*pred_glmLightning$se.fit)
+up_bound <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
+
+ggplot(mapping = aes(x = light_fires.df$LightningCount, y = pred_glmLightning$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Number of Lightning Strikes") +
+  labs(
+    title = "Predicted Probability of a Fire Occurrence Based on the Number of Lightning Strikes in a Day",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2012")
+```
+
+lightning count is statistically significant to occurrence of wildfires.
+```{r}
+summary(glmLightning)
+```
+
+Filtered to fire season months
+```{r}
+light_firesFS.df <- light_fires.df %>%
+  filter(month(Date) == 05 | month(Date) == 06 | month(Date) == 07)
+
+glmLightningFS <- glm(formula = FireBool ~ LightningCount, family = binomial, data = light_firesFS.df)
+
+#probabilities based on glm
+pred_glmLightning <- predict(object = glmLightningFS,
+                             type = "response",
+                             se.fit = TRUE)
+
+#creating confidence interval
+low_bound <- pred_glmLightning$fit - (1.96*pred_glmLightning$se.fit)
+up_bound <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
+
+ggplot(mapping = aes(x = light_firesFS.df$LightningCount, y = pred_glmLightning$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Number of Lightning Strikes") +
+  labs(
+    title = "Predicted Probability of a Fire Occurrence Based on the Number of Lightning Strikes in a Day During the Fire Season",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2012 Fire Seasons (May - July)")
+```
+
