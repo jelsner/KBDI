@@ -33,6 +33,7 @@ library(RColorBrewer)
 library(rgdal)
 library(USAboundaries)
 library(XML)
+library(units)
 ```
 
 Daily summary of the day values from Tallahassee (TLH)
@@ -327,7 +328,7 @@ TLH_fireYrs.df <- TLH.df %>%
   filter(Year >= 1992 & Year <= 2018)
 ```
 
-create a data frame for the number of fires that occured on a given day
+create a data frame for the number of fires that occurred on a given day
 ```{r}
 countfires.df <- anf_LF.sf %>%
   count(DISCOVERY_) %>%
@@ -480,5 +481,94 @@ ggplot(mapping = aes(x = light_firesFS.df$LightningCount, y = pred_glmLightning$
     title = "Predicted Probability of a Fire Occurrence Based on the Number of Lightning Strikes in a Day During the Fire Season",
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2012 Fire Seasons (May - July)")
+```
+
+##Study how the burned area over the past year may impact fire occurance.
+
+Create a data frame to include the area that was burned over the past year.
+```{r}
+anf_Fires.sf <- anf_Fires.sf %>%
+  mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-1"))) %>%
+  mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-03", "-31"))) %>%
+  unite(col = "burnedGroupInterval", c("burnedGroupStart", "burnedGroupEnd"), sep = " -- ") %>%
+  #rearrange order of columns
+  select(FOD_ID:DISCOVERY_, burnedGroupInterval, NWCG_CAUSE_CLASSIFICATION:Shape)
+```
+
+Group data by burned periods and sum the total acres burned over that period
+Note this does not include fires in the first 3 months of the data set
+```{r}
+burnedArea.sf <- anf_Fires.sf %>%
+  group_by(burnedGroupInterval) %>%
+  summarise(acresBurned = sum(FIRE_SIZE)) %>%
+  #create column to define the year the data will be used to forecast for
+  mutate(forecastYear = substr(burnedGroupInterval, 15, 18)) %>%
+  #reorder columns
+  select(forecastYear, burnedGroupInterval:acresBurned) %>%
+  #convert forecastYear to an int/ double so it will merge
+  transform(forecastYear = as.numeric(forecastYear)) %>%
+  filter(forecastYear <= 2018)
+```
+
+Create a count of natural wildfires occurring in the anf during the fire season. This will be merged with the burned acres data frame.
+```{r}
+seasonFires.sf <-  anf_LF.sf %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  count(FIRE_YEAR) %>%
+  rename(Year = FIRE_YEAR, nFIRES = n) %>%
+  st_set_geometry(NULL)
+```
+
+Merge burned data frame with the number of lightning wildfires that occurred in the Apalachicola National Forest for each year.
+```{r}
+burnedArea.sf <- left_join(x = burnedArea.sf, y = seasonFires.sf, by = c("forecastYear" = "Year"))
+
+burnedArea.sf$nFIRES <- replace_na(burnedArea.sf$nFIRES, 0)
+```
+
+The model finds that the number of acres burned over the past year is not statistically significant
+There is minimal evidence of a relationship between the number of acres burned and the number of natural fires that occur during the fire season.
+p-value = 0.0604
+correlation coefficient = 0.0966; we would expect a negative slope and a negative correlation.
+```{r}
+burnedGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = burnedArea.sf)
+
+pred_burnedGLM <- predict(object = burnedGLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+summary(burnedGLM)
+
+cor(burnedArea.sf$acresBurned, burnedArea.sf$nFIRES)
+```
+
+Explore area as a percentage of the forest that was burned.
+```{r}
+st_area(anfbounds.sf) #2564052729 m^2
+drop_units(st_area(anfbounds.sf))/1000000 #2564.053 kilometers^2
+drop_units(st_area(anfbounds.sf))/4047 #approximately 633,568.7 acres
+```
+
+Create a column within the burnedArea.sf data frame to represent the percentage of the forest burned prior to the fire season
+```{r}
+burnedArea.sf <- burnedArea.sf %>%
+  mutate(percentBurned = (acresBurned/(drop_units(st_area(anfbounds.sf))/4047))*100) %>%
+  #reorder columns
+  select(forecastYear:acresBurned, percentBurned, nFIRES:Shape)
+```
+
+create model based on the percent of forest that was burned.
+We find the percent of forest burned is not statistically significant (p-value = 0.146)
+The correlation coefficient suggests no relationship (0.0773)
+```{r}
+percentBurnedGLM <- glm(formula = nFIRES ~ percentBurned, family = poisson, data = burnedArea.sf)
+
+pred_percentBurnedGLM <- predict(object = percentBurnedGLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+summary(percentBurnedGLM)
+
+cor(burnedArea.sf$percentBurned, burnedArea.sf$nFIRES)
 ```
 
