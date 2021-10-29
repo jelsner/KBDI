@@ -804,10 +804,27 @@ ggplot(mapping = aes(x = fireSeasondates2013.df$Ql, y = fireSeasondates2013.df$L
 ```
 
 ### Does the occurance of a large fire create a time lag in the occurrence of another fire?
-Explore relationship between the number of fires and fire size.
+
+make a correction to the anf_LF.sf data frame. This data frame is bounded by counties because counties were used to bound lightning data. Correct this to account for the anf boundaries rather than county boundaries
+```{r}
+anf_LF_corrected.sf <- anf_LF.sf %>%
+  st_transform(crs = st_crs(anfbounds.sf)) %>%
+  st_intersection(anfbounds.sf)
+```
 
 ```{r}
-seasonFires <- anf_LF.sf %>%
+tmap_mode("view")
+
+tm_shape(anfbounds.sf) +
+  tm_borders()
+
+tm_shape(anf_LF_corrected.sf) +
+  tm_dots(col = "orange")
+```
+
+Explore relationship between the number of fires and fire size.
+```{r}
+seasonFires <- anf_LF_corrected.sf %>%
   filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
   count(FIRE_YEAR) %>%
   rename(Year = FIRE_YEAR, nFIRES = n) %>%
@@ -1492,6 +1509,12 @@ allFires.sf <- allFires.sf %>%
   rename(DISCOVERY_ = DISCOVERY_DATE)
 ```
 
+Filter for lightning fires. Previous dataframes of lightning fires were filtered to anf counties and not the anf bounds.
+```{r}
+ANF_LFburned <- allFires.sf %>%
+  filter(NWCG_CAUSE_CLASSIFICATION == "Natural")
+```
+
 group fires/ year and sum up the total acres burned during each month
 ```{r}
 testgroup <- allFires.sf %>%
@@ -1501,6 +1524,7 @@ testgroup <- allFires.sf %>%
 ```
 
 Follow Guidance from Dr. Elsner's email.
+Take this code chunk out?
 ```{r}
 allFires.sf <- allFires.sf %>%
   mutate(InSeason = DISCOVERY_ >= as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30")) & DISCOVERY_ <= as.Date(paste0(as.character(FIRE_YEAR+1), "-03", "-31"))) %>%
@@ -1508,7 +1532,7 @@ allFires.sf <- allFires.sf %>%
   select(FOD_ID:DISCOVERY_, InSeason, NWCG_CAUSE_CLASSIFICATION:Shape)
 ```
 
-Rearranging to get sting of date range rather than true/false
+Rearranging to get string of date range rather than true/false
 ```{r}
 allFires.sf <- allFires.sf %>%
   mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-1"))) %>%
@@ -1532,10 +1556,18 @@ burnedAcres <- allFires.sf %>%
   transform(forecastYear = as.numeric(forecastYear))
 ```
 
-merge this data frame with the number of lightning wildfires that occurred in the Apalachicola National Forest for each year.
-seasonFires data set has grouped the number of fires that occurred each season
+Create a count of natural wildfires occurring in the anf during the fire season. This will be merged with the burned acres data frame.
 ```{r}
-countfiresandburned.df <- left_join(x = burnedAcres, y = seasonFires, by = c("forecastYear" = "Year"))
+ANF_LFburned_count <- ANF_LFburned %>%
+  filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  count(FIRE_YEAR) %>%
+  rename(Year = FIRE_YEAR, nFIRES = n) %>%
+  st_set_geometry(NULL)
+```
+
+merge burned data frame with the number of lightning wildfires that occurred in the Apalachicola National Forest for each year.
+```{r}
+countfiresandburned.df <- left_join(x = burnedAcres, y = ANF_LFburned_count, by = c("forecastYear" = "Year"))
 
 countfiresandburned.df$nFIRES <- replace_na(countfiresandburned.df$nFIRES, 0)
 ```
@@ -1544,7 +1576,9 @@ Explore how the number of acres burned over the past year (April - March) may in
 Follow linear regression model from modeling April KBDI
 
 The model finds that the number of acres burned over the past year is not statistically significant
-There is no evidence of a relationship between the number of acres burned and the number of natural fires that occur during the fire season. Correlation Coefficient = 0.049
+There is minimal evidence of a relationship between the number of acres burned and the number of natural fires that occur during the fire season.
+p-value = 0.0604
+correlation coefficient = 0.0966; we would expect a negative slope and a negative correlation.
 ```{r}
 burnedGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = countfiresandburned.df)
 
@@ -1590,6 +1624,12 @@ ggplot(mapping = aes(x = tocompareModels$KBDI_midApril, y = pred_April15GLM$fit)
     title = "Predicted Number of Fires for the Upcoming Fire Season\nBased on April 15th KBDI",
     subtitle = "With 95% Confidence Interval",
     caption = "April 1992-2018")
+```
+
+Correlate the residuals of this April KBDI model with the number of acres burned in the season prior
+when correlating the number of acres burned to the KBDI model, we find no relationship. Correlation coefficent = -0.0197
+```{r}
+cor(tocompareModels$acresBurned,resid(April15GLM))
 ```
 
 Build a model to predict the number of fires based on burned area
