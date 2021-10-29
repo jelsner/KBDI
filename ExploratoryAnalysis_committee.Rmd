@@ -26,6 +26,7 @@ library(RColorBrewer)
 library(rgdal)
 
 library(XML)
+library(units)
 ```
 
 
@@ -1626,11 +1627,47 @@ ggplot(mapping = aes(x = tocompareModels$KBDI_midApril, y = pred_April15GLM$fit)
     caption = "April 1992-2018")
 ```
 
-Correlate the residuals of this April KBDI model with the number of acres burned in the season prior
-when correlating the number of acres burned to the KBDI model, we find no relationship. Correlation coefficent = -0.0197
+Correlate the residuals of this April KBDI model with the number of acres burned in the year prior.
+When correlating the number of acres burned to the KBDI model, we find no relationship. Correlation coefficient = -0.0197
 ```{r}
 cor(tocompareModels$acresBurned,resid(April15GLM))
 ```
+
+Explore area as a percentage of the forest that was burned.
+```{r}
+st_area(anfbounds.sf) #2564052729 m^2
+drop_units(st_area(anfbounds.sf))/1000000 #2564.053 kilometers^2
+drop_units(st_area(anfbounds.sf))/4047 #approximately 633,568.7 acres
+```
+
+Create a column within the tocompareModels data frame to represent the percentage of the forest burned prior to the fire season
+```{r}
+tocompareModels <- tocompareModels %>%
+  mutate(percentBurned = (acresBurned/(drop_units(st_area(anfbounds.sf))/4047))*100)
+```
+
+create model based on the percent of forest that was burned.
+We find the percent of forest burned is not statiscally significant (p-value = 0.146)
+The correlation coefficient suggests no realtionship (-0.0773)
+```{r}
+percentBurnedGLM <- glm(formula = nFIRES ~ percentBurned, family = poisson, data = tocompareModels)
+
+pred_percentBurnedGLM <- predict(object = percentBurnedGLM,
+                         type = "response",
+                         se.fit = TRUE)
+
+summary(percentBurnedGLM)
+
+cor(tocompareModels$percentBurned, tocompareModels$nFIRES)
+```
+
+Correlate the residuals of the April KBDI model with the number of acres burned in the year prior
+Suggests no relationship (-0.0197)
+```{r}
+cor(tocompareModels$percentBurned,resid(April15GLM))
+```
+
+
 
 Build a model to predict the number of fires based on burned area
 ```{r}
