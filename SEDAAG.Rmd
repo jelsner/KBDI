@@ -174,6 +174,8 @@ df <- anf_Fires.sf %>%
   summarize(nF = n(),
             perF = nF/nrow(anf_Fires.sf))
 
+#png("C:/Users/zlaw9/OneDrive/Thesis/SEDAAG/PresentationFigures/FireCause.png", width = 733, height = 412)
+
 ggplot(df,
        mapping = aes(y = reorder(NWCG_GENERAL_CAUSE, perF),
                      x = perF,
@@ -184,10 +186,14 @@ ggplot(df,
                        guide = "none") +
   scale_x_continuous(labels = percent) +
   ylab("") + xlab("") +
-  labs(title = "Lightning is the predominant spark for wildfires in the Apalachicola National Forest",
+  labs(title = "Lightning is the predominant spark for wildfires\nin the Apalachicola National Forest",
        subtitle = "Based on data from 1992-2018",
        caption = "Data source: Short, Karen (2021)") +
-  theme_minimal()
+  #theme_minimal()
+  theme(plot.title = element_text(size = 15),
+        axis.text = element_text(size = 12))
+
+#dev.off()
 ```
 
 Locations of lightning fires in the ANF
@@ -238,7 +244,9 @@ ggplot(data = df,
   labs(title = "Over 80% of lightning-sparked wildfires in the Apalachicola National Forest occur during May-July",
        subtitle = "Percentage of all lightning-sparked wildfires by month",
        caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
-  theme_minimal() 
+  #theme_minimal()
+  theme(plot.title = element_text(size = 15),
+        axis.text = element_text(size = 12))
 ```
 
 Plot average monthly rainfall and max temperatures
