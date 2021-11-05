@@ -5,6 +5,8 @@ editor_options:
   chunk_output_type: console
 ---
 
+Prescribed fire NOT prescribed burn. Lots of resources are required for planning and implementing a prescribed fire. Seasonal forecasts can help with planning of those resources.
+
 What is the relationship between dryness of the soil and lightning-kindled wildfire activity in the ANF on the seasonal time scale? Quantifying the statistical relationship between soil dryness and lightning-kindled wildfire activity in the ANF.
 
 (1) By how much does the threat of a wildfire increase during the fire season with increases in soil dryness during the dry season?
