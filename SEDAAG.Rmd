@@ -20,7 +20,10 @@ Anthropogenic climate change is shifting the risk of wildfires worldwide. The in
 library(lubridate)
 library(tidyverse)
 library(ggplot2)
+#library(ggpubr)
 #library(ggrepel)
+install.packages(ggpmisc)
+#library(ggpmisc)
 library(scales)
 library(patchwork)
 library(tidycensus)
@@ -241,12 +244,12 @@ ggplot(data = df,
                        guide = FALSE) +
   scale_x_continuous(labels = percent) +
   xlab("") + ylab("") +
-  labs(title = "Over 80% of lightning-sparked wildfires in the Apalachicola National Forest occur during May-July",
+  labs(title = "Over 80% of lightning-sparked wildfires in the\nApalachicola National Forest occur during May-July",
        subtitle = "Percentage of all lightning-sparked wildfires by month",
        caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
   #theme_minimal()
   theme(plot.title = element_text(size = 15),
-        axis.text = element_text(size = 12))
+        axis.text = element_text(size = 10))
 ```
 
 Plot average monthly rainfall and max temperatures
@@ -267,7 +270,10 @@ p1 <- ggplot(data = df,
         theme_dark() +
         labs(x = "", y = "(mm)",
              title = "Average monthly rainfall amount in the Apalachicola National Forest",
-             subtitle = "1941-2019")
+             subtitle = "1941-2019") +
+        theme(plot.title = element_text(size = 15),
+              plot.subtitle = element_text(size = 13),
+              axis.text = element_text(size = 11))
 
 
 p2 <- ggplot(data = df,
@@ -280,9 +286,13 @@ p2 <- ggplot(data = df,
         theme_dark() +
         labs(x = "", y = "(°F)",
              title = "Average daily high temperature in the Apalachicola National Forest",
-             subtitle = "1941-2019")
+             subtitle = "1941-2019") +
+        theme(plot.title = element_text(size = 15),
+              plot.subtitle = element_text(size = 13),
+              axis.text = element_text(size = 10))
 
-p1 / p2
+(p1 / p2) +
+  labs(caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee")
 ```
 
 Monthly average soil moisture deficit.
@@ -365,10 +375,11 @@ up_bound <- pred_glmQl$fit + (1.96*pred_glmQl$se.fit)
 ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
+  #stat_regline_equation(label.x = 3, label.y = 32) +
   ylab("Predicited Probablility") +
-  xlab("Daily Ql") +
+  xlab("Daily KBDI") +
   labs(
-    title = "Predicted Probability of Fire Occurrence Based on Daily KBDI Values",
+    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
     subtitle = "With 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
@@ -454,7 +465,7 @@ ggplot(mapping = aes(x = light_fires.df$LightningCount, y = pred_glmLightning$fi
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
   labs(
-    title = "Predicted Probability of a Fire Occurrence Based on the Number of Lightning Strikes in a Day",
+    title = "Predicted Probability of a Fire Occurrence Based on the\nNumber of Lightning Strikes in a Day",
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2012")
 ```
