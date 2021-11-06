@@ -20,10 +20,9 @@ Anthropogenic climate change is shifting the risk of wildfires worldwide. The in
 library(lubridate)
 library(tidyverse)
 library(ggplot2)
-#library(ggpubr)
 #library(ggrepel)
-install.packages(ggpmisc)
-#library(ggpmisc)
+library(ggpp)
+library(ggpubr)
 library(scales)
 library(patchwork)
 library(tidycensus)
@@ -146,6 +145,9 @@ lightning.df <- lightning.df %>%
          YEAR = year(SEQDAY)) %>%
 #missing data beyond 5/20/2013 for FIPS #12037. Remove last 5 rows from data set. This addresses the parsing failure and removes data that is NA.
   filter(SEQDAY <=  "2013-05-20")
+
+#make FCOUNT_NLDN column numeric
+lightning.df$FCOUNT_NLDN <- as.numeric(lightning.df$FCOUNT_NLDN)
 
 #Combine total lightning strikes in ANF counties by date.
 lightning.df <- lightning.df %>%
@@ -375,7 +377,8 @@ up_bound <- pred_glmQl$fit + (1.96*pred_glmQl$se.fit)
 ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
-  #stat_regline_equation(label.x = 3, label.y = 32) +
+  stat_regline_equation() +
+  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .15) +
   ylab("Predicited Probablility") +
   xlab("Daily KBDI") +
   labs(
