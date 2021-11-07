@@ -378,7 +378,7 @@ ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
   stat_regline_equation() +
-  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .15) +
+  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .155) +
   ylab("Predicited Probablility") +
   xlab("Daily KBDI") +
   labs(
@@ -465,6 +465,8 @@ up_bound <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
 ggplot(mapping = aes(x = light_fires.df$LightningCount, y = pred_glmLightning$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
+  stat_regline_equation() +
+  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .87) +
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
   labs(
@@ -592,5 +594,43 @@ pred_percentBurnedGLM <- predict(object = percentBurnedGLM,
 summary(percentBurnedGLM)
 
 cor(burnedArea.sf$percentBurned, burnedArea.sf$nFIRES)
+```
+
+Create a poisson plot
+Percentage Burned
+```{r}
+#creating confidence interval
+low_bound <- pred_percentBurnedGLM$fit - (1.96*pred_percentBurnedGLM$se.fit)
+up_bound <- pred_percentBurnedGLM$fit + (1.96*pred_percentBurnedGLM$se.fit)
+
+ggplot(mapping = aes(x = burnedArea.sf$percentBurned, y = pred_percentBurnedGLM$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicted Number of Fires") +
+  xlab("Percentage of Forest Burned") +
+  labs(
+    title = "Predicted Number of Fires Based on the Forest Area Burned in the Last Year",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: April 1992 to July 2018")
+```
+
+Area Burned
+```{r}
+#creating confidence interval
+low_bound <- pred_burnedGLM$fit - (1.96*pred_burnedGLM$se.fit)
+up_bound <- pred_burnedGLM$fit + (1.96*pred_burnedGLM$se.fit)
+
+ggplot(mapping = aes(x = burnedArea.sf$acresBurned, y = pred_burnedGLM$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  geom_point(aes(x = burnedArea.sf$acresBurned, y = burnedArea.sf$nFIRES)) +
+  stat_regline_equation() +
+  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = 40) +
+  ylab("Predicted Number of Fires") +
+  xlab("Acres of Forest Burned") +
+  labs(
+    title = "Predicted Number of Fires Based on the Forest Area Burned in the Last Year",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: April 1992 to July 2018")
 ```
 
