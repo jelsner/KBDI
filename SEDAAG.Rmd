@@ -243,7 +243,7 @@ ggplot(data = df,
   geom_col() +
   scale_fill_distiller(palette = "Oranges",
                        direction = 1,
-                       guide = FALSE) +
+                       guide = "none") +
   scale_x_continuous(labels = percent) +
   xlab("") + ylab("") +
   labs(title = "Over 80% of lightning-sparked wildfires in the\nApalachicola National Forest occur during May-July",
@@ -251,7 +251,8 @@ ggplot(data = df,
        caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
   #theme_minimal()
   theme(plot.title = element_text(size = 15),
-        axis.text = element_text(size = 10))
+        axis.text = element_text(size = 10)) +
+  theme_dark()
 ```
 
 Plot average monthly rainfall and max temperatures
@@ -295,6 +296,33 @@ p2 <- ggplot(data = df,
 
 (p1 / p2) +
   labs(caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee")
+```
+
+Average number of lightning strikes in the ANF
+```{r}
+lightningAvg.df <- lightning.df %>%
+  filter(year(SEQDAY) <= 2012) %>%
+  mutate(MonthF = factor(month.name[month(SEQDAY)],
+                         levels = rev(month.name),
+                         ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(avgLightningCount = sum(LightningCount)/(2012-1986))
+```
+
+Plot average lightning
+```{r}
+lightningAvg.df %>%
+  ggplot(mapping = aes(y = MonthF,
+                       x = avgLightningCount,
+                       fill = avgLightningCount)) +
+  geom_col() +
+  scale_fill_gradientn(colors = brewer.pal(4, "OrRd"),
+                       guide = "none") +
+  labs(x = "", y = "",
+       title = "The Lightning Season Peaks in July in the Apalachicola National Forest",
+       subtitle = "Average Number of Lightning Strikes",
+       caption = "Period of record 1986 - 2012, Data Source: National Centers for Environmental Information NOAA") +
+  theme_dark()
 ```
 
 Monthly average soil moisture deficit.
@@ -554,6 +582,7 @@ The model finds that the number of acres burned over the past year is not statis
 There is minimal evidence of a relationship between the number of acres burned and the number of natural fires that occur during the fire season.
 p-value = 0.0604
 correlation coefficient = 0.0966; we would expect a negative slope and a negative correlation.
+correlation coefficient model residuals = -0.0029
 ```{r}
 burnedGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = burnedArea.sf)
 
@@ -564,6 +593,9 @@ pred_burnedGLM <- predict(object = burnedGLM,
 summary(burnedGLM)
 
 cor(burnedArea.sf$acresBurned, burnedArea.sf$nFIRES)
+
+#correlation of model residuals
+cor(burnedArea.sf$acresBurned, resid(burnedGLM))
 ```
 
 Explore area as a percentage of the forest that was burned.
@@ -584,6 +616,7 @@ burnedArea.sf <- burnedArea.sf %>%
 create model based on the percent of forest that was burned.
 We find the percent of forest burned is not statistically significant (p-value = 0.146)
 The correlation coefficient suggests no relationship (0.0773)
+The correlation coefficient of the residuals = -0.00292 (Same as the area burned model)
 ```{r}
 percentBurnedGLM <- glm(formula = nFIRES ~ percentBurned, family = poisson, data = burnedArea.sf)
 
@@ -594,6 +627,9 @@ pred_percentBurnedGLM <- predict(object = percentBurnedGLM,
 summary(percentBurnedGLM)
 
 cor(burnedArea.sf$percentBurned, burnedArea.sf$nFIRES)
+
+#correlation of model residuals
+cor(burnedArea.sf$percentBurned, resid(percentBurnedGLM))
 ```
 
 Create a poisson plot
