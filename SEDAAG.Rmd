@@ -36,6 +36,10 @@ library(rgdal)
 library(USAboundaries)
 library(XML)
 library(units)
+library(equatiomatic)
+#library(mpm)
+#library(magrittr)
+#library(texPreview)
 ```
 
 Daily summary of the day values from Tallahassee (TLH)
@@ -342,7 +346,7 @@ ggplot(mapping = aes(y = MonthF,
                        guide = 'none') +
   labs(x = "", y = "",
        title = "May through November is the dry season in the Apalachicola National Forest",
-       subtitle = "Average soil moisture deficit (mm)",
+       subtitle = "Average dryness (mm)",
        caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") +
   theme_dark() 
 ```
@@ -364,7 +368,7 @@ TLH.df %>%
   theme_dark() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
-       subtitle = "Monthly average soil moisture deficit (mm) by year with trend line (gray)", 
+       subtitle = "Monthly average dryness (mm) by year with trend line (gray)", 
        caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") 
 ```
 
@@ -405,8 +409,25 @@ up_bound <- pred_glmQl$fit + (1.96*pred_glmQl$se.fit)
 ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
-  stat_regline_equation() +
-  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .155) +
+  #stat_regline_equation() +
+  #stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .155) +
+  ylab("Predicited Probablility") +
+  xlab("Daily KBDI") +
+  labs(
+    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
+    subtitle = "Line of Fitted Values With a 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2018")
+```
+
+Another way of plotting
+```{r}
+KBDI_fire.df$glmQl_Pred <- glmQl$fitted.values
+```
+
+```{r}
+ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
+  geom_line(color = "blue") +
+  #geom_smooth(method = "glm")+
   ylab("Predicited Probablility") +
   xlab("Daily KBDI") +
   labs(
@@ -414,6 +435,23 @@ ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
     subtitle = "With 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
+
+This is a plot of the generalized linear regression fitted values
+```{r}
+ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
+  #geom_line(color = "blue") +
+  geom_smooth(method = "glm")+
+  ylab("Predicited Probablility") +
+  xlab("Daily KBDI") +
+  labs(
+    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
+    subtitle = "With 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2018")
+```
+
+
+
+
 
 Ql is statistically significant
 ```{r}
@@ -493,8 +531,8 @@ up_bound <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
 ggplot(mapping = aes(x = light_fires.df$LightningCount, y = pred_glmLightning$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
-  stat_regline_equation() +
-  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .87) +
+  #stat_regline_equation() +
+  #stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .87) +
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
   labs(
@@ -736,10 +774,17 @@ compare models. How is this interpreted? Google
 anova(glm0, glm1)
 ```
 
-visualize the data
+visualize the data with actual fire points
 ```{r}
 ggplot(glm1, aes(x=Ql_April30, y = nFIRES)) +
-  geom_smooth(method = "glm")
+  geom_point()+
+  geom_smooth(method = "glm") +
+  ylab("Number of Fires") +
+  xlab("KDBI on April 30th") +
+  labs(
+    title = "Predicted Number of Fires During the Fire Season Based on April 30th KBDI",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2018")
 ```
 
 Explore the Predicted Values
@@ -747,11 +792,12 @@ Explore the Predicted Values
 seasonFires.sf$glm1_Pred <- glm1$fitted.values
 ```
 
-view predicted fire plot based on april KBDI
+view fire plot with predicted values based on april KBDI (fitted values of the model)
 ```{r}
 ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
   geom_point() +
   geom_smooth(method = "glm") +
+  stat_regline_equation() +
   ylab("Predicted Number of Fires") +
   xlab("KDBI on April 30th") +
   labs(
@@ -759,6 +805,12 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
+
+```{r}
+extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE)
+```
+
+
 
 
 Model 2 will predict the number of fires by adding the prior area burned to the model.
