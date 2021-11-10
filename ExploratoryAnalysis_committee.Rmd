@@ -1524,6 +1524,8 @@ testgroup <- allFires.sf %>%
   rename(month = "month(DISCOVERY_)")
 ```
 
+##Burned area code has been edited/ corrected, see SEDAGG rmd for corrections
+
 Follow Guidance from Dr. Elsner's email.
 Take this code chunk out?
 ```{r}
