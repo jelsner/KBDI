@@ -540,8 +540,22 @@ ggplot(mapping = aes(x = light_firesFS.df$LightningCount, y = pred_glmLightning$
 Create a data frame to include the area that was burned over the past year.
 ```{r}
 anf_Fires.sf <- anf_Fires.sf %>%
-  mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-1"))) %>%
-  mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-03", "-31"))) %>%
+  mutate(InSeason = DISCOVERY_ >= as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30")) & DISCOVERY_ <= as.Date(paste0(as.character(FIRE_YEAR+1), "-04", "-29"))) %>%
+   mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30"))) %>%
+   mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-04", "-29")))
+
+#anf_Fires.sf <- anf_Fires.sf %>%
+#  mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30"))) %>%
+#  mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-04", "-29")))
+
+for(i in 1:length(anf_Fires.sf$InSeason)){
+  if (anf_Fires.sf$InSeason[i] == FALSE){
+    anf_Fires.sf$burnedGroupStart[i] <- as.Date(paste0(as.character(anf_Fires.sf$FIRE_YEAR[i]-1), "-04", "-30"))
+    anf_Fires.sf$burnedGroupEnd[i] <- as.Date(paste0(as.character(anf_Fires.sf$FIRE_YEAR[i]), "-04", "-29"))
+  }
+}
+
+anf_Fires.sf <- anf_Fires.sf %>%
   unite(col = "burnedGroupInterval", c("burnedGroupStart", "burnedGroupEnd"), sep = " -- ") %>%
   #rearrange order of columns
   select(FOD_ID:DISCOVERY_, burnedGroupInterval, NWCG_CAUSE_CLASSIFICATION:Shape)
@@ -669,4 +683,113 @@ ggplot(mapping = aes(x = burnedArea.sf$acresBurned, y = pred_burnedGLM$fit)) +
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: April 1992 to July 2018")
 ```
+
+##Model/Plot Adjustments based on meeting 11/9/2021
+
+Create a bar chart showing the number of fires per year over the data period
+```{r}
+seasonFires.sf %>%
+  ggplot(mapping = aes(x = Year, 
+                       y = nFIRES, 
+                       fill = nFIRES)) +
+  geom_col() +
+  scale_fill_gradientn(colors = brewer.pal(4, "OrRd"),
+                       guide = "none") +
+  scale_x_continuous(breaks = seq(1995, 2015, 5)) +
+  ylab("Number of Fires") +
+  xlab("Year") +
+  labs(
+    title = "Total Number of Fires During the Fire Season",
+    caption = "Period of Record: 1992 to 2018") +
+  theme_dark()
+```
+
+Add April 30th KBDI to the seasonFires.sf data frame
+```{r}
+April30.df <- KBDI_fire.df %>%
+  filter(month(Date) == 04 & day(Date) == 30) %>%
+  select("Date", "Ql") %>%
+  rename(Ql_April30 = Ql) %>%
+  mutate(Year = year(Date))
+
+#make April30.df left table so that years 1997 and 2005 are filled as zeros
+seasonFires.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year")) %>%
+  select("Year", "nFIRES", "Ql_April30")
+seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
+```
+
+Create a linear null model and general linear regression
+```{r}
+formula0 <- lm(nFIRES ~ 1, data = seasonFires.sf)
+glm0 <- glm(formula0, data = seasonFires.sf, family = poisson)
+summary(glm0)
+```
+
+create linear model of nFIRES and KBDI
+```{r}
+formula1 <- lm(nFIRES ~ Ql_April30, data = seasonFires.sf)
+glm1 <- glm(formula1, data = seasonFires.sf, family = poisson)
+```
+
+compare models. How is this interpreted? Google
+```{r}
+anova(glm0, glm1)
+```
+
+visualize the data
+```{r}
+ggplot(glm1, aes(x=Ql_April30, y = nFIRES)) +
+  geom_smooth(method = "glm")
+```
+
+Explore the Predicted Values
+```{r}
+seasonFires.sf$glm1_Pred <- glm1$fitted.values
+```
+
+view predicted fire plot based on april KBDI
+```{r}
+ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
+  geom_point() +
+  geom_smooth(method = "glm") +
+  ylab("Predicted Number of Fires") +
+  xlab("KDBI on April 30th") +
+  labs(
+    title = "Predicted Number of Fires During the Fire Season Based on April 30th KBDI",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2018")
+```
+
+
+Model 2 will predict the number of fires by adding the prior area burned to the model.
+
+add the area burned over the prior season to seasonFires.sf
+```{r}
+seasonFires.sf <- left_join(x = seasonFires.sf, y = burnedArea.sf, by = c("Year" = "forecastYear")) %>%
+  select("Year":"percentBurned") %>%
+  rename(nFIRES = nFIRES.x)
+```
+
+Acres burned is not statistically significant (p-value = 0.092)
+```{r}
+temp <- seasonFires.sf %>%
+  filter(Year >= 1993)
+formula2 <- lm(nFIRES ~ Ql_April30 + acresBurned, data = temp)
+glm2 <- glm(formula2, data = temp, family = poisson)
+
+summary(glm2)
+```
+
+Is acres burned statistically significant when standing alone? (p-value = 0.0657)
+```{r}
+temp <- seasonFires.sf %>%
+  filter(Year >= 1993)
+formula3 <- lm(nFIRES ~ acresBurned, data = temp)
+glm3 <- glm(formula3, data = temp, family = poisson)
+
+summary(glm3)
+
+cor(temp$acresBurned,resid(glm3)) #0.04958
+```
+
 
