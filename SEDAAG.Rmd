@@ -796,7 +796,7 @@ view fire plot with predicted values based on april KBDI (fitted values of the m
 ```{r}
 ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
   geom_point() +
-  geom_smooth(method = "glm") +
+  geom_smooth(method = "glm")+
   stat_regline_equation() +
   ylab("Predicted Number of Fires") +
   xlab("KDBI on April 30th") +
@@ -805,6 +805,22 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
+
+```{r}
+ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
+  geom_point() +
+  geom_smooth(method = "glm", formula = y ~ x,
+              method.args = list(family = poisson(link = "log"))) +
+  stat_regline_equation() +
+  ylab("Number of Fires") +
+  xlab("KDBI on April 30th") +
+  labs(
+    title = "Predicted Number of Fires During the Fire Season Based on April 30th KBDI",
+    subtitle = "With a 95% Confidence Interval",
+    caption = "Period of Record: 1992 to 2018")
+```
+
+
 
 ```{r}
 extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE)
