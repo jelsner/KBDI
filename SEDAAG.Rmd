@@ -821,16 +821,23 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
     caption = "Period of Record: 1992 to 2018")
 ```
 
+```{r}
+# Install from CRAN
+##install.packages('rmarkdown')
+
+# Or if you want to test the development version,
+# install from GitHub
+#if (!requireNamespace("devtools"))
+#  install.packages('devtools')
+#devtools::install_github('rstudio/rmarkdown')
+```
+
 
 
 ```{r}
 #tinytex::install_tinytex()
 
-#tlmgr::install_standalone()
-#tlmgr install luatex85
-#tlmgr install pgf  # this installs tikz.sty
-#tlmgr install pgfplots
-#tlmgr update --self --all
+tinytex::parse_install()
 
 tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
 ```
