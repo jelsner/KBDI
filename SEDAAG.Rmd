@@ -37,9 +37,10 @@ library(USAboundaries)
 library(XML)
 library(units)
 library(equatiomatic)
+library(tinytex)
 #library(mpm)
 #library(magrittr)
-#library(texPreview)
+library(texPreview)
 ```
 
 Daily summary of the day values from Tallahassee (TLH)
@@ -811,7 +812,7 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
   geom_point() +
   geom_smooth(method = "glm", formula = y ~ x,
               method.args = list(family = poisson(link = "log"))) +
-  stat_regline_equation() +
+  stat_regline_equation(formula = y ~ x) +
   ylab("Number of Fires") +
   xlab("KDBI on April 30th") +
   labs(
@@ -823,7 +824,15 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
 
 
 ```{r}
-extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE)
+#tinytex::install_tinytex()
+
+#tlmgr::install_standalone()
+#tlmgr install luatex85
+#tlmgr install pgf  # this installs tikz.sty
+#tlmgr install pgfplots
+#tlmgr update --self --all
+
+tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
 ```
 
 
