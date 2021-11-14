@@ -837,7 +837,14 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
 ```{r}
 #tinytex::install_tinytex()
 
-tinytex::parse_install()
+#tinytex::parse_install()
+
+#installr::install.MikTeX
+
+update.packages(ask = FALSE, checkBuilt = TRUE)
+tinytex::tlmgr_update()
+
+tinytex::pdflatex('test.tex')
 
 tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
 ```
