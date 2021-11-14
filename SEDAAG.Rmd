@@ -427,8 +427,9 @@ KBDI_fire.df$glmQl_Pred <- glmQl$fitted.values
 
 ```{r}
 ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
-  geom_line(color = "blue") +
-  #geom_smooth(method = "glm")+
+  #geom_line(color = "blue") +
+  geom_smooth(method = "glm", formula = y ~ x,
+              method.args = list(family = poisson(link = "log")))+
   ylab("Predicited Probablility") +
   xlab("Daily KBDI") +
   labs(
@@ -436,6 +437,7 @@ ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
     subtitle = "With 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
+
 
 This is a plot of the generalized linear regression fitted values
 ```{r}
@@ -812,7 +814,7 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
   geom_point() +
   geom_smooth(method = "glm", formula = y ~ x,
               method.args = list(family = poisson(link = "log"))) +
-  stat_regline_equation(formula = y ~ x) +
+  #stat_regline_equation(formula = y ~ x) +
   ylab("Number of Fires") +
   xlab("KDBI on April 30th") +
   labs(
@@ -820,6 +822,13 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
+
+Equation of glm1 regression line
+```{r}
+extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE)
+```
+
+
 
 ```{r}
 # Install from CRAN
@@ -841,12 +850,14 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
 
 #installr::install.MikTeX
 
-update.packages(ask = FALSE, checkBuilt = TRUE)
-tinytex::tlmgr_update()
+#update.packages(ask = FALSE, checkBuilt = TRUE)
+#tinytex::tlmgr_update()
 
-tinytex::pdflatex('test.tex')
+#tinytex::pdflatex('test.tex')
 
-tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
+#tinytex::latexmk()
+
+#tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
 ```
 
 
