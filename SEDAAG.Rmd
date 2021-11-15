@@ -253,7 +253,7 @@ ggplot(data = df,
   xlab("") + ylab("") +
   labs(title = "Over 80% of lightning-sparked wildfires in the\nApalachicola National Forest occur during May-July",
        subtitle = "Percentage of all lightning-sparked wildfires by month",
-       caption = "Period of record: 1992-2015, Data source: Short, Karen (2017)") +
+       caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
   #theme_minimal()
   theme(plot.title = element_text(size = 15),
         axis.text = element_text(size = 10)) +
@@ -325,7 +325,7 @@ lightningAvg.df %>%
                        guide = "none") +
   labs(x = "", y = "",
        title = "The Lightning Season Peaks in July in the Apalachicola National Forest",
-       subtitle = "Average Number of Lightning Strikes",
+       subtitle = "Average Number of Lightning Strikes Per Month",
        caption = "Period of record 1986 - 2012, Data Source: National Centers for Environmental Information NOAA") +
   theme_dark()
 ```
