@@ -280,3 +280,5 @@ SeasonalData.df %>%
              data = SeasonalData.df) +
   scale_fill_brewer()
 ```
+
+Try the {marginaleffects} package http://arelbundock.com/brms.html to get posterior draws with user-specified values and other predictors held at their means.
