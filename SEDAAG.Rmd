@@ -745,16 +745,17 @@ seasonFires.sf %>%
   theme_dark()
 ```
 
+
 Add April 30th KBDI to the seasonFires.sf data frame
 ```{r}
 April30.df <- KBDI_fire.df %>%
   filter(month(Date) == 04 & day(Date) == 30) %>%
   select("Date", "Ql") %>%
-  rename(Ql_April30 = Ql) %>%
+  rename(KBDI_April30 = Ql) %>%
   mutate(Year = year(Date))
 
 #make April30.df left table so that years 1997 and 2005 are filled as zeros
-seasonFires.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year")) %>%
+seasonFires.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year"))
   select("Year", "nFIRES", "Ql_April30")
 seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
 ```
@@ -769,8 +770,14 @@ summary(glm0)
 create linear model of nFIRES and KBDI
 ```{r}
 formula1 <- lm(nFIRES ~ Ql_April30, data = seasonFires.sf)
-glm1 <- glm(formula1, data = seasonFires.sf, family = poisson)
+#glm1 <- glm(formula1, data = seasonFires.sf, family = poisson)
 ```
+
+create a generalized linear model (Poisson)
+```{r}
+glm <- glm(nFIRES ~ Ql_April30, data = seasonFires.sf)
+```
+
 
 compare models. How is this interpreted? Google
 ```{r}
@@ -809,6 +816,7 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
     caption = "Period of Record: 1992 to 2018")
 ```
 
+visualize the poisson model
 ```{r}
 ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
   geom_point() +
@@ -825,7 +833,7 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
 
 Equation of glm1 regression line
 ```{r}
-extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE)
+extract_eq(glm1, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
 
 
@@ -877,10 +885,19 @@ Acres burned is not statistically significant (p-value = 0.092)
 temp <- seasonFires.sf %>%
   filter(Year >= 1993)
 formula2 <- lm(nFIRES ~ Ql_April30 + acresBurned, data = temp)
-glm2 <- glm(formula2, data = temp, family = poisson)
+#glm2 <- glm(formula2, data = temp, family = poisson)
+
+#summary(glm2)
+```
+
+glm (poisson)
+```{r}
+glm2 <- glm(nFIRES ~ Ql_April30 + acresBurned, data = temp)
 
 summary(glm2)
 ```
+
+
 
 Is acres burned statistically significant when standing alone? (p-value = 0.0657)
 ```{r}
