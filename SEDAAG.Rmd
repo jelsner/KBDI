@@ -425,17 +425,18 @@ Another way of plotting
 KBDI_fire.df$glmQl_Pred <- glmQl$fitted.values
 ```
 
+This code chunk takes a long time to knit
 ```{r}
-ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
+#ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
   #geom_line(color = "blue") +
-  geom_smooth(method = "glm", formula = y ~ x,
-              method.args = list(family = poisson(link = "log")))+
-  ylab("Predicited Probablility") +
-  xlab("Daily KBDI") +
-  labs(
-    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
-    subtitle = "With 95% Confidence Interval",
-    caption = "Period of Record: 1992 to 2018")
+#  geom_smooth(method = "glm", formula = y ~ x,
+#              method.args = list(family = poisson(link = "log")))+
+#  ylab("Predicited Probablility") +
+#  xlab("Daily KBDI") +
+#  labs(
+#    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
+#    subtitle = "With 95% Confidence Interval",
+#    caption = "Period of Record: 1992 to 2018")
 ```
 
 
@@ -755,8 +756,8 @@ April30.df <- KBDI_fire.df %>%
   mutate(Year = year(Date))
 
 #make April30.df left table so that years 1997 and 2005 are filled as zeros
-seasonFires.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year"))
-  select("Year", "nFIRES", "Ql_April30")
+seasonFires.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year")) %>%
+  select("Year", "nFIRES", "KBDI_April30")
 seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
 ```
 
@@ -769,13 +770,14 @@ summary(glm0)
 
 create linear model of nFIRES and KBDI
 ```{r}
-formula1 <- lm(nFIRES ~ Ql_April30, data = seasonFires.sf)
+formula1 <- lm(nFIRES ~ KBDI_April30, data = seasonFires.sf)
 #glm1 <- glm(formula1, data = seasonFires.sf, family = poisson)
 ```
 
-create a generalized linear model (Poisson)
+
+Poisson Regression
 ```{r}
-glm <- glm(nFIRES ~ Ql_April30, data = seasonFires.sf)
+glm1 <- glm(nFIRES ~ KBDI_April30, data = seasonFires.sf, family = poisson)
 ```
 
 
@@ -786,7 +788,7 @@ anova(glm0, glm1)
 
 visualize the data with actual fire points
 ```{r}
-ggplot(glm1, aes(x=Ql_April30, y = nFIRES)) +
+ggplot(glm1, aes(x= KBDI_April30, y = nFIRES)) +
   geom_point()+
   geom_smooth(method = "glm") +
   ylab("Number of Fires") +
@@ -799,12 +801,12 @@ ggplot(glm1, aes(x=Ql_April30, y = nFIRES)) +
 
 Explore the Predicted Values
 ```{r}
-seasonFires.sf$glm1_Pred <- glm1$fitted.values
+seasonFires.sf$glm1_fit <- glm1$fitted.values
 ```
 
 view fire plot with predicted values based on april KBDI (fitted values of the model)
 ```{r}
-ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
+ggplot(seasonFires.sf, aes(x = KBDI_April30, y = glm1_fit)) +
   geom_point() +
   geom_smooth(method = "glm")+
   stat_regline_equation() +
@@ -818,7 +820,7 @@ ggplot(seasonFires.sf, aes(x = Ql_April30, y = glm1_Pred)) +
 
 visualize the poisson model
 ```{r}
-ggplot(seasonFires.sf, aes(x = Ql_April30, y = nFIRES)) +
+ggplot(seasonFires.sf, aes(x = KBDI_April30, y = nFIRES)) +
   geom_point() +
   geom_smooth(method = "glm", formula = y ~ x,
               method.args = list(family = poisson(link = "log"))) +
@@ -884,19 +886,19 @@ Acres burned is not statistically significant (p-value = 0.092)
 ```{r}
 temp <- seasonFires.sf %>%
   filter(Year >= 1993)
-formula2 <- lm(nFIRES ~ Ql_April30 + acresBurned, data = temp)
+formula2 <- lm(nFIRES ~ KBDI_April30 + acresBurned, data = temp)
 #glm2 <- glm(formula2, data = temp, family = poisson)
 
 #summary(glm2)
 ```
 
-glm (poisson)
+
+Poisson Regression
 ```{r}
-glm2 <- glm(nFIRES ~ Ql_April30 + acresBurned, data = temp)
-
-summary(glm2)
+temp <- seasonFires.sf %>%
+  filter(Year >= 1993)
+glm2 <- glm(nFIRES ~ KBDI_April30 + acresBurned, data = temp, family = poisson)
 ```
-
 
 
 Is acres burned statistically significant when standing alone? (p-value = 0.0657)
