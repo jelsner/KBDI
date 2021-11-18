@@ -751,7 +751,7 @@ TLH.df %>%
               col = "orange") 
 ```
 
-Combine seasonal fire data with dryness data.
+Combine seasonal fire data with dryness data. Include a column with previous year's total acres burned.
 ```{r}
 SeasonalFires <- NaturalFires.sf %>%
   st_drop_geometry() %>%

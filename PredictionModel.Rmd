@@ -18,7 +18,7 @@ library(modelr)
 
 ## Get the data
 
-The data are organized in the file `ANF_Fires.Rmd`. 
+The data are organized in the file `ANF_Fires.Rmd`. Change moisture deficit units to cm.
 ```{r}
 SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
   mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
