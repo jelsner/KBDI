@@ -27,7 +27,7 @@ W <- SeasonalData.df$nFires
 ```
 
 ```{r}
-var(W)/mean(W) #13.8
+var(W)/mean(W) #13.6
 
 model0 <- glm.nb(W ~ 1)
 
@@ -41,8 +41,12 @@ ggplot(data = SeasonalData.df,
        mapping = aes(x = QlmLastDay, y = nFires)) +
   geom_point() + 
   geom_line(aes(y = fitted(model1))) +
-  ylab("Number of Fires (May-July)") + xlab("Drought Index (April)") +
+  ylab("Number of Fires (May-July)") + xlab("Soil Moisture Deficit (April)") +
   theme_minimal()
+
+model2 <- glm.nb(nFires ~ QlmLastDay + preYearAcresBurned,
+                 data = SeasonalData.df)
+summary(model2)
 ```
 
 Use the {brms} and {tidybayes} packages to get posterior distributions.

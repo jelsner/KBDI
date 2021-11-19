@@ -7,7 +7,7 @@ editor_options:
 
 Prescribed fire NOT prescribed burn. Lots of resources are required for planning and implementing a prescribed fire. Seasonal forecasts can help with planning of those resources.
 
-fires remove fuels for subsequent fires, 
+Fires remove fuels for subsequent fires.
 
 What is the relationship between dryness of the soil and lightning-kindled wildfire activity in the ANF on the seasonal time scale? Quantifying the statistical relationship between soil dryness and lightning-kindled wildfire activity in the ANF.
 
@@ -41,7 +41,7 @@ https://www.who.int/health-topics/wildfires#tab=tab_1
 
 Like air pollution, wildfire smoke — and particularly the concentration of PM 2.5, or particles smaller than 2.5 microns — can affect the respiratory and cardiovascular systems, said Colleen Reid, an environmental epidemiologist and health geographer at the University of Colorado Boulder.
 
-## Get the required packages
+## Get required packages
 ```{r}
 library(sf)
 library(tidyverse)
@@ -65,19 +65,19 @@ unzip("S_USA.NFSLandUnit.zip",
       files = "S_USA.NFSLandUnit")
 }
 
-ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") %>%
+ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest")
 
-st_area(ANF_Boundary.sf) # 2,564 sq. km (634,000 acre)
+st_area(ANF_Boundary.sf) # 2,567 sq. km (~634,000 acre)
 ```
 
 Make a map showing the ANF boundary and the airport location.
 ```{r}
 Airport.sf <- data.frame(Name = c("Regional Airport"), 
                          Latitude = c(30.39306),
-                         Longitude = c(-84.35333)) %>%
+                         Longitude = c(-84.35333)) |>
   st_as_sf(coords = c("Longitude", "Latitude"),
-           crs = 4326) %>%
+           crs = 4326) |>
   st_transform(crs = st_crs(ANF_Boundary.sf))
 
 tmap_mode("view")
@@ -97,11 +97,13 @@ Frequency of fires: Number of fires
 #unzip("RDS-2013-0009.5_GPKG.zip")
 #st_layers(dsn = "Data/FPA_FOD_20210617.gpkg")
 
+t0 <- Sys.time()
 Fires.sf <- st_read(dsn = "Data/FPA_FOD_20210617.gpkg",
-                    layer = "Fires") %>%
-  filter(STATE == "FL") %>%
-  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
+                    layer = "Fires") |>
+  filter(STATE == "FL") |>
+  st_transform(crs = st_crs(ANF_Boundary.sf)) |>
   st_intersection(ANF_Boundary.sf)
+Sys.time() - t0  # ~ 4 min on desktop 
 ```
 
 These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
@@ -224,7 +226,7 @@ NF.ppp <- NF.ppp[W] %>%
 summary(NF.ppp)
 ```
 
-Area is 2,564 square km. There are 356 natural wildfires for an average intensity of 13.9 fires per 10 square kilometer during May-July over the 27-year period.
+Area is 2,564 square km. There are 356 natural wildfires for an average spatial intensity of 13.9 fires per 10 square kilometer during May-July over the 27-year period.
 ```{r}
 NF.ppp %>%
   density() %>%
@@ -355,8 +357,8 @@ No significant inter-seasonal autocorrelation. Significant correlation between n
 
 Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to what we did for predicting tornado EF rating.
 ```{r}
-NaturalFires.sf %>%
-  group_by(SizeF) %>%
+NaturalFires.sf |>
+  group_by(SizeF) |>
   summarize(nFires = n(),
             Range1 = range(Size)[1],
             Range2 = range(Size)[2])
@@ -415,7 +417,7 @@ ggplot(data = sc,
   theme_minimal() 
 ```
 
-Cloud to ground lightning is most common in the ANF between June through August. The wildfire season beats to the rhythms of drying and lightning.
+Cloud to ground lightning is most common in the ANF between June through August. The wildfire season beats to the rhythms of seasonal drying and seasonal lightning.
 
 ## Get TLH airport daily weather data and compute the Keetch & Byram drought index
 
@@ -437,15 +439,15 @@ Import the summary of the day data and add columns to the data frame. Assign zer
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
                    stringsAsFactors = FALSE,
-                   header = TRUE) %>%
-  mutate(Date = as.Date(DATE)) %>%
+                   header = TRUE) |>
+  mutate(Date = as.Date(DATE)) |>
   mutate(Year = year(Date), 
          month = month(Date, label = TRUE, abbr = TRUE),
          doy = yday(Date),
          MaxTemp = TMAX,
          MinTemp = TMIN,
          Rainfall24 = PRCP,
-         Rainfall24mm = Rainfall24 * 25.4) %>%
+         Rainfall24mm = Rainfall24 * 25.4) |>
   filter(Year <= 2020)
 
 sum(is.na(TLH.df$PRCP))
@@ -460,11 +462,11 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$Rainfall24[is.na(TLH.df$PRCP)] <- c(.1, .3, 0, .1, 0)
 TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
 
-( AnnualRainfall <- TLH.df %>%
-  filter(Year >= 1943) %>%  # complete data started in March 1943
-  group_by(Year) %>%
-  summarize(totalRainfall = sum(Rainfall24)) %>%
-  pull(totalRainfall) %>%
+( AnnualRainfall <- TLH.df |>
+  filter(Year >= 1943) |>  # complete data started in March 1943
+  group_by(Year) |>
+  summarize(totalRainfall = sum(Rainfall24)) |>
+  pull(totalRainfall) |>
   mean() )
 ```
 
@@ -652,7 +654,7 @@ ggplot(df,
   theme_minimal() 
 ```
 
-Get SOI data and join with TLH.df.
+Get SOI data and join with TLH.df. LINK NO LONGER WORKS
 ```{r}
 SOI.df <- read.csv(file = "https://www.ncdc.noaa.gov/teleconnections/enso/indicators/soi/data.csv",
                    skip = 1, header = TRUE) %>%
@@ -762,7 +764,7 @@ SeasonalFires <- NaturalFires.sf %>%
             totalAcresBurned = sum(Size)) %>%
   mutate(Year = 1992:2018)
 
-Drought <- TLH.df %>%
+Dryness <- TLH.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2018) %>%
   dplyr::filter(month == "Apr") %>%
   group_by(Year) %>%
@@ -774,12 +776,24 @@ AprilSOI <- SOI.df %>%
   dplyr::filter(month == "Apr") %>%
   pull(SOI)
 
-df <- data.frame(Year = Drought$Year, 
-                 QlmLastDay = Drought$QlmLastDay,
-                 AvgQlm = Drought$AvgQlm,
+PreviousYearBurnArea.df <- Fires.sf |>
+  st_drop_geometry() |>
+  mutate(Date = DISCOVERY_DATE,
+         Year = year(DISCOVERY_DATE),
+         Month = month(DISCOVERY_DATE),
+         BurnYear = Year + (Month >= 5))|>
+  group_by(BurnYear) |>
+  mutate(BurnArea = cumsum(FIRE_SIZE)) |>
+  summarize(BurnArea = last(BurnArea)) |>
+  filter(BurnYear < 2019)
+
+df <- data.frame(Year = Dryness$Year, 
+                 QlmLastDay = Dryness$QlmLastDay,
+                 AvgQlm = Dryness$AvgQlm,
                  nFires = SeasonalFires$nFires, 
-                 totalAcresBurned = SeasonalFires$totalAcresBurned,
-                 AprilSOI = AprilSOI)
+                 AcresBurned = SeasonalFires$totalAcresBurned,
+                 preYearAcresBurned = PreviousYearBurnArea.df$BurnArea)
+#                 AprilSOI = AprilSOI)
 
 write_csv(df, file = "SeasonalForecastModelData.csv")
 ```
