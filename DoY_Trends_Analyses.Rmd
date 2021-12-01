@@ -72,14 +72,14 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv') |>
          Wind = AWND * .44704) |> # wind values appear to be mph so convert to m/s
   filter(Year <= 2020)
 
-Other.df <- read.csv(file = 'Data/MKE_Daily1938-2020.csv') |>
-  mutate(Date = as.Date(DATE)) |>
-  mutate(Year = year(Date), 
-         month = month(Date, label = TRUE, abbr = TRUE),
-         doy = yday(Date),
-         MaxTemp = TMAX,
-         MinTemp = TMIN) |>
-  filter(Year <= 2020 & Year >= 1943)
+#Other.df <- read.csv(file = 'Data/MKE_Daily1938-2020.csv') |>
+#  mutate(Date = as.Date(DATE)) |>
+#  mutate(Year = year(Date), 
+#         month = month(Date, label = TRUE, abbr = TRUE),
+#         doy = yday(Date),
+#         MaxTemp = TMAX,
+#         MinTemp = TMIN) |>
+#  filter(Year <= 2020 & Year >= 1943)
 
 # Missing data filled in from NCDC daily summaries https://gis.ncdc.noaa.gov/maps/ncei/summaries/daily or https://www.wunderground.com/history/daily/KTLH/date/2018-11-28
 
@@ -123,6 +123,79 @@ TLH.df <- TLH.df |>
   mutate(AvgTemp = (MaxTemp + MinTemp) / 2,
          DTR = MaxTemp - MinTemp)
 ```
+
+## Bayesian non-parametric quantile regression
+
+https://www.jstatsoft.org/article/view/v100i09
+
+Example 1: motorcycle data set. Single quantile
+```{r}
+data("mcycle", package = "MASS")
+library(qgam)
+fit1 <- qgam(list(form = accel ~ s(times, k = 20, bs = "ad"), ~ s(times)),
+             data = mcycle, qu = .9)
+
+head(predict(fit1), 5)
+
+plot(fit1)
+fit1$family$getTheta()
+
+fit2 <- qgam(list(form = MaxTemp ~ s(doy, k = 20, bs = "ad"), ~ s(doy)),
+             data = TLH.df, qu = .95)
+
+plot(fit2)
+fit2$family$getTheta()
+head(fit2$family$getCo(), 5)
+```
+
+Multiple quantiles
+```{r}
+fit2M <- mqgam(form = list(MaxTemp ~ s(doy, k = 20, bs = "ad"), ~ s(doy)),
+               data = TLH.df, qu = c(.1, .25, .5, .75, .9))
+qdo(fit2M, qu = .25, fun = summary)
+
+library(mgcViz)
+fit2M <- getViz(fit2M)
+
+plot(fit2M)
+```
+The effects cross each other because they are all centered.
+
+```{r}
+xseq <- with(TLH.df, seq(min(doy), max(doy), length.out = 366))
+preds <- sapply(fit2M, predict, newdata = data.frame(doy = xseq))
+plot(TLH.df$doy, TLH.df$MaxTemp)
+for(ii in 1:5) lines(xseq, preds[, ii], col = 2)
+
+min(apply(preds, 1, diff))
+max(apply(preds, 1, diff))
+```
+The minimal distance between consecutive quantiles is 2 degrees. There is no crossing within the range of the data.
+
+Use a cyclic effect for doy to ensure that the seasonal effect has the same value on the 31st of December and on the 1st of January.
+```{r}
+fit3 <- qgam(list(form = MaxTemp ~ Year + s(doy, bs = "cc"), ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = .9)
+summary(fit3)
+plot(fit3)
+
+fit4 <- qgam(list(form = MinTemp ~ s(Year) + s(doy, bs = "cc"), ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = .1)
+summary(fit4)
+plot(fit4)
+```
+The end points now have the same curvature and the uncertainty is not flared.
+
+```{r}
+fit3M <- mqgam(form = list(MaxTemp ~ s(Year) + s(doy, bs = "cc"), ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = c(.1, .25, .5, .75, .9))
+fit3M <- getViz(fit3M)
+print(plot(fit3M, allTerms = TRUE), pages = 1 )
+```
+
+
+
+## Descriptive statistics
 
 Annual mean daily highs and lows are warming since the 1970s.
 ```{r}
@@ -920,7 +993,3 @@ arrows <-
 
 p6/p5
 ```
-
-## Bayesian non-parametric quantile regression on seasonal cycle of daily high temperatures.
-
-https://www.jstatsoft.org/article/view/v100i09
