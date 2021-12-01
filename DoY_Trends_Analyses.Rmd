@@ -920,3 +920,7 @@ arrows <-
 
 p6/p5
 ```
+
+## Bayesian non-parametric quantile regression on seasonal cycle of daily high temperatures.
+
+https://www.jstatsoft.org/article/view/v100i09
