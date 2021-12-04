@@ -9,9 +9,11 @@ editor_options:
 
 Tallahassee is hot and getting hotter. Examples: https://iopscience.iop.org/article/10.1088/2515-7620/ab27cf
 
-Key findings of the current research: The most significant warming trends are occurring during summer although the largest changes occur during fall and winter. This increased warming averaged over decades amounts to about 
+Key findings of the current research: The most significant warming trends are occurring during summer although the largest changes occur during fall and winter. This increased warming averaged over decades amounts to about xxx.
 
-day-to-day temperature variability
+Can we quantify the change in the chance of a given day exceeding a percentile high temperature? For example, in 1950 the chance that May 15 would have a high temperature exceeding 90F was 20% in 2020 the chance is now 25%.
+
+Day-to-day temperature variability
 
 While a warmer than usual day in December will be experienced as quite pleasant a warmer than usual day in July likely will be experienced as dreadfully uncomfortable and potential quite dangerous to health.
 
@@ -172,13 +174,103 @@ max(apply(preds, 1, diff))
 ```
 The minimal distance between consecutive quantiles is 2 degrees. There is no crossing within the range of the data.
 
-Use a cyclic effect for doy to ensure that the seasonal effect has the same value on the 31st of December and on the 1st of January.
+Use a cyclic effect for doy to ensure that the seasonal effect has the same value on the 31st of December and on the 1st of January. An interaction term Year:doy is not significant.
 ```{r}
-fit3 <- qgam(list(form = MaxTemp ~ Year + s(doy, bs = "cc"), ~ s(doy, bs = "cc")),
-             data = TLH.df, qu = .9)
+library(qgam)
+fit0 <- qgam(list(form = MinTemp ~ s(doy, bs = "cc"), 
+                                 ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = .1)
+
+fit3 <- qgam(list(form = MinTemp ~ s(doy, bs = "cc") + s(Year), 
+                                 ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = .1)
+
+fit4 <- qgam(list(form = MaxTemp ~ s(doy, bs = "cc") + s(Year) + doy:Year, 
+                                 ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = .95)
+```
+
+Performance package https://github.com/easystats/performance
+```{r}
+library(performance)
+library(see)
+
+compare_performance(fit0, fit3, fit4, rank = TRUE)
+```
+
+
+```{r}
 summary(fit3)
 plot(fit3)
 
+fit3$family$getTheta()
+head(fit3$family$getCo(), 5)
+
+newdata.df <- expand_grid(doy = 1:366, 
+                          Year = c(1943, 2020))
+predictions.df <- predict(fit4, 
+                          newdata = newdata.df,
+                          se = TRUE) |>
+  as.data.frame() |>
+  cbind(newdata.df) |>
+  mutate(lo = fit - 2 * se.fit,
+         hi = fit + 2 * se.fit)
+
+predictions.df |>
+  filter(doy == 150) |>
+ggplot(mapping = aes(x = as.factor(Year),
+                     y = fit)) +
+  geom_point() +
+  geom_errorbar(mapping = aes(ymin = lo,
+                              ymax = hi), width = .1) +
+  scale_y_continuous(limits = c(NA, NA)) +
+  theme_minimal()
+
+predictions.df |>
+  ggplot(mapping = aes(x = doy, y = fit, color = as.factor(Year))) +
+  geom_line() +
+  geom_ribbon(mapping = aes(ymin = lo, ymax = hi, 
+                            fill = as.factor(Year)),
+              color = "transparent", 
+              alpha = .3) +
+  theme_minimal()
+
+predictions.df |>
+  group_by(doy) |>
+  summarize(diff = last(fit) - first(fit))
+  
+
+
+plot(c(1943, 2020), pred$fit, ylim = c(90, 100))
+lines(c(1943, 2020), pred$fit + 2*pred$se.fit, lwd = 1, col = 2)
+lines(c(1943, 2020), pred$fit - 2*pred$se.fit, lwd = 1, col = 2)
+```
+
+
+
+```{r}
+cqcheck(fit0, v = c("doy"), scatter = TRUE)
+cqcheck(fit3, v = c("doy"), scatter = TRUE)
+
+cqcheck(fit3, v = c("Year", "doy"), nbin = c(15, 12), scatter = TRUE)
+```
+If a bin is red (green) this means that the fraction of responses falling below the fit is smaller (larger) than (qu = .95). Bright colors means that the deviation is statistically significant. 
+
+Multiple quantiles
+```{r}
+quSeq <- c(.1, .25, .5, .75, .9)
+set.seed(4663)
+fit4 <- mqgam(list(form = MaxTemp ~ s(doy, bs = "cc") + s(Year),
+                      ~ s(doy, bs = "cc")),
+             data = TLH.df, 
+             qu = quSeq)
+
+qdo(fit4, qu = .9, summary)
+```
+What about the posterior predictive distributions?
+
+
+```{r}
 fit4 <- qgam(list(form = MinTemp ~ s(Year) + s(doy, bs = "cc"), ~ s(doy, bs = "cc")),
              data = TLH.df, qu = .1)
 summary(fit4)
