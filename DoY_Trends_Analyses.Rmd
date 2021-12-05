@@ -177,17 +177,17 @@ The minimal distance between consecutive quantiles is 2 degrees. There is no cro
 Use a cyclic effect for doy to ensure that the seasonal effect has the same value on the 31st of December and on the 1st of January. An interaction term Year:doy is not significant.
 ```{r}
 library(qgam)
-fit0 <- qgam(list(form = MinTemp ~ s(doy, bs = "cc"), 
+fit0 <- qgam(list(form = Qlm ~ s(doy, bs = "cc"), 
                                  ~ s(doy, bs = "cc")),
-             data = TLH.df, qu = .1)
+             data = TLH.df, qu = .9)
 
-fit3 <- qgam(list(form = MinTemp ~ s(doy, bs = "cc") + s(Year), 
-                                 ~ s(doy, bs = "cc")),
-             data = TLH.df, qu = .1)
+fit3 <- qgam(list(form = Qlm ~ s(doy, bs = "cc") + s(Year), 
+                             ~ s(doy, bs = "cc")), 
+             data = TLH.df, qu = .9)
 
-fit4 <- qgam(list(form = MaxTemp ~ s(doy, bs = "cc") + s(Year) + doy:Year, 
-                                 ~ s(doy, bs = "cc")),
-             data = TLH.df, qu = .95)
+fit4 <- qgam(list(form = Qlm ~ s(doy, bs = "cc") + s(Year) + doy:Year, 
+                             ~ s(doy, bs = "cc")),
+             data = TLH.df, qu = .9)
 ```
 
 Performance package https://github.com/easystats/performance
@@ -208,7 +208,7 @@ head(fit3$family$getCo(), 5)
 
 newdata.df <- expand_grid(doy = 1:366, 
                           Year = c(1943, 2020))
-predictions.df <- predict(fit4, 
+predictions.df <- predict(fit3, 
                           newdata = newdata.df,
                           se = TRUE) |>
   as.data.frame() |>
