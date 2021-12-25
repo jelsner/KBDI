@@ -5,41 +5,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-Prescribed fire NOT prescribed burn. Lots of resources are required for planning and implementing a prescribed fire. Seasonal forecasts can help with planning of those resources.
-
-Fires remove fuels for subsequent fires.
-
-What is the relationship between dryness of the soil and lightning-kindled wildfire activity in the ANF on the seasonal time scale? Quantifying the statistical relationship between soil dryness and lightning-kindled wildfire activity in the ANF.
-
-(1) By how much does the threat of a wildfire increase during the fire season with increases in soil dryness during the dry season?
-(2) What climate factors are associated with soil dryness during the dry season?
-(3) Is there an increasing risk of wildfires in the ANF?
-
-The increasing risk of fire in the ANF. Is the risk of fire in the ANF increasing? Why we need this paper: Uses an index that assesses the risk of fire rather than just rainfall deficit. Looks at changes during the fire season.
-
-KBDI assesses the risk of fire. KBDI is computed from daily rainfall and high temperature. These data are available at TLH NWS. Establish that TLH represents well the ANF by showing a correlation map between KBDI computed at TLH and PRISM data across the ANF. The PRISM dataset should not be used to calculate century-long climate trends due to non-climatic variations from to station equipment and location changes, openings and closings, varying observation times, and the use of relatively short-term networks.
-
-https://www.predictiveservices.nifc.gov/outlooks/monthly_seasonal_outlook.pdf
-https://iopscience.iop.org/article/10.1088/1748-9326/ab83a7
-https://www.sciencedirect.com/science/article/abs/pii/S0048969719318315
-
-Brown, Emily K., Wang, Jiali, and Feng, Yan. US wildfire potential: a historical view and future projection using high-resolution climate data. United States: N. p., 2021. Web. doi:10.1088/1748-9326/aba868.
-
-Abatzoglou and Williams (2016) found that the correlation coefficient between KBDI and burned area over the forests of southwestern United States is 0.6–0.8.
-
-Title: Seasonal frequency and severity of lightning-sparked wildfires and their relationship to soil dryness and climate variability in the Apalachicola National Forest
-
-The ANF contains some of Florida's largest intact natural areas where lightning-sparked fires are a seasonally common occurrence and wildfire frequency and size distributions are not substantially influenced by confounding effects of urbanization, agricultural land or roadways. While this publicly managed natural area deploys various proactive and reactive fire suppression resources, the incidence of large lightning-sparked fires is still largely a climatic and fuels-driven phenomenon. The landscape is among the largest remaining semi-wild areas of fire-maintained long-leaf pine savanna in the Southeast United States. 
-
-R version 4.1.0 (2021-05-18) -- "Camp Pontanezen"
-
-Fire is controlled by two things: ignition and fuel. Climate change impacts both by increasing flammability (the likelihood something will burn) and the availability of dead, dry stuff on the landscape to burn. People and lightning are ignitors. 
-
-Wildfires require a spark and fuel. In the United States, half of wildfires are initiated by lighting. The other half are human-caused — frequently started by power lines, cigarettes, cars, camp fires or arson. In recent years, there’s been an abundance of very dry fuel. Drought and high heat can kill trees and dry out dead grass, pine needles, and any other material on the bottom of the forest floor that act as kindling when a fire sweeps through a forest. Wildfire experts see the signature of climate change in the dryness, high heat and longer fire season that have made these fires more extreme. “We wouldn’t be seeing this giant ramp up in fire activity as fast as it is happening without climate change,” said Park Williams, a climate scientist at UCLA. 
-
-https://www.who.int/health-topics/wildfires#tab=tab_1
-
-Like air pollution, wildfire smoke — and particularly the concentration of PM 2.5, or particles smaller than 2.5 microns — can affect the respiratory and cardiovascular systems, said Colleen Reid, an environmental epidemiologist and health geographer at the University of Colorado Boulder.
+R version 4.1.2 (2021-11-01) -- "Bird Hippie"
 
 ## Get required packages
 ```{r}
@@ -117,21 +83,33 @@ From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/_metadata_RDS
 
 Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2018. It is the fourth update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as a Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG), including an updated wildfire-cause standard (approved August 2020). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. In addition to incorporating data for 2016-2018, some previously unavailable nonfederal wildfire records for the period 1999-2015 were acquired either directly from the state fire services (NH, NJ) or indirectly from an updated National Association of State Foresters database (AR, AZ, CA, CO, FL, HI, ID, IL, OK, SD) and added. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 2.17 million geo-referenced wildfire records, representing a total of 165 million acres burned during the 27-year period. Identifiers necessary to link the point-based, final-fire-reporting information to published large-fire-perimeter and operational-situation-reporting datasets are included.
 
-NOT USED: See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/
+NOT USED: See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/ and https://www.mtbs.gov/
 ```{r, eval=FALSE}
 Fires2.sf <- st_read(dsn = "NIFC_ANF_firesshapefile",
                      layer = "NIFCboundedfires")
 
 table(year(Fires2.sf$FireDiscov))
+
+Fires3.sf <- st_read(dsn = "mtbs_fod_pts_data",
+                     layer = "mtbs_FODpoints_DD") |>
+  st_intersection(ANF_Boundary.sf) |>
+  mutate(Date = as.Date(Ig_Date))
+
+tmap_mode("view")
+tm_shape(ANF_Boundary.sf) +
+  tm_borders() +
+tm_shape(Fires3.sf) +
+  tm_dots(size = .03, 
+          col = "orange")
 ```
 
 Make a bar chart of frequency by cause.
 ```{r}
 table(Fires.sf$NWCG_GENERAL_CAUSE)
 
-df <- Fires.sf %>%
-  st_drop_geometry() %>%
-  group_by(NWCG_GENERAL_CAUSE) %>%
+df <- Fires.sf |>
+  st_drop_geometry() |>
+  group_by(NWCG_GENERAL_CAUSE) |>
   summarize(nF = n(),
             perF = nF/nrow(Fires.sf))
 
@@ -163,16 +141,25 @@ tm_shape(Airport.sf) +
   tm_dots(size = .1, col = "black")
 ```
 
-Create a new data frame containing only the natural-caused wildfires.
+Create a new data frame containing only the natural-caused wildfires and one containing all fires.
 ```{r}
-NaturalFires.sf <- Fires.sf %>%
-  filter(NWCG_GENERAL_CAUSE == "Natural") %>%
+NaturalFires.sf <- Fires.sf |>
+  filter(NWCG_GENERAL_CAUSE == "Natural") |>
   mutate(Year = year(DISCOVERY_DATE),
          Month = month(DISCOVERY_DATE),
          Day = day(DISCOVERY_DATE),
          YDay = yday(DISCOVERY_DATE),
          YDayF = factor(YDay, levels = as.character(1:366)),
-         SizeF = factor(FIRE_SIZE_CLASS, ordered = TRUE)) %>%
+         SizeF = factor(FIRE_SIZE_CLASS, ordered = TRUE)) |>
+  dplyr::select(Year, Month, Day, YDay, YDayF, Size = FIRE_SIZE, SizeF)
+
+AllFires.sf <- Fires.sf |>
+  mutate(Year = year(DISCOVERY_DATE),
+         Month = month(DISCOVERY_DATE),
+         Day = day(DISCOVERY_DATE),
+         YDay = yday(DISCOVERY_DATE),
+         YDayF = factor(YDay, levels = as.character(1:366)),
+         SizeF = factor(FIRE_SIZE_CLASS, ordered = TRUE)) |>
   dplyr::select(Year, Month, Day, YDay, YDayF, Size = FIRE_SIZE, SizeF)
 ```
 
