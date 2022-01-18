@@ -507,7 +507,7 @@ count_cFiresYrs.df <- count_cFires.df %>%
   filter(year(Date) <= 2012)
 
 lightningYrs.df <- lightning.df %>%
-  filter(year(SEQDAY) >= 1992)
+  filter(year(SEQDAY) >= 1992 & year(SEQDAY) <= 2012)
 ```
 
 merge lightning count data and counted fire data
