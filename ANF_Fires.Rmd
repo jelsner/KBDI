@@ -71,19 +71,8 @@ Fires.sf <- st_read(dsn = "Data/FPA_FOD_20210617.gpkg",
   filter(STATE == "FL") |>
   st_transform(crs = st_crs(ANF_Boundary.sf)) |>
   st_intersection(ANF_Boundary.sf)
-Sys.time() - t0  # ~ 4 min on desktop 
+Sys.time() - t0  # ~ 4 min on desktop, ~ 2.1 min on new macbook
 ```
-
-These data were collected using funding from the U.S. Government and can be used without additional permissions or fees. If you use these data in a publication, presentation, or other research product please use the following citation:
-
-Short, Karen C. 2021. Spatial wildfire occurrence data for the United States, 1992-2018 [FPA_FOD_20170508]. 5th Edition. Fort Collins, CO: Forest Service Research Data Archive.
-https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.5
-
-From: https://www.fs.usda.gov/rds/archive/products/RDS-2013-0009.5/_metadata_RDS-2013-0009.5.html
-`FIRE_SIZE` = Estimate of acres within the final perimeter of the fire.
-`FIRE_SIZE_CLASS` = Code for fire size based on the number of acres within the final fire perimeter expenditures (A=greater than 0 but less than or equal to 0.25 acres, B=0.26-9.9 acres, C=10.0-99.9 acres, D=100-299 acres, E=300 to 999 acres, F=1000 to 4999 acres, and G=5000+ acres).
-
-Abstract: This data publication contains a spatial database of wildfires that occurred in the United States from 1992 to 2018. It is the fourth update of a publication originally generated to support the national Fire Program Analysis (FPA) system. The wildfire records were acquired from the reporting systems of federal, state, and local fire organizations. The following core data elements were required for records to be included in this data publication: discovery date, final fire size, and a point location at least as precise as a Public Land Survey System (PLSS) section (1-square mile grid). The data were transformed to conform, when possible, to the data standards of the National Wildfire Coordinating Group (NWCG), including an updated wildfire-cause standard (approved August 2020). Basic error-checking was performed and redundant records were identified and removed, to the degree possible. In addition to incorporating data for 2016-2018, some previously unavailable nonfederal wildfire records for the period 1999-2015 were acquired either directly from the state fire services (NH, NJ) or indirectly from an updated National Association of State Foresters database (AR, AZ, CA, CO, FL, HI, ID, IL, OK, SD) and added. The resulting product, referred to as the Fire Program Analysis fire-occurrence database (FPA FOD), includes 2.17 million geo-referenced wildfire records, representing a total of 165 million acres burned during the 27-year period. Identifiers necessary to link the point-based, final-fire-reporting information to published large-fire-perimeter and operational-situation-reporting datasets are included.
 
 NOT USED: See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/ and https://www.mtbs.gov/
 ```{r, eval=FALSE}
@@ -130,8 +119,6 @@ ggplot(df,
        caption = "Data source: Short, Karen (2021)") +
   theme_minimal()
 ```
-
-About 40% of all wildfires in the ANF are of natural origin. The next leading cause is arson accounting for just over 16% of all wildfires in the forest.
 
 Create an interactive map showing the locations of all fires over the period of record.
 ```{r}
@@ -203,7 +190,7 @@ W <- ANF_Boundary.sf %>%
   as.owin()
 
 NF.ppp <- NaturalFires.sf %>% 
-  filter(Month %in% c(5, 6, 7)) %>%
+#  filter(Month %in% c(5, 6, 7)) %>%
   st_geometry() %>%
   st_transform(crs = 2779) %>%
   as_Spatial() %>% 
@@ -236,7 +223,7 @@ NF.ppp %>%
                alternative = "clustered")
 ```
 
-There is some weak evidence that the locations are clustered. But the evidence is not significant.
+There is some weak evidence that the locations are clustered. But the evidence is not strong.
 
 Compute Ripley K using the `Kstat()` function
 ```{r}
@@ -334,6 +321,14 @@ ggplot(data = df,
        subtitle = "Larger and darker color points indicate more fires")
 ```
 
+Annual stats
+```{r}
+df$Year[df$nFires == 0]
+max(df$nFires)
+df$Year[df$nFires == max(df$nFires)]
+mean(df$nFires); var(df$nFires)
+```
+
 Seasonal temporal autocorrelation in frequency and total area burned.
 ```{r}
 plot(acf(df$nFires))
@@ -367,7 +362,8 @@ FLfips <- fips_codes %>%
   filter(county %in% c("Liberty County", "Wakulla County")) %>%
   pull(county_code)
 
-fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
+fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12",
+             FLfips, "-BETA.csv")
 
 df <- data.frame()
 for(i in 1:length(fn)){
@@ -443,12 +439,19 @@ TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 95
 TLH.df$Rainfall24[is.na(TLH.df$PRCP)] <- c(.1, .3, 0, .1, 0)
 TLH.df$Rainfall24mm[is.na(TLH.df$PRCP)] <- c(3, 8.9, 0, 2.5, 0)
 
-( AnnualRainfall <- TLH.df |>
+AnnualRainfall <- TLH.df |>
   filter(Year >= 1943) |>  # complete data started in March 1943
   group_by(Year) |>
-  summarize(totalRainfall = sum(Rainfall24)) |>
-  pull(totalRainfall) |>
-  mean() )
+  summarize(totalRainfall = sum(Rainfall24),
+            totalRainfallcm = totalRainfall * 2.54)
+
+AnnualRainfall |> 
+  summarize(avgRainfall = mean(totalRainfallcm),
+            sdRainfall = sd(totalRainfallcm),
+            varRainfall = var(totalRainfallcm))
+AnnualRainfall |>
+  arrange(totalRainfallcm)
+ 
 ```
 
 Plot monthly values of average daily high temperature and average month rainfall.
@@ -456,7 +459,7 @@ Plot monthly values of average daily high temperature and average month rainfall
 df <- TLH.df %>%
   filter(Year >= 1943 & Year <= 2020) %>%
   group_by(month) %>%
-  summarize(totalRain = sum(Rainfall24mm),
+  summarize(totalRain = sum(Rainfall24mm / 10),
             avgMonthlyTotalRain = totalRain/(2020 - 1943 + 1),
             avgDailyHighTemp = mean(MaxTemp))
 
@@ -466,10 +469,10 @@ p1 <- ggplot(data = df,
         scale_fill_distiller(palette = "Greens",
                          direction = 1, 
                          guide = 'none') +
-        theme_dark() +
-        labs(x = "", y = "(mm)",
-             title = "Average monthly rainfall amount in the Apalachicola National Forest",
-             subtitle = "1943-2020")
+        theme_minimal() +
+        labs(x = "", y = "(cm)",
+             title = "Monthly rainfall and average daily high temperature",
+             subtitle = "NWSFO TLH: 1943-2020")
 
 
 p2 <- ggplot(data = df,
@@ -479,10 +482,8 @@ p2 <- ggplot(data = df,
                               direction = 1, 
                               guide = 'none') +
         scale_y_continuous(limits = c(60, 100)) +
-        theme_dark() +
-        labs(x = "", y = "(°F)",
-             title = "Average daily high temperature in the Apalachicola National Forest",
-             subtitle = "1943-2020")
+        theme_minimal() +
+        labs(x = "", y = "(°F)")
 
 library(patchwork)
 
