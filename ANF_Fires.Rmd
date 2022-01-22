@@ -532,7 +532,7 @@ ggplot(mapping = aes(y = MonthF,
        title = "May through November is the dry season in the Apalachicola National Forest",
        subtitle = "Average soil moisture deficit (mm)",
        caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
-  theme_dark() 
+  theme_minimal() 
 ```
 
 Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
@@ -547,23 +547,6 @@ ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
        subtitle = "Daily soil moisture deficit (mm)", 
-       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
-
-TLH.df %>%
-  group_by(month, Year) %>%
-  summarise(Avg = mean(Qlm)) %>%
-  ggplot(aes(x = Year, y = Avg, color = Avg)) +
-  geom_smooth(method = lm, se = FALSE, color = "gray70") +
-  geom_point() +  
-  scale_color_gradientn(colors = terrain.colors(5), guide = "none") +
-  scale_y_continuous(limits = c(0, 201)) +
-  scale_x_continuous(limits = c(1940, 2020), breaks = c(1950, 1980, 2010)) +
-  ylab("") + xlab("") +
-  facet_wrap(~ month, ncol = 12) +
-  theme_dark() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
-       subtitle = "Monthly average soil moisture deficit (mm) by year with trend line (gray)", 
        caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
 ```
 
