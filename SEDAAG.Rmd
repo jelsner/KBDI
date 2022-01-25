@@ -391,7 +391,7 @@ countfires.df <- anf_LF.sf %>%
 Merge the KBDI and fire count data sets
 ```{r}
 KBDI_fire.df <- left_join(x = TLH_fireYrs.df, y = countfires.df, by = c("Date" = "Date")) %>%
-  select(Date, FireCount, Ql)
+  select(Date, FireCount, Ql, DroughtIndex)
 
 KBDI_fire.df$fireBool <- !is.na(KBDI_fire.df$FireCount)
 ```
@@ -419,6 +419,25 @@ ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
     subtitle = "Line of Fitted Values With a 95% Confidence Interval",
     caption = "Period of Record: 1992 to 2018")
 ```
+
+```{r}
+extract_eq(glmQl, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
+```
+
+
+$$
+\log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -5.5013 + 0.0049(\operatorname{Ql})
+$$
+
+Create a data frame to show a further distribution of the data
+```{r}
+KBDI_fire.df %>%
+  group_by(DroughtIndex) %>%
+  count(DroughtIndex)
+
+ggplot(KBDI_fire.df, aes(x = DroughtIndex)) + geom_histogram()
+```
+
 
 Another way of plotting
 ```{r}
@@ -837,6 +856,7 @@ Equation of glm1 regression line
 ```{r}
 extract_eq(glm1, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
+
 
 
 
