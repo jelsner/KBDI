@@ -569,6 +569,14 @@ lightning count is statistically significant to occurrence of wildfires.
 summary(glmLightning)
 ```
 
+```{r}
+extract_eq(glmLightning, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
+```
+
+$$
+\log\left[ \frac { \widehat{P( \operatorname{FireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{FireBool} = \operatorname{TRUE} )} } \right] = -3.2102 + 0.0012(\operatorname{LightningCount})
+$$
+
 Filtered to fire season months
 ```{r}
 light_firesFS.df <- light_fires.df %>%
@@ -857,7 +865,9 @@ Equation of glm1 regression line
 extract_eq(glm1, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
 
-
+$$
+\log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.7296 + 0.0046(\operatorname{KBDI\_April30})
+$$
 
 
 ```{r}
