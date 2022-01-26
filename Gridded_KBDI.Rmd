@@ -228,8 +228,8 @@ TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
          MinTemp = TMIN,
          Rainfall24 = PRCP,
          Rainfall24 = replace_na(Rainfall24, 0),
-         Rainfall24mm = Rainfall24 * 25.4) %>%
-  filter(Year >= t0 & Year <= t1)
+         Rainfall24mm = Rainfall24 * 25.4) |>
+  filter(Year >= t0 & Year <= t1) # to match the PRISM years
 
 TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
 DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
@@ -247,17 +247,17 @@ for(i in 1:dim(TP.st)[1]){
   for(j in 1:dim(TP.st)[2]){
     Qlm <- TP.st$Qlm[i, j, ]
     cc <- cor(Qlm, TLH.df$Qlm)
-    R.a[i, j] <- cc
+    R.a[i, j] <- cc * cc
   }
 }
 
 R.st <- st_as_stars(R.a) |>
-  setNames("Correlation")
+  setNames("R^2")
 attr(R.st, "dimensions")$y <- attr(TP.st, "dimensions")$y # replace dimensions
 attr(R.st, "dimensions")$x <- attr(TP.st, "dimensions")$x
 
 ggplot() +  
-  geom_stars(data = R.st["Correlation"], alpha = .8) + 
+  geom_stars(data = R.st["R^2"], alpha = .8) + 
   scale_fill_distiller(limits = c(0, 1), palette = "Blues", direction = 1) +
   coord_equal() +
   theme_map() +
@@ -274,6 +274,26 @@ tm_shape(ANF_Boundary.sf) +
   tm_borders(col = "black")
 ```
 
+
+```{r}
+library(USAboundaries)
+FL_Counties.sf <- us_counties(states = "FL",
+                              resolution = "high") %>%
+  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
+  st_crop(st_bbox(st_buffer(ANF_Boundary.sf, dist = .25)) )
+
+ggplot() +
+  geom_sf(data = FL_Counties.sf, fill = "transparent", 
+          col = "gray80") +
+  geom_stars(data = R.st) +
+  scale_fill_distiller(palette = "Blues",
+                       direction = 1,
+                       na.value = "transparent") +
+  geom_sf(data = ANF_Boundary.sf, fill = "transparent") +
+  theme_bw() +
+  labs(x = "", y = "", fill = "% Variance\nExplained")
+```
+
 ## Convert space-time object to vector simple feature and merge correlations
 
 See https://r-spatial.github.io/stars/articles/stars5.html#switching-between-vector-and-raster-in-stars-objects-1
@@ -283,6 +303,20 @@ R.sf <-
   round(digits = 1) |>
   st_as_sf(merge = TRUE)
 plot(R.sf)
+
+ggplot() +
+  geom_sf(data = FL_Counties.sf, fill = "transparent", 
+          col = "gray80") +
+  geom_sf(data = R.sf, 
+          color = 'transparent',
+          mapping = aes(fill = as.character(`R^2`))) +
+  scale_fill_brewer(palette = "Blues",
+                    labels=c('[.6, .7)', '[.7, .8)',
+                             '[.8, .9)', '[.9, 1]')) +
+  geom_sf(data = ANF_Boundary.sf, fill = "transparent") +
+  theme_bw() +
+  labs(x = "", y = "", fill = "% Variance\nExplained")
+
 ```
 
 
