@@ -869,6 +869,40 @@ $$
 \log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.7296 + 0.0046(\operatorname{KBDI\_April30})
 $$
 
+Exploring the confidence intervals
+```{r}
+temp.df <- data.frame(KBDI_April30 = 350.1028) #mean KBDI value
+predict.glm(glm1, newdata = temp.df, type = "response", se.fit = TRUE)
+```
+
+create histogram to show the distribution of the data
+April 30 KBDI
+```{r}
+ggplot(seasonFires.sf, aes(x = KBDI_April30)) + 
+  geom_histogram(aes(y = ..density..), binwidth = 50, color = "darkblue", fill = "lightblue") +
+  scale_x_continuous(breaks = seq(0,700, 100)) +
+  geom_density(alpha = .2, fill = 'blue') +
+  geom_vline(aes(xintercept = mean(KBDI_April30)),
+             color = "red", linetype = "solid", size = 1) +
+  geom_vline(aes(xintercept = median(KBDI_April30)),
+             color = "black", linetype = "dashed", size = 1)
+  
+```
+
+Fires
+```{r}
+ggplot(seasonFires.sf, aes(x = nFIRES)) + 
+  geom_histogram(aes(y = ..density..), binwidth = 5, color = "darkblue", fill = "lightblue") +
+  scale_x_continuous(breaks = seq(0, 50, 5)) +
+  geom_density(alpha = .2, fill = 'blue') +
+  geom_vline(aes(xintercept = mean(nFIRES)),
+             color = "red", linetype = "solid", size = 1) +
+  geom_vline(aes(xintercept = median(nFIRES)),
+             color = "black", linetype = "dashed", size = 1)
+```
+
+
+
 
 ```{r}
 # Install from CRAN
