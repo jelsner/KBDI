@@ -157,7 +157,7 @@ for(i in 1:dim(TP.st)[1]){
 TP.st$NetR <- NetR.a
 ```
 
-Compute daily drought index at each grid point.
+Compute daily drought index at each grid point. About 20 seconds.
 ```{r}
 source("droughtIndex.R")
 
@@ -181,7 +181,7 @@ TP.st$DroughtIndex <- DI.a
 
 Check with maps.
 ```{r}
-X <- filter(TP.st, time >= ymd("2017-04-01"), time <= ymd("2017-04-08"))
+X <- filter(TP.st, time >= ymd("2010-04-01"), time <= ymd("2010-04-08"))
 
 p1 <- ggplot() +  
   geom_stars(data = X["MaxTemp"], alpha = .8) + 
@@ -269,7 +269,7 @@ ggplot() +
 library(tmap)
 
 tm_shape(R.st) +
-  tm_raster() +
+  tm_raster(palette = "Blues") +
 tm_shape(ANF_Boundary.sf) +
   tm_borders(col = "black")
 ```
