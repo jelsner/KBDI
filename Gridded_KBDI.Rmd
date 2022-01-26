@@ -34,14 +34,15 @@ prism_set_dl_dir("Data/PRISM/")
 
 ts <- proc.time()
 get_prism_dailys(type = "ppt",
-                 minDate = "2018-01-01",
-                 maxDate = "2018-12-31")
+                 minDate = "2009-01-01",
+                 maxDate = "2015-12-31")
 proc.time() - ts
 ```
 
-Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`).
+Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`). About 4 minutes to read ten years of daily temperature and rainfall.
 ```{r}
-t0 <- 2017
+ts <- proc.time()
+t0 <- 2009
 t1 <- 2018
 dates <- seq(as_date(paste0(t0, "-01-01")), 
              as_date(paste0(t1, "-12-31")), 
@@ -63,7 +64,10 @@ ppt <- read_stars(file_list2, along = list(time = dates)) |>
   setNames("Precip_mm")
 TP.st <- c(tmax, ppt)
 TP.st
+proc.time() - ts
+```
 
+```{r}
 X <- filter(tmax, 
             time == ymd("2018-01-01"))
 plot(X)
@@ -77,11 +81,11 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
   filter(NFSLANDU_2 == "Apalachicola National Forest") |>
   st_transform(crs = st_crs(TP.st)) 
 
-TP.st <- TP.st[ANF_Boundary.sf] # same as st_crop()
+# TP.st <- TP.st[ANF_Boundary.sf] # same as st_crop()
 TP.st <- TP.st |>
   st_crop(ANF_Boundary.sf)
 
-X <- filter(TP.st["Tmax_C"], time == ymd("2017-01-10"))
+X <- filter(TP.st["Tmax_C"], time == ymd("2010-01-10"))
 X <- round(X, digits = 0)
 
 plot(st_geometry(ANF_Boundary.sf))
