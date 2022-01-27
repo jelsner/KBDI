@@ -964,6 +964,24 @@ temp <- seasonFires.sf %>%
 glm2 <- glm(nFIRES ~ KBDI_April30 + acresBurned, data = temp, family = poisson)
 ```
 
+Include fitted values in temp table
+```{r}
+temp$glm2_fit <- glm2$fitted.values
+```
+
+Distribution of acres burned
+```{r}
+ggplot(temp, aes(x = acresBurned)) + 
+  geom_histogram(aes(y = ..density..), binwidth = 1000, color = "darkblue", fill = "lightblue") +
+  scale_x_continuous(breaks = seq(0, 35000, 4000)) +
+  geom_density(alpha = .2, fill = 'blue') +
+  geom_vline(aes(xintercept = mean(acresBurned)),
+             color = "red", linetype = "solid", size = 1) +
+  geom_vline(aes(xintercept = median(acresBurned)),
+             color = "black", linetype = "dashed", size = 1)
+```
+
+
 
 Is acres burned statistically significant when standing alone? (p-value = 0.0657)
 ```{r}
