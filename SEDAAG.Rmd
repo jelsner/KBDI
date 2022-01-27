@@ -969,6 +969,28 @@ Include fitted values in temp table
 temp$glm2_fit <- glm2$fitted.values
 ```
 
+change in fitted values
+```{r}
+temp$change <- temp$glm1_fit - temp$glm2_fit
+```
+
+
+```{r}
+extract_eq(glm2, use_coefs = TRUE, coef_digits = 6, fix_signs = FALSE)
+```
+
+$$
+\log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.735669 + 0.004732(\operatorname{KBDI\_April30}) + -1.1e-05(\operatorname{acresBurned})
+$$
+
+Exploring the confidence intervals
+```{r}
+temp.df <- data.frame(KBDI_April30 = 559.35924, acresBurned = 2034.00)
+predict.glm(glm2, newdata = temp.df, type = "response", se.fit = TRUE)
+```
+
+
+
 Distribution of acres burned
 ```{r}
 ggplot(temp, aes(x = acresBurned)) + 
