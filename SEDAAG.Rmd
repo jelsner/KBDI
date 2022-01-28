@@ -569,6 +569,18 @@ lightning count is statistically significant to occurrence of wildfires.
 summary(glmLightning)
 ```
 
+Include fitted values in the table
+```{r}
+light_fires.df$fit <- glmLightning$fitted.values
+```
+
+Exploring the confidence intervals
+```{r}
+temp.df <- data.frame(LightningCount = 2794)
+predict.glm(glmLightning, newdata = temp.df, type = "response", se.fit = TRUE)
+```
+
+
 ```{r}
 extract_eq(glmLightning, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
@@ -871,7 +883,7 @@ $$
 
 Exploring the confidence intervals
 ```{r}
-temp.df <- data.frame(KBDI_April30 = 350.1028) #mean KBDI value
+temp.df <- data.frame(KBDI_April30 = 0)
 predict.glm(glm1, newdata = temp.df, type = "response", se.fit = TRUE)
 ```
 
@@ -985,7 +997,7 @@ $$
 
 Exploring the confidence intervals
 ```{r}
-temp.df <- data.frame(KBDI_April30 = 559.35924, acresBurned = 2034.00)
+temp.df <- data.frame(KBDI_April30 = 0, acresBurned = 518.07)
 predict.glm(glm2, newdata = temp.df, type = "response", se.fit = TRUE)
 ```
 
