@@ -198,10 +198,10 @@ ggplot(df,
   ylab("") + xlab("") +
   labs(title = "Lightning is the predominant spark for wildfires\nin the Apalachicola National Forest",
        subtitle = "Based on data from 1992-2018",
-       caption = "Data source: Short, Karen (2021)") +
+       caption = "Data source: Short, Karen (2021)")
   #theme_minimal()
-  theme(plot.title = element_text(size = 15),
-        axis.text = element_text(size = 12))
+  #theme(plot.title = element_text(size = 15),
+        #axis.text = element_text(size = 12))
 
 #dev.off()
 ```
@@ -224,7 +224,7 @@ ggplot() +
                        "F: 1000-4999",
                        "G: 5000+")) +
   theme_bw() +
-  labs(title = "Location of natural-caused wildfires in the Apalachicola National Forest (1992-2018)",
+  labs(title = "Location of natural-caused wildfires in the\nApalachicola National Forest (1992-2018)",
        subtitle = "Darker color points indicates the fire resulted in a larger burn area",
        caption = "Data source: Short, Karen (2021)")
 ```
@@ -254,10 +254,10 @@ ggplot(data = df,
   labs(title = "Over 80% of lightning-sparked wildfires in the\nApalachicola National Forest occur during May-July",
        subtitle = "Percentage of all lightning-sparked wildfires by month",
        caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
-  #theme_minimal()
+  theme_minimal() +
   theme(plot.title = element_text(size = 15),
-        axis.text = element_text(size = 10)) +
-  theme_dark()
+        axis.text = element_text(size = 10)) 
+  #theme_dark()
 ```
 
 Plot average monthly rainfall and max temperatures
@@ -321,13 +321,15 @@ lightningAvg.df %>%
                        x = avgLightningCount,
                        fill = avgLightningCount)) +
   geom_col() +
-  scale_fill_gradientn(colors = brewer.pal(4, "OrRd"),
+  #scale_fill_gradientn(colors = brewer.pal(4, "OrRd"),
+  scale_fill_gradientn(colors = brewer.pal(4, "Blues"),                     
                        guide = "none") +
   labs(x = "", y = "",
-       title = "The Lightning Season Peaks in July in the Apalachicola National Forest",
-       subtitle = "Average Number of Lightning Strikes Per Month",
-       caption = "Period of record 1986 - 2012, Data Source: National Centers for Environmental Information NOAA") +
-  theme_dark()
+       title = "Lightning in the Apalachicola National Forest peaks from June-August",
+       subtitle = "Daily average number of cloud-to-ground lightning strikes by month",
+       caption = "Period of record 1986 - 2012, Data Source: NCEI") +
+  #theme_dark()
+  theme_minimal()
 ```
 
 Monthly average soil moisture deficit.
