@@ -71,7 +71,7 @@ Fires.sf <- st_read(dsn = "Data/FPA_FOD_20210617.gpkg",
   filter(STATE == "FL") |>
   st_transform(crs = st_crs(ANF_Boundary.sf)) |>
   st_intersection(ANF_Boundary.sf)
-Sys.time() - t0  # ~ 4 min on desktop, ~ 2.1 min on new macbook
+Sys.time() - t0  # ~ 4 min on desktop computer, ~ 2.1 min on macbook
 ```
 
 NOT USED: See also NASA burned-area data https://firms.modaps.eosdis.nasa.gov/ and https://www.mtbs.gov/
@@ -104,7 +104,7 @@ df <- Fires.sf |>
   summarize(nF = n(),
             perF = nF/nrow(Fires.sf))
 
-ggplot(df,
+ggplot(data = df,
        mapping = aes(y = reorder(NWCG_GENERAL_CAUSE, perF),
                      x = perF,
                      fill = perF)) +
@@ -127,7 +127,7 @@ tm_shape(ANF_Boundary.sf) +
 tm_shape(Fires.sf) +
   tm_bubbles(size = "FIRE_SIZE", col = "orange") +
 tm_shape(Airport.sf) +
-  tm_dots(size = .1, col = "black")
+  tm_dots(size = .1, col = "black") 
 ```
 
 Create a new data frame containing only the natural-caused wildfires and one containing all fires.
@@ -321,7 +321,7 @@ ggplot(data = df,
        subtitle = "Larger and darker color points indicate more fires")
 ```
 
-Annual stats
+Annual statistics
 ```{r}
 df$Year[df$nFires == 0]
 max(df$nFires)
@@ -339,7 +339,7 @@ cor.test(df$nFires[-1], df$totalAcresBurned[-24])
 
 No significant inter-seasonal autocorrelation. Significant correlation between number of fires and burned area as expected.
 
-Possible project: Make fire size an ordered factor and create a model that predicts the probability by size category similar to what we did for predicting tornado EF rating.
+Future work: Make fire size an ordered factor and create a model that predicts the probability by size category similar to what we did for predicting tornado EF rating.
 ```{r}
 NaturalFires.sf |>
   group_by(SizeF) |>
@@ -347,9 +347,6 @@ NaturalFires.sf |>
             Range1 = range(Size)[1],
             Range2 = range(Size)[2])
 ```
-
-https://www.nifc.gov/nicc/predictive/outlooks/outlooks.htm
-https://www.cpc.ncep.noaa.gov/products/predictions/90day/
 
 ## Get lightning data
 
@@ -412,7 +409,7 @@ https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
 Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
 AWND = Average daily wind speed (tenths of meters per second) 
 
-Import the summary of the day data and add columns to the data frame. Assign zero rainfall on days with missing values.
+Import the summary of the day data and add columns to the data frame.
 ```{r}
 TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
                    stringsAsFactors = FALSE,
@@ -522,11 +519,11 @@ ggplot(mapping = aes(y = MonthF,
                      x = AvgSoilMoistureDeficit,
                      fill = AvgSoilMoistureDeficit)) +
   geom_col() +
-#  scale_fill_distiller(palette = "BrBG",
-#                       direction = -1,
-#                       guide = 'none') +
-  scale_fill_gradientn(colors = terrain.colors(5),
+  scale_fill_distiller(palette = "BrBG",
+                       direction = -1,
                        guide = 'none') +
+#  scale_fill_gradientn(colors = terrain.colors(5),
+#                       guide = 'none') +
 #  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = 'none') +
   labs(x = "", y = "",
        title = "May through November is the dry season in the Apalachicola National Forest",
@@ -535,11 +532,14 @@ ggplot(mapping = aes(y = MonthF,
   theme_minimal() 
 ```
 
-Make some trend plots. The second plot is statistically more realistic because it removes the temporal autocorrelations.
+Make some trend plots. This plot is statistically more realistic because it removes the temporal autocorrelations.
 ```{r}
 ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   geom_line() +
-  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
+#  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
+  scale_color_distiller(palette = "BrBG",
+                        direction = -1,
+                        guide = 'none') +
   ylab("") + xlab("") +
   geom_smooth(method = lm, se = FALSE, color = "white") +
   facet_wrap(~ month, ncol = 12) +
@@ -694,7 +694,10 @@ ggplot(data = TLH.df,
   geom_tile() +
   scale_y_reverse(breaks = seq(1943, 2020, 4)) +
   scale_x_date(date_breaks = "month", date_labels = "%b", position = "top") +
-  scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
+#  scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
+   scale_fill_brewer(palette = "BrBG",
+                       direction = -1,
+                       name = "") +
   ylab("") + xlab("") +
   theme_minimal() +
   guides(fill = guide_legend(reverse = TRUE)) +
@@ -703,19 +706,21 @@ ggplot(data = TLH.df,
        caption = "Period of record: 1949-2019, Data source: NWSFO Tallahassee")
 ```
 
-Number of days per year with KBDI above 650.
+Number of days per year with KBDI above 650 (hundredths of an inch) (Qlm = 165.1)
 ```{r}
 library(MASS)
 
-TLH.df %>%
-  group_by(Year) %>%
-  summarize(nD = sum(Ql > 650)) %>%
+TLH.df |>
+  group_by(Year) |>
+  summarize(nD = sum(Qlm > 160)) |>
   ggplot(aes(Year, nD)) +
   geom_point() +
+  labs(title = "Number of days KBDI exceeds 160 mm",
+       x = "", y = "") +
   stat_smooth(method = "glm.nb",
               formula = y ~ x, 
               se = FALSE,
-              col = "orange") 
+              col = "red") 
 ```
 
 Combine seasonal fire data with dryness data. Include a column with previous year's total acres burned.
@@ -736,10 +741,10 @@ Dryness <- TLH.df %>%
   summarize(QlmLastDay = last(Qlm),
             AvgQlm = mean(Qlm))
 
-AprilSOI <- SOI.df %>%
-  dplyr::filter(Year >= 1992 & Year <= 2018) %>%
-  dplyr::filter(month == "Apr") %>%
-  pull(SOI)
+#AprilSOI <- SOI.df %>%
+#  dplyr::filter(Year >= 1992 & Year <= 2018) %>%
+#  dplyr::filter(month == "Apr") %>%
+#  pull(SOI)
 
 PreviousYearBurnArea.df <- Fires.sf |>
   st_drop_geometry() |>
@@ -765,36 +770,39 @@ write_csv(df, file = "SeasonalForecastModelData.csv")
 
 Correlations and scatter plots.
 ```{r}
-cor(df$AvgQlm, df$totalAcresBurned) # .54
-cor(df$QlmLastDay, df$totalAcresBurned) #.48
-cor(df$QlmLastDay, df$nFires) # .60
+cor(df$AvgQlm, df$AcresBurned) # .54
+cor(df$QlmLastDay, df$AcresBurned) #.48
+cor(df$QlmLastDay, df$nFires) # .61
 cor(df$AvgQlm, df$nFires) # .56
 
 ggplot(data = df,
        mapping = aes(x = QlmLastDay, y = nFires, label = Year)) +
   geom_point() +
   geom_label_repel() +
+  labs(title = "The number of seasonal fires increases with increasing April soil dryness",
+       x = "KBDI on April 30th", y = "Number of fires in the ANF (May-Jul)") +
   theme_minimal()
 ```
 
 Correlation by day of month during April.
 ```{r}
-TLH.df %>%
-  dplyr::filter(Year >= 1992 & Year <= 2018) %>%
-  dplyr::filter(month == "Apr") %>%
-  group_by(doy, Year) %>%
-  mutate(Qlm = Qlm) %>%
-  dplyr::select(Year, doy, Qlm) %>%
-  filter(doy != 91 & doy != 121) %>%
-  group_by(doy) %>%
+TLH.df |>
+  dplyr::filter(Year >= 1992 & Year <= 2018) |>
+  dplyr::filter(month == "Apr") |>
+  group_by(doy, Year) |>
+  mutate(Qlm = Qlm) |>
+  dplyr::select(Year, doy, Qlm, Date) |>
+  filter(doy != 91 & doy != 121) |>
+  group_by(doy) |>
   summarize(r = cor.test(Qlm, SeasonalFires$nFires)$estimate,
             rLo = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[1],
-            rHi = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[2]) %>%
-  ggplot(aes(x = doy, y = r)) +
+            rHi = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[2],
+            Date = last(Date)) |>
+  ggplot(aes(x = Date, y = r)) +
   geom_ribbon(aes(ymin = rLo, ymax = rHi), fill = "gray90") +
   geom_point() +
   geom_line() +
-  scale_y_continuous(limits = c(-1, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
 #  scale_x_continuous(breaks = c(1,	32,	60,	91, 121, 152, 182, 213, 244, 274, 305, 335),
 #                     labels = month.abb, position = "top") +
   theme_minimal()
