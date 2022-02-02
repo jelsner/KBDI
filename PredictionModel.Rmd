@@ -36,7 +36,31 @@ summary(model0)
 model1 <- glm.nb(nFires ~ QlmLastDay,
                  data = SeasonalData.df)
 summary(model1)
+```
 
+In-sample skill estimates
+```{r}
+What <- predict(model1, type = "response")
+cor(W, What)
+mean(abs(W - What))
+mean((W - What)^2)
+```
+
+Hold-one-out cross validation (out of sample skill estimates)
+```{r}
+What <- vector()
+for(i in 1:dim(SeasonalData.df)[1]){
+  model <- glm.nb(nFires ~ QlmLastDay, data = SeasonalData.df[-i,])
+  What[i] <- predict(model, type = "response", 
+                    newdata = data.frame(QlmLastDay = SeasonalData.df$QlmLastDay[i]))
+}
+cor(W, What)
+mean(abs(W - What))
+mean((W - What)^2)
+```
+
+Graph showing observed values and predicted line.
+```{r}
 ggplot(data = SeasonalData.df, 
        mapping = aes(x = QlmLastDay, y = nFires)) +
   geom_point() + 
@@ -64,28 +88,28 @@ As {brms} is a high-level interface to Stan, please additionally cite Stan:
 Carpenter B., Gelman A., Hoffman M. D., Lee D., Goodrich B., Betancourt M., Brubaker M., Guo J., Li P., and Riddell A. (2017). Stan: A probabilistic programming language. Journal of Statistical Software. 76(1). 10.18637/jss.v076.i01
 
 ```{r}
-fit1 <- brm(nFires ~ 1,
+fit0 <- brm(nFires ~ 1,
             family = "negbinomial",
             data = SeasonalData.df)
 
-prior_summary(fit1)
+prior_summary(fit0)
 
-stancode(fit1)
+stancode(fit0)
 
-plot(fit1, variable = "b_Intercept")
+plot(fit0, variable = "b_Intercept")
 ```
 
 Note `b_Intercept` is the mean (mu) and `shape` is the size parameter when generating random numbers with the `rnbinom()` function.
 
 Posterior samples of the parameters (intercept and shape).
 ```{r}
-ps <- fit1 |>
+ps <- fit0 |>
   posterior::as_draws_df()
 ```
 
 Posterior samples of the outcome (number of fires).
 ```{r}
-pp <- fit1 |>
+pp <- fit0 |>
   brms::posterior_predict() |>
   as.data.frame()
 ```
@@ -98,13 +122,15 @@ See https://www.youtube.com/watch?v=wbzfqh_3LyM https://mjskay.github.io/ggdist/
 
 Posterior samples of the parameters using {tidybayes}
 ```{r}
-tidybayes::get_variables(fit1)
+library(tidybayes)
 
-fit1 |>
-  tidybayes::spread_draws(b_Intercept, shape) %>%
+get_variables(fit0)
+
+fit0 |>
+  spread_draws(b_Intercept, shape) %>%
   head(10)
 
-fit1 |>
+fit0 |>
   spread_draws(b_Intercept) |>
   ggplot(mapping = aes(x = b_Intercept)) +
 #    stat_halfeye()
@@ -115,10 +141,10 @@ fit1 |>
 Posterior samples of the _expected_ outcome for each outcome value using {tidybayes}
 ```{r}
 ps <- SeasonalData.df |>
-  tidybayes::add_epred_draws(fit1)
+  add_epred_draws(fit0)
 
 SeasonalData.df |>
-  tidybayes::add_epred_draws(fit1) |>
+  add_epred_draws(fit0) |>
   ggplot(mapping = aes(x = .epred)) +
   facet_wrap(~ Year) +
   stat_dotsinterval() +
@@ -130,7 +156,7 @@ SeasonalData.df |>
 This shows the uncertainty of the expected count of the number fires. It does not contain the uncertainty associated with a particular count given the expected count.
 
 ```{r}
-pp <- fit1 |>
+pp <- fit0 |>
   brms::posterior_predict() |>
   as.data.frame()
 
@@ -157,21 +183,21 @@ This shows the uncertainty of the expected counted _together_ with the uncertain
 
 Create a new model with dryness as a predictor.
 ```{r}
-fit2 <- brm(nFires ~ QlmLastDay,
+fit1 <- brm(nFires ~ QlmLastDay,
             family = "negbinomial",
             data = SeasonalData.df)
 
-prior_summary(fit2)
-stancode(fit2)
+prior_summary(fit1)
+stancode(fit1)
 ```
 
 Posterior draws of the coefficient on dryness.
 ```{r}
-fit2 |>
+fit1 |>
   spread_draws(b_QlmLastDay) |>
   head(15)
 
-fit2 |>
+fit1 |>
   spread_draws(b_QlmLastDay) |>
   ggplot(mapping = aes(x = b_QlmLastDay)) +
     stat_dotsinterval()
@@ -179,12 +205,12 @@ fit2 |>
 
 ```{r}
 ps <- SeasonalData.df |>
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) |> #1D GRID
-  tidybayes::add_epred_draws(fit2)
+  tidyr::expand(QlmLastDay = modelr::seq_range(QlmLastDay, n = 25)) |> #1D GRID
+  tidybayes::add_epred_draws(fit1)
  
 ps <- SeasonalData.df |>
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) |> #GRID
-  tidybayes::add_epred_draws(fit2) |> #CONDITION
+  tidyr::expand(QlmLastDay = modelr::seq_range(QlmLastDay, n = 25)) |> #GRID
+  tidybayes::add_epred_draws(fit1) |> #CONDITION
   tidybayes::median_qi(.epred, .width = c(.66, .95)) #MUNGE
 
 ggplot() +
@@ -197,71 +223,29 @@ ggplot() +
   geom_point(mapping = aes(x = QlmLastDay, y = nFires),
              color = "orange",
              data = SeasonalData.df) +
-  theme_dark()
+  theme_minimal()
 
 SeasonalData.df |>
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) |> #GRID
-  tidybayes::add_epred_draws(fit2) |> #CONDITION
+  tidyr::expand(QlmLastDay = modelr::seq_range(QlmLastDay, n = 25)) |> #GRID
+  tidybayes::add_epred_draws(fit1) |> #CONDITION
   dplyr::filter(.draw <= 20) |>
   ggplot() +
   geom_line(mapping = aes(x = QlmLastDay, y = .epred, group = .draw), 
             color = "skyblue") +
-  theme_dark()
-```
-
-
-```{r}
-out <- SeasonalData.df %>%
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
-  tidybayes::add_fitted_draws(fit1) %>% #CONDITION
-  tidybayes::median_qi(.value, .width = c(.66, .95)) # MUNGE
-
-ggplot(data = out,
-       mapping = aes(x = QlmLastDay,
-                     y = .value,
-                     ymin = .lower,
-                     ymax = .upper)) +
-  geom_lineribbon() +
-  scale_fill_brewer()
-
-SeasonalData.df %>%
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
-  tidybayes::add_fitted_draws(fit1) %>% #CONDITION
-  ggplot(mapping = aes(x = QlmLastDay,
-                     y = .value)) +
-  tidybayes::stat_lineribbon(.width = c(.5, .8, .95)) +
-  geom_point(mapping = aes(y = nFires),
+  geom_point(mapping = aes(x = QlmLastDay, y = nFires),
+             color = "orange",
              data = SeasonalData.df) +
-  scale_fill_brewer()
-
-SeasonalData.df %>%
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
-  tidybayes::add_fitted_draws(fit1, n = 20) %>% #CONDITION
-  ggplot(mapping = aes(x = QlmLastDay,
-                       y = .value, 
-                       group = .draw)) +
-  geom_line() +
-  scale_fill_brewer()
-
-SeasonalData.df %>%
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
-  tidybayes::add_predicted_draws(fit1) %>% #CONDITION
-  ggplot(mapping = aes(x = QlmLastDay,
-                     y = .prediction)) +
-  tidybayes::stat_lineribbon(.width = c(.5, .8, .95)) +
-  geom_point(mapping = aes(y = nFires),
-             data = SeasonalData.df) +
-  scale_fill_brewer()
+  theme_minimal()
 ```
 
 Total acres burned
 ```{r}
 ggplot(data = SeasonalData.df,
-       mapping = aes(x = totalAcresBurned)) +
+       mapping = aes(x = AcresBurned)) +
   geom_density() +
   geom_rug() 
 
-fit2 <- brm(I(totalAcresBurned + .01) ~ QlmLastDay,
+fit2 <- brm(I(AcresBurned + .01) ~ QlmLastDay,
             family = "exponential",
             data = SeasonalData.df)
 
@@ -269,20 +253,39 @@ prior_summary(fit2)
 
 plot(fit2, pars = "QlmLastDay")
 
-fit2 %>%
-  spread_draws(b_QlmLastDay) %>%
+fit2 |>
+  spread_draws(b_QlmLastDay) |>
   ggplot(mapping = aes(b_QlmLastDay)) +
     stat_dotsinterval()
 
-SeasonalData.df %>%
-  tidyr::expand(QlmLastDay = seq_range(QlmLastDay, n = 25)) %>% #GRID
-  tidybayes::add_fitted_draws(fit2) %>% #CONDITION
-  ggplot(mapping = aes(x = QlmLastDay,
-                     y = .value)) +
-  tidybayes::stat_lineribbon(.width = c(.5, .8, .95)) +
-  geom_point(mapping = aes(y = totalAcresBurned),
+ps <- SeasonalData.df |>
+  tidyr::expand(QlmLastDay = modelr::seq_range(QlmLastDay, n = 25)) |> #GRID
+  tidybayes::add_epred_draws(fit2) |> #CONDITION
+  tidybayes::median_qi(.epred, .width = c(.66, .95)) #MUNGE
+
+ggplot() +
+  geom_lineribbon(mapping = aes(x = QlmLastDay,
+                     y = .epred,
+                     ymin = .lower,
+                     ymax = .upper),
+                  data = ps) +
+  scale_fill_brewer() +
+  geom_point(mapping = aes(x = QlmLastDay, y = AcresBurned),
+             color = "orange",
              data = SeasonalData.df) +
-  scale_fill_brewer()
+  theme_minimal()
+
+SeasonalData.df |>
+  tidyr::expand(QlmLastDay = modelr::seq_range(QlmLastDay, n = 25)) |> #GRID
+  tidybayes::add_epred_draws(fit2) |> #CONDITION
+  dplyr::filter(.draw <= 20) |>
+  ggplot() +
+  geom_line(mapping = aes(x = QlmLastDay, y = .epred, group = .draw), 
+            color = "skyblue") +
+  geom_point(mapping = aes(x = QlmLastDay, y = AcresBurned),
+             color = "orange",
+             data = SeasonalData.df) +
+  theme_minimal()
 ```
 
-Try the {marginaleffects} package http://arelbundock.com/brms.html to get posterior draws with user-specified values and other predictors held at their means.
+When more than one predictor variable, try the {marginaleffects} package http://arelbundock.com/brms.html to get posterior draws with user-specified values and other predictors held at their means.
