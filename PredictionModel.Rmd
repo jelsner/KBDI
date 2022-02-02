@@ -235,6 +235,8 @@ SeasonalData.df |>
   geom_point(mapping = aes(x = QlmLastDay, y = nFires),
              color = "orange",
              data = SeasonalData.df) +
+  labs(x = "Soil Moisture Deficit on April 30th (cm)",
+       y = "Number of Fires in the ANF (May-July)") +
   theme_minimal()
 ```
 
