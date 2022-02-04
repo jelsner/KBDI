@@ -96,13 +96,16 @@ tm_shape(Fires3.sf) +
 
 Make a bar chart of frequency by cause.
 ```{r}
-table(Fires.sf$NWCG_GENERAL_CAUSE)
+library(xtable)
+table(Fires.sf$NWCG_GENERAL_CAUSE) |>
+  xtable()
 
 df <- Fires.sf |>
   st_drop_geometry() |>
   group_by(NWCG_GENERAL_CAUSE) |>
   summarize(nF = n(),
-            perF = nF/nrow(Fires.sf))
+            perF = nF/nrow(Fires.sf)) |>
+  xtable()
 
 ggplot(data = df,
        mapping = aes(y = reorder(NWCG_GENERAL_CAUSE, perF),
@@ -256,28 +259,28 @@ At longer lags there are features that make natural fires somewhat more or less 
 
 Monthly occurrence (relative frequency) of natural wildfires in the ANF.
 ```{r}
-df <- NaturalFires.sf %>%
-  st_drop_geometry() %>%
-  mutate(MonthF = factor(month.name[Month], 
-                         levels = rev(month.name), 
-                         ordered = TRUE)) %>%
-  group_by(MonthF, .drop = FALSE) %>%
+df <- NaturalFires.sf |>
+  st_drop_geometry() |>
+  mutate(MonthF = factor(month.abb[Month], 
+                         levels = month.abb, 
+                         ordered = TRUE)) |>
+  group_by(MonthF, .drop = FALSE) |>
   summarize(nF = n(),
             perF = nF/nrow(NaturalFires.sf))
 
-ggplot(data = df,
-       mapping = aes(y = MonthF, 
-                     x = perF,
+p1 <- ggplot(data = df,
+       mapping = aes(x = MonthF, 
+                     y = perF,
                      fill = perF)) +
   geom_col() +
   scale_fill_distiller(palette = "Oranges",
                        direction = 1,
                        guide = "none") +
-  scale_x_continuous(labels = percent) +
-  xlab("") + ylab("") +
-  labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest occur during May-July",
-       subtitle = "Percentage of all natural wildfires by month",
-       caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
+  scale_y_continuous(labels = scales::percent_format(1L)) +
+  labs(title = "A", x = "", y = "Wildfire frequency") +
+#  labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest occur during May-July",
+#       subtitle = "Percentage of all natural wildfires by month",
+#       caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
   theme_minimal() 
 ```
 
@@ -302,9 +305,9 @@ ggplot(data = df,
                         guide = "none") +
   scale_x_continuous(breaks = seq(1992, 2018, by = 4)) +
   theme_minimal() +
-  labs(x = "", y = "",
-       title = "Large inter-seasonal variability in the number of natural wildfires in the ANF",
-       subtitle = "Larger and darker points indicate larger burn area")
+  labs(x = "", y = "Number of wildfires")
+#       title = "Large inter-seasonal variability in the number of natural wildfires in the ANF",
+#       subtitle = "Larger and darker points indicate larger burn area")
 
 ggplot(data = df,
        mapping = aes(x = Year, y = totalAcresBurned, color = nFires)) +
@@ -378,25 +381,28 @@ df <- df %>%
 Seasonal cycle.
 ```{r}
 sc <- df %>%
-  mutate(MonthF = factor(month.name[MONTH], 
-                         levels = rev(month.name), 
+  mutate(MonthF = factor(month.abb[MONTH], 
+                         levels = month.abb, 
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
   summarize(AvgDailyCount = mean(FCOUNT_NLDN, na.rm = TRUE))
 
-ggplot(data = sc,
-       mapping = aes(y = MonthF, 
-                     x = AvgDailyCount,
+p2 <- ggplot(data = sc,
+       mapping = aes(x = MonthF, 
+                     y = AvgDailyCount,
                      fill = AvgDailyCount)) +
   geom_col() +
   scale_fill_distiller(palette = "Blues",
                        direction = 1,
                        guide = "none") +
-  labs(x = "", y = "",
-       title = "Lightning in the Apalachicola National Forest peaks from June-August",
-       subtitle = "Daily average number of cloud-to-ground lightning strikes by month",
-       caption = "Period of record: 1986-2013, Data source: NCEI") +
+  labs(x = "", y = "Cloud-to-ground strikes",
+       title = "B") +
+#       title = "Lightning in the Apalachicola National Forest peaks from June-August",
+#       subtitle = "Daily average cloud-to-ground lightning strikes by month",
+#       caption = "Period of record: 1986-2013, Data source: NCEI") +
   theme_minimal() 
+
+p1 / p2
 ```
 
 ## Get TLH airport daily weather data and compute the Keetch & Byram drought index
@@ -448,7 +454,6 @@ AnnualRainfall |>
             varRainfall = var(totalRainfallcm))
 AnnualRainfall |>
   arrange(totalRainfallcm)
- 
 ```
 
 Plot monthly values of average daily high temperature and average month rainfall.
@@ -502,29 +507,43 @@ TLH.df$DroughtIndex <- DI$DroughtIndex
 
 Note: There is a package to compute the standardized precip-evapotranspiration index {SPEI}. Only good for monthly data. Same for the Palmer Drought Severity Index (PDSI).
 
+Daily
+```{r}
+TLH.df <- TLH.df |>
+  filter(Year >= 1943) |>
+  mutate(Date2 = as.Date(doy - 1, origin = "2020-01-01"))
+
+p1 <- ggplot(data = TLH.df, 
+       mapping = aes(x = Date2, y = Year, fill = Qlm)) +
+  geom_tile() +
+  scale_y_reverse(breaks = seq(1945, 2020, by = 10)) +
+  scale_x_date(date_breaks = "month", date_labels = "%b", position = "top") +
+  scale_fill_distiller(palette = "BrBG",
+                       direction = -1,
+                       name = "mm") +
+  labs(title = "A", x = "", y = "") +
+  theme_minimal() 
+```
+
 Monthly average soil moisture deficit.
 ```{r}
-TLH.df |>
-  mutate(MonthF = factor(month.name[month], 
-                         levels = rev(month.name), 
+p2 <- TLH.df |>
+  mutate(MonthF = factor(month.abb[month], 
+                         levels = month.abb, 
                          ordered = TRUE)) |>
   group_by(MonthF, .drop = FALSE) |>
-  summarize(AvgSoilMoistureDeficit = mean(Qlm)) %>%
-ggplot(mapping = aes(y = MonthF, 
-                     x = AvgSoilMoistureDeficit,
+  summarize(AvgSoilMoistureDeficit = mean(Qlm)) |>
+ggplot(mapping = aes(x = MonthF, 
+                     y = AvgSoilMoistureDeficit,
                      fill = AvgSoilMoistureDeficit)) +
   geom_col() +
   scale_fill_distiller(palette = "BrBG",
                        direction = -1,
                        guide = 'none') +
-#  scale_fill_gradientn(colors = terrain.colors(5),
-#                       guide = 'none') +
-#  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = 'none') +
-  labs(x = "Soil Moisture Deficit (mm)", y = "") +
-#       title = "May through November is the dry season in the Apalachicola National Forest",
-#       subtitle = "Average soil moisture deficit (mm)",
-#       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
+  labs(title = "B", y = "Soil Moisture Deficit (mm)", x = "") +
   theme_minimal() 
+
+p1 / p2
 ```
 
 Make some trend plots. This plot is statistically more realistic because it removes the temporal autocorrelations.
@@ -667,23 +686,6 @@ TLH.df %>%
 
 Daily
 ```{r}
-TLH.df <- TLH.df |>
-  filter(Year >= 1943) |>
-  mutate(Date2 = as.Date(doy - 1, origin = "2020-01-01"))
-
-ggplot(data = TLH.df, 
-       mapping = aes(x = Date2, y = Year, fill = Qlm)) +
-  geom_tile() +
-  scale_y_reverse(breaks = seq(1943, 2020, 4)) +
-  scale_x_date(date_breaks = "month", date_labels = "%b", position = "top") +
-#  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
-  scale_fill_gradientn(colors = terrain.colors(8), name = "mm") +
-  ylab("") + xlab("") +
-  theme_minimal() +
-  labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest", 
-      subtitle = "Daily soil moisture deficit (mm)",
-      caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
-
 ggplot(data = TLH.df, 
        mapping = aes(x = Date2, y = Year, fill = factor(DroughtIndex))) +
   geom_tile() +
@@ -774,8 +776,7 @@ ggplot(data = df,
        mapping = aes(x = QlmLastDay, y = nFires, label = Year)) +
   geom_point() +
   geom_label_repel() +
-  labs(title = "The number of seasonal fires increases with increasing April soil dryness",
-       x = "KBDI on April 30th", y = "Number of fires in the ANF (May-Jul)") +
+  labs(x = "Soil moisture deficit (mm) on April 30th", y = "Number of fires in the ANF (May-Jul)") +
   theme_minimal()
 ```
 
@@ -786,14 +787,20 @@ TLH.df |>
   dplyr::filter(month == "Apr") |>
   group_by(doy, Year) |>
   mutate(Qlm = Qlm) |>
-  dplyr::select(Year, doy, Qlm, Date) |>
+  dplyr::select(Year, doy, Qlm) |>
   filter(doy != 91 & doy != 121) |>
   group_by(doy) |>
   summarize(r = cor.test(Qlm, SeasonalFires$nFires)$estimate,
             rLo = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[1],
             rHi = cor.test(Qlm, SeasonalFires$nFires, conf.level = .9)$conf.int[2],
-            Date = last(Date)) |>
-  ggplot(aes(x = Date, y = r)) +
+            rs = cor(Qlm, SeasonalFires$nFires, method = "s")) |>
+  xtable()
+```
+
+Make a plot
+```{r}
+  ggplot(data = df, 
+         mapping = aes(x = Date, y = r)) +
   geom_ribbon(aes(ymin = rLo, ymax = rHi), fill = "gray90") +
   geom_point() +
   geom_line() +

@@ -14,6 +14,7 @@ library(MASS)
 library(brms)
 library(tidybayes)
 library(modelr)
+library(equatiomatic)
 ```
 
 ## Get the data
@@ -36,7 +37,11 @@ summary(model0)
 model1 <- glm.nb(nFires ~ QlmLastDay,
                  data = SeasonalData.df)
 summary(model1)
+extract_eq(model1, intercept = "beta")
 ```
+$$
+\log ({ E( \operatorname{nFires} ) })  = \beta_{0} + \beta_{1}(\operatorname{QlmLastDay})
+$$
 
 In-sample skill estimates
 ```{r}
