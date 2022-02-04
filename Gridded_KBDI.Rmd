@@ -24,8 +24,6 @@ library(prism)
 library(ggthemes)
 ```
 
-Start with two years: 2017 & 2018.
-
 ## Read PRISM data (.bil) files as {stars} objects
 
 Download daily PRISM data using functions from the {prism} package. About 35 (23) minutes per year per variable of daily data at home (apartment) internet speeds. Temperature is in C and precipitation is in mm.

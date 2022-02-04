@@ -39,7 +39,7 @@ ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
 st_area(ANF_Boundary.sf) # 2,567 sq. km (~634,000 acre)
 ```
 
-Make a map showing the ANF boundary and the airport location.
+Make a map showing the ANF boundary and the airport location. Export > Save as Image > tiff increasing width & height then open in Preview and convert to pdf.
 ```{r}
 Airport.sf <- data.frame(Name = c("Regional Airport"), 
                          Latitude = c(30.39306),
@@ -467,25 +467,20 @@ p1 <- ggplot(data = df,
                          direction = 1, 
                          guide = 'none') +
         theme_minimal() +
-        labs(x = "", y = "(cm)",
-             title = "Monthly rainfall and average daily high temperature",
-             subtitle = "NWSFO TLH: 1943-2020")
-
+        labs(x = "", y = "Rainfall (cm)", title = "A")
 
 p2 <- ggplot(data = df,
              mapping = aes(x = month, y = avgDailyHighTemp, color = avgDailyHighTemp)) +
         geom_point(size = 4) +
-        scale_color_distiller(palette = "Oranges",
+        scale_color_distiller(palette = "Reds",
                               direction = 1, 
                               guide = 'none') +
         scale_y_continuous(limits = c(60, 100)) +
         theme_minimal() +
-        labs(x = "", y = "(°F)")
+        labs(x = "", y = "Temperature (°F)", title = "B")
 
 library(patchwork)
-
 p1 / p2
-
 ```
 
 Compute daily values of the KBDI. Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf with a minor correction identified in Alexander1992.pdf (paper found in Dropbox/Literature).
@@ -509,11 +504,11 @@ Note: There is a package to compute the standardized precip-evapotranspiration i
 
 Monthly average soil moisture deficit.
 ```{r}
-TLH.df %>%
+TLH.df |>
   mutate(MonthF = factor(month.name[month], 
                          levels = rev(month.name), 
-                         ordered = TRUE)) %>%
-  group_by(MonthF, .drop = FALSE) %>%
+                         ordered = TRUE)) |>
+  group_by(MonthF, .drop = FALSE) |>
   summarize(AvgSoilMoistureDeficit = mean(Qlm)) %>%
 ggplot(mapping = aes(y = MonthF, 
                      x = AvgSoilMoistureDeficit,
@@ -525,10 +520,10 @@ ggplot(mapping = aes(y = MonthF,
 #  scale_fill_gradientn(colors = terrain.colors(5),
 #                       guide = 'none') +
 #  scale_fill_gradient2(low = "#FC8B93", mid = "#965784", high = "#D9DE6E", guide = 'none') +
-  labs(x = "", y = "",
-       title = "May through November is the dry season in the Apalachicola National Forest",
-       subtitle = "Average soil moisture deficit (mm)",
-       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
+  labs(x = "Soil Moisture Deficit (mm)", y = "") +
+#       title = "May through November is the dry season in the Apalachicola National Forest",
+#       subtitle = "Average soil moisture deficit (mm)",
+#       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
   theme_minimal() 
 ```
 
