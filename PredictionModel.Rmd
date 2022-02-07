@@ -15,6 +15,7 @@ library(brms)
 library(tidybayes)
 library(modelr)
 library(equatiomatic)
+library(xtable)
 ```
 
 ## Get the data
@@ -36,7 +37,10 @@ summary(model0)
 
 model1 <- glm.nb(nFires ~ QlmLastDay,
                  data = SeasonalData.df)
+
 summary(model1)
+
+xtable(model1)
 extract_eq(model1, intercept = "beta")
 ```
 $$
@@ -75,7 +79,8 @@ ggplot(data = SeasonalData.df,
 
 model2 <- glm.nb(nFires ~ QlmLastDay + preYearAcresBurned,
                  data = SeasonalData.df)
-summary(model2)
+coef(model2) |>
+  xtable()
 ```
 
 Use the {brms} and {tidybayes} packages to get posterior distributions.

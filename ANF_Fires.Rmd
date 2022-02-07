@@ -456,6 +456,31 @@ AnnualRainfall |>
   arrange(totalRainfallcm)
 ```
 
+Plot average daily mean wind speeds during May-July by year.
+```{r}
+TLH.df |>
+  filter(Year >= 1984) |>
+  filter(month %in% c("May", "Jun", "Jul")) |>
+  group_by(Year) |>
+  summarize(AvgWindSpeed = mean(AWND) / 10) |>
+ggplot(mapping = aes(x = Year, y = AvgWindSpeed)) +
+  geom_point() +
+  geom_smooth(method = lm)
+```
+
+Plot average daily minimum during May-July by year.
+```{r}
+TLH.df |>
+  filter(month %in% c("May", "Jun", "Jul")) |>
+  group_by(Year) |>
+  summarize(AvgMinTemp = mean(MinTemp, na.rm = TRUE)) |>
+ggplot(mapping = aes(x = Year, y = AvgMinTemp)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(y = "Average minimum temperature (F)") +
+  theme_minimal()
+```
+
 Plot monthly values of average daily high temperature and average month rainfall.
 ```{r}
 df <- TLH.df %>%
@@ -554,14 +579,15 @@ ggplot(TLH.df, aes(x = Date, y = Qlm, color = Qlm)) +
   scale_color_distiller(palette = "BrBG",
                         direction = -1,
                         guide = 'none') +
-  ylab("") + xlab("") +
+  scale_x_date(date_breaks = "20 years", date_labels = "%Y") +
+  ylab("Soil moisture deficit (mm)") + xlab("") +
   geom_smooth(method = lm, se = FALSE, color = "white") +
   facet_wrap(~ month, ncol = 12) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
-       subtitle = "Daily soil moisture deficit (mm)", 
-       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+#  labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
+#       subtitle = "Daily soil moisture deficit (mm)", 
+#       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
 ```
 
 Repeat using data from Apalachicola (see `compare.rmd`). https://www.ncdc.noaa.gov/  > I want to search for data at a particular location > DATA TOOLS > Final a Station
@@ -712,12 +738,14 @@ TLH.df |>
   summarize(nD = sum(Qlm > 160)) |>
   ggplot(aes(Year, nD)) +
   geom_point() +
-  labs(title = "Number of days KBDI exceeds 160 mm",
-       x = "", y = "") +
-  stat_smooth(method = "glm.nb",
-              formula = y ~ x, 
-              se = FALSE,
-              col = "red") 
+  labs(x = "", y = "Number of days\nSoil moisture deficit exceeded 160 mm") +
+#  labs(title = "Number of days KBDI exceeds 160 mm",
+#       x = "", y = "") +
+#  stat_smooth(method = "glm.nb",
+#              formula = y ~ x, 
+#              se = FALSE,
+#              col = "red") +
+  theme_minimal()
 ```
 
 Combine seasonal fire data with dryness data. Include a column with previous year's total acres burned.
