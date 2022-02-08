@@ -1084,7 +1084,17 @@ Model reflecting only soil moisture deficit
 negative binomial regression
 ```{r}
 nbr1 <- glm.nb(nFIRES ~ Qlcm, data = seasonFires_cm.sf)
+
+#summary(nbr1)
 ```
+
+```{r}
+extract_eq(nbr1, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
+```
+
+$$
+\log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.7515 + 0.1773(\operatorname{Qlcm})
+$$
 
 visualize the negative binomial regression model
 ```{r}
@@ -1101,6 +1111,13 @@ ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
   theme_minimal()
 ```
 
+Exploring predicted values and confidence intervals
+```{r}
+temp.df <- data.frame(Qlcm = 0)
+predict.glm(nbr1, newdata = temp.df, type = "response", se.fit = TRUE)
+```
+
+
 Adjustments to set up multiple linear regression model
 Error in the select statement. Explore further
 ```{r}
@@ -1109,8 +1126,6 @@ seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c(
   rename(nFIRES = nFIRES.x)
 ```
 
-
-
 Multiple negative binominal regression model. Soil moisture deficit and prior acres burned.
 Use temp dataframe because 1992 does not store all acres burned data.
 ```{r}
@@ -1118,6 +1133,13 @@ temp <- seasonFires_cm.sf %>%
   filter(Year >= 1993)
 nbr2 <- glm.nb(nFIRES ~  Qlcm + acresBurned, data = temp)
 ```
+
+add fitted values to dataframe to compare
+```{r}
+temp$nbr1_fit <- nbr1$fitted.values
+temp$nbr2_fit <- nbr2$fitted.values
+```
+
 
 ```{r}
 extract_eq(nbr2, use_coefs = TRUE, coef_digits = 8, fix_signs = FALSE)
