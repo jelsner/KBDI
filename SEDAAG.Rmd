@@ -915,6 +915,12 @@ ggplot(seasonFires.sf, aes(x = nFIRES)) +
              color = "black", linetype = "dashed", size = 1)
 ```
 
+##Correct model to be negative binomialregression model, not Poisson
+```{r}
+nbr1 <- glm.nb(nFIRES ~ KBDI_April30, data = seasonFires.sf)
+```
+
+
 
 
 
