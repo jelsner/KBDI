@@ -41,6 +41,7 @@ library(tinytex)
 #library(mpm)
 #library(magrittr)
 library(texPreview)
+library(MASS)
 ```
 
 Daily summary of the day values from Tallahassee (TLH)
@@ -393,10 +394,17 @@ countfires.df <- anf_LF.sf %>%
 Merge the KBDI and fire count data sets
 ```{r}
 KBDI_fire.df <- left_join(x = TLH_fireYrs.df, y = countfires.df, by = c("Date" = "Date")) %>%
-  select(Date, FireCount, Ql, DroughtIndex)
+  select(Date, FireCount, Ql, Qlm, DroughtIndex)
 
 KBDI_fire.df$fireBool <- !is.na(KBDI_fire.df$FireCount)
 ```
+
+Create a cm column for daily soil moisture deficit
+```{r}
+KBDI_fire.df <- KBDI_fire.df %>%
+  mutate(Qlcm = Qlm / 10)
+```
+
 
 Regression Model
 ```{r}
@@ -423,7 +431,7 @@ ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
 ```
 
 ```{r}
-extract_eq(glmQl, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
+#extract_eq(glmQl, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
 
 
@@ -474,10 +482,6 @@ ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
     caption = "Period of Record: 1992 to 2018")
 ```
 
-
-
-
-
 Ql is statistically significant
 ```{r}
 summary(glmQl)
@@ -512,6 +516,42 @@ Ql is statistically significant
 ```{r}
 summary(glmQlFS)
 ```
+
+
+
+
+
+Adjust Binomial Regression model to represent KBDI in cm (SI units)
+```{r}
+glmQlcm <- glm(formula = fireBool~Qlcm, family = binomial, data = KBDI_fire.df)
+
+pred_glmQlcm <- predict(object = glmQlcm,
+                      type = "response",
+                      se.fit = TRUE)
+
+low_bound <- pred_glmQlcm$fit - (1.96*pred_glmQlcm$se.fit)
+up_bound <- pred_glmQlcm$fit + (1.96*pred_glmQlcm$se.fit)
+
+ggplot(mapping = aes(x = KBDI_fire.df$Qlcm, y = pred_glmQlcm$fit)) +
+  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
+  geom_line(color = "blue") +
+  ylab("Predicited Probablility") +
+  xlab("Soil Moisture Deficit (cm)") +
+  #labs(
+    #title = "Predicted Probability of Lightning Fire Occurrence\nBased on Daily Soil Moisture Deficit Values",
+    #subtitle = "Line of Fitted Values With a 95% Confidence Interval",
+    #caption = "Period of Record: 1992 to 2018")
+  theme_minimal()
+```
+
+```{r}
+extract_eq(glmQlcm, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
+```
+
+$$
+\log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -5.5013 + 0.1937(\operatorname{Qlcm})
+$$
+
 
 ##General linear regression - Study how the number of lightning strikes on a given day impacts lightning wildfire occurrence
 
@@ -556,14 +596,13 @@ up_bound <- pred_glmLightning$fit + (1.96*pred_glmLightning$se.fit)
 ggplot(mapping = aes(x = light_fires.df$LightningCount, y = pred_glmLightning$fit)) +
   geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
   geom_line(color = "blue") +
-  #stat_regline_equation() +
-  #stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = .87) +
   ylab("Predicited Probablility") +
   xlab("Number of Lightning Strikes") +
-  labs(
-    title = "Predicted Probability of a Fire Occurrence Based on the\nNumber of Lightning Strikes in a Day",
-    subtitle = "With a 95% Confidence Interval",
-    caption = "Period of Record: 1992 to 2012")
+  #labs(
+    #title = "Predicted Probability of a Fire Occurrence Based on the\nNumber of Lightning Strikes in a Day",
+    #subtitle = "With a 95% Confidence Interval",
+    #caption = "Period of Record: 1992 to 2012")
+  theme_minimal()
 ```
 
 lightning count is statistically significant to occurrence of wildfires.
@@ -792,7 +831,7 @@ Add April 30th KBDI to the seasonFires.sf data frame
 ```{r}
 April30.df <- KBDI_fire.df %>%
   filter(month(Date) == 04 & day(Date) == 30) %>%
-  select("Date", "Ql") %>%
+  select("Date", "Ql", "Qlm", "Qlcm") %>%
   rename(KBDI_April30 = Ql) %>%
   mutate(Year = year(Date))
 
@@ -915,13 +954,6 @@ ggplot(seasonFires.sf, aes(x = nFIRES)) +
              color = "black", linetype = "dashed", size = 1)
 ```
 
-##Correct model to be negative binomialregression model, not Poisson
-```{r}
-nbr1 <- glm.nb(nFIRES ~ KBDI_April30, data = seasonFires.sf)
-```
-
-
-
 
 
 ```{r}
@@ -953,8 +985,6 @@ nbr1 <- glm.nb(nFIRES ~ KBDI_April30, data = seasonFires.sf)
 
 #tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
 ```
-
-
 
 
 Model 2 will predict the number of fires by adding the prior area burned to the model.
@@ -1035,6 +1065,72 @@ glm3 <- glm(formula3, data = temp, family = poisson)
 summary(glm3)
 
 cor(temp$acresBurned,resid(glm3)) #0.04958
+```
+
+
+
+##Make correction to the models
+1) set soil moisture deficit units to cm (SI units)
+2) fit a negative binomial regression model instead of Poisson
+
+Adjust data frames so that units are in cm
+```{r}
+seasonFires_cm.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year")) %>%
+  select("Year", "nFIRES", "Qlcm")
+seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
+```
+
+Model reflecting only soil moisture deficit
+negative binomial regression
+```{r}
+nbr1 <- glm.nb(nFIRES ~ Qlcm, data = seasonFires_cm.sf)
+```
+
+visualize the negative binomial regression model
+```{r}
+ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
+  geom_point() +
+  geom_smooth(method = "glm.nb") + #, formula = y ~ x,
+              #method.args = list(family = poisson(link = "log"))) +
+  ylab("Number of Fires in the ANF (May - July)") +
+  xlab("Soil Moisture Deficit on April 30th (cm)") +
+  #labs(
+    #title = "Predicted Number of Fires During the Fire Season Based on April 30th Soil Moisture Deficit",
+    #subtitle = "With a 95% Confidence Interval",
+    #caption = "Period of Record: 1992 to 2018")
+  theme_minimal()
+```
+
+Adjustments to set up multiple linear regression model
+Error in the select statement. Explore further
+```{r}
+seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c("Year" = "forecastYear")) %>%
+  select("seasonFires_cm.sf$Year":"seasonFires_cm.sf$percentBurned") %>%
+  rename(nFIRES = nFIRES.x)
+```
+
+
+
+Multiple negative binominal regression model. Soil moisture deficit and prior acres burned.
+Use temp dataframe because 1992 does not store all acres burned data.
+```{r}
+temp <- seasonFires_cm.sf %>%
+  filter(Year >= 1993)
+nbr2 <- glm.nb(nFIRES ~  Qlcm + acresBurned, data = temp)
+```
+
+```{r}
+extract_eq(nbr2, use_coefs = TRUE, coef_digits = 8, fix_signs = FALSE)
+```
+
+8 digits are used to show extent of acres burned beta coefficent
+$$
+\log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.75384833 + 0.18424609(\operatorname{Qlcm}) + -1.026e-05(\operatorname{acresBurned})
+$$
+
+Acres burned is not statistically significant to the model
+```{r}
+summary(nbr2)
 ```
 
 
