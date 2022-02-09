@@ -1117,6 +1117,12 @@ temp.df <- data.frame(Qlcm = 0)
 predict.glm(nbr1, newdata = temp.df, type = "response", se.fit = TRUE)
 ```
 
+Explore the Predicted Values
+```{r}
+seasonFires_cm.sf$nbr1_fit <- nbr1$fitted.values
+```
+
+
 
 Adjustments to set up multiple linear regression model
 Error in the select statement. Explore further
@@ -1129,15 +1135,19 @@ seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c(
 Multiple negative binominal regression model. Soil moisture deficit and prior acres burned.
 Use temp dataframe because 1992 does not store all acres burned data.
 ```{r}
-temp <- seasonFires_cm.sf %>%
+temp_cm <- seasonFires_cm.sf %>%
   filter(Year >= 1993)
 nbr2 <- glm.nb(nFIRES ~  Qlcm + acresBurned, data = temp)
 ```
 
-add fitted values to dataframe to compare
+add nbr2 fitted values to dataframe to compare models
 ```{r}
-temp$nbr1_fit <- nbr1$fitted.values
-temp$nbr2_fit <- nbr2$fitted.values
+temp_cm$nbr2_fit <- nbr2$fitted.values
+```
+
+explore the change in fitted values
+```{r}
+temp_cm$change_fit <- temp$nbr1_fit - temp$nbr2_fit
 ```
 
 
@@ -1155,4 +1165,8 @@ Acres burned is not statistically significant to the model
 summary(nbr2)
 ```
 
-
+Exploring nrb2 predicted values and confidence intervals
+```{r}
+temp.df <- data.frame(Qlcm = 0, acresBurned = 518.07)
+predict.glm(nbr2, newdata = temp.df, type = "response", se.fit = TRUE)
+```
