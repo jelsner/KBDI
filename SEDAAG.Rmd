@@ -1170,3 +1170,18 @@ Exploring nrb2 predicted values and confidence intervals
 temp.df <- data.frame(Qlcm = 0, acresBurned = 518.07)
 predict.glm(nbr2, newdata = temp.df, type = "response", se.fit = TRUE)
 ```
+
+
+Clean up data frame to be exported to table in paper
+```{r}
+appendix_table.df <- temp_cm %>%
+  dplyr::select("Year":"acresBurned", "nbr1_fit", "nbr2_fit") %>%
+  rename(NumberOfFires = nFIRES, SoilMoistureDeficit_cm = Qlcm, BurnedGroupInteval = burnedGroupInterval, AcresBurned = acresBurned, Model1Fit = nbr1_fit, Model2Fit = nbr2_fit)
+```
+
+Export the data frame to an excel table
+```{r}
+write_csv(appendix_table.df, "C:\\Users\\zlaw9\\OneDrive\\Thesis\\Thesis\\Paper Figures\\appendix\\appendixtable.csv")
+```
+
+
