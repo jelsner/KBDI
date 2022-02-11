@@ -76,6 +76,12 @@ TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
 TLH.df$DroughtIndex <- droughtIndex(Q,R,TLH.df$MaxTemp,TLH.df$NetR)$DroughtIndex
 ```
 
+Include a Ql centimeters column in the TLH.df data frame
+```{r}
+TLH.df <- TLH.df %>%
+  mutate(Qlcm = Qlm/10)
+```
+
 ANF Boundaries data set:
 ```{r}
 if(!"S_USA.NFSLandUnit" %in% list.files()){
@@ -399,6 +405,8 @@ KBDI_fire.df <- left_join(x = TLH_fireYrs.df, y = countfires.df, by = c("Date" =
 KBDI_fire.df$fireBool <- !is.na(KBDI_fire.df$FireCount)
 ```
 
+
+this can be edited in the future because I have now included a cm column in the base data frame (TLH.df)
 Create a cm column for daily soil moisture deficit
 ```{r}
 KBDI_fire.df <- KBDI_fire.df %>%
@@ -1184,4 +1192,50 @@ Export the data frame to an excel table
 write_csv(appendix_table.df, "C:\\Users\\zlaw9\\OneDrive\\Thesis\\Thesis\\Paper Figures\\appendix\\appendixtable.csv")
 ```
 
+
+##editing plots
+Create a filtered data frame from 1943 to 2020 to omit missing data
+```{r}
+TLH_1943.df <- TLH.df %>%
+  filter(Year >= 1943)
+```
+
+
+Exploring paper plots in centimeters
+```{r}
+ggplot(TLH_1943.df, aes(x = Date, y = Qlcm, color = Qlcm)) +
+  geom_line() +
+#  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
+  scale_color_distiller(palette = "BrBG",
+                        direction = -1,
+                        guide = 'none') +
+  scale_x_date(date_breaks = "20 years", date_labels = "%Y") +
+  ylab("Soil moisture deficit (cm)") + xlab("") +
+  geom_smooth(method = lm, se = FALSE, color = "white") +
+  facet_wrap(~ month, ncol = 12) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) 
+#  labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
+#       subtitle = "Daily soil moisture deficit (mm)", 
+#       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
+```
+
+Number of days per year with KBDI above 650 (hundredths of an inch) (Qlcm = 16.51)
+```{r}
+#library(MASS)
+
+TLH_1943.df %>%
+  group_by(Year) %>%
+  summarize(nD = sum(Qlcm > 16)) %>%
+  ggplot(aes(Year, nD)) +
+  geom_point() +
+  labs(x = "", y = "Number of days\nSoil moisture deficit exceeded 16 cm") +
+#  labs(title = "Number of days KBDI exceeds 160 mm",
+#       x = "", y = "") +
+#  stat_smooth(method = "glm.nb",
+#              formula = y ~ x, 
+#              se = FALSE,
+#              col = "red") +
+  theme_minimal()
+```
 
