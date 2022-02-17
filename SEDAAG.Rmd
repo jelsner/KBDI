@@ -1239,3 +1239,90 @@ TLH_1943.df %>%
   theme_minimal()
 ```
 
+
+
+Are the locations of natural-caused wildfires during May, June, and July within the ANF clustered?
+
+Create a {spatstat} object containing the locations of lightning-kindled fires in the ANF during May-July. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
+```{r}
+library(spatstat)
+library(maptools)
+#remotes::install_github("walkerke/crsuggest")
+library(crsuggest)
+
+suggest_crs(anfbounds.sf)
+
+W <- anfbounds.sf %>% 
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.owin()
+
+NF.ppp <- anf_LF.sf %>% 
+  filter(month(DISCOVERY_) %in% c(5, 6, 7)) %>%
+  #filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
+  st_geometry() %>%
+  st_transform(crs = 2779) %>%
+  as_Spatial() %>% 
+  as.ppp()
+
+NF.ppp <- NF.ppp[W] %>%
+  rescale(s = 1000, 
+          unitname = "km")
+summary(NF.ppp)
+```
+
+Area is 2,564 square km. There are 356 natural wildfires for an average spatial intensity of 13.9 fires per 10 square kilometer during May-July over the 27-year period.
+```{r}
+NF.ppp %>%
+  density() %>%
+  plot()
+
+NF.ppp %>%
+  dirichlet() %>%
+  plot()
+
+NF.ppp %>%
+  quadratcount(nx = 20, ny = 15) %>%
+  plot()
+
+NF.ppp %>%
+  quadrat.test(nx = 20, ny = 15,
+               method = "M",
+               nsim = 9999,
+               alternative = "clustered")
+```
+
+There is some weak evidence that the locations are clustered. But the evidence is not strong.
+
+Compute Ripley K using the `Kstat()` function
+```{r}
+df <- NF.ppp %>%
+  envelope(fun = Kest,
+           nsim = 100,
+           global = TRUE,
+           nrank = 1) %>%
+  as.data.frame()
+
+df <- df %>%
+  mutate(theo = theo * intensity(NF.ppp),
+         obs = obs * intensity(NF.ppp),
+         lo = lo * intensity(NF.ppp),
+         hi = hi * intensity(NF.ppp))
+
+ggplot(data = df,
+       mapping = aes(x = r, y = obs)) +
+  geom_ribbon(aes(ymin = lo, 
+                  ymax = hi), fill = "gray80") +
+  geom_line(col = "orange") +
+  geom_line(aes(y = theo), color = "white") +
+  xlab("Distance (km)") + ylab("K(r)") +
+  labs(title = "Locations of natural wildfires in the ANF are inconsistent with a random process",
+       subtitle = "Average observed (orange) versus modeled (white) number of additional wildfires within a distance r of a random wildfire.\nThe gray ribbon is the 99% uncertainy band based on 100 simulations from the spatial random process model.") +
+  theme_minimal()
+```
+
+At longer lags there are features that make natural fires somewhat more or less likely (e.g., Bradwell Bay Wilderness--swamp) 
+
+
+
+
