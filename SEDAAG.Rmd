@@ -665,6 +665,48 @@ ggplot(mapping = aes(x = light_firesFS.df$LightningCount, y = pred_glmLightning$
     caption = "Period of Record: 1992 to 2012 Fire Seasons (May - July)")
 ```
 
+
+
+Include daily soil dryness and daily lightning count in one model.
+
+First, create one data frame which includes both data sets
+combine KBDI_fire.df and light_fires.df which were used in building each individual model
+Both data frames start on the same date, left join on light_fires.df because data period stops in 2012
+Important to note in the merge. The bounds of the forest are not quite the same. The lightning data frame bounds the data by county and the dryness data frame bounds the data by forest boundaries. We will assume the lightning count data is an approximation for the forest count here and will reference the fire count and firebool from the soil dryness data frame.
+```{r}
+logisticModel.df <- left_join(light_fires.df, KBDI_fire.df, by = c("Date" = "Date"))
+logisticModel.df <- logisticModel.df %>%
+  dplyr::select("Date", "FireCount.y", "fireBool", "Qlcm", "LightningCount") %>%
+  dplyr::rename(FireCount = FireCount.y)
+```
+
+Create logistic regression with both predictors
+```{r}
+logistic_DL <- glm(formula = fireBool ~ Qlcm + LightningCount, family = binomial(link = "logit"), data = logisticModel.df)
+```
+
+Both daily soil dryness and daily lightning count are statistically significant
+```{r}
+summary(logistic_DL)
+```
+
+add fitted values within a column in the data frame
+```{r}
+logisticModel.df$fit <- logistic_DL$fitted.values
+```
+
+visualize data
+```{r}
+ggplot(mapping = aes(y= logistic_DL$fit, x= logisticModel.df$Qlcm, color= logisticModel.df$LightningCount))+
+  geom_point()+
+  ylab("Predicited Probablility\nof a Fire Occurrence") +
+  xlab("Daily Soil Moisture Deficit (cm)") +
+  labs(color = "Daily Lightning Strike Count") +
+  theme_minimal()
+```
+
+
+
 ##Study how the burned area over the past year may impact fire occurance.
 
 Create a data frame to include the area that was burned over the past year.
@@ -813,6 +855,7 @@ ggplot(mapping = aes(x = burnedArea.sf$acresBurned, y = pred_burnedGLM$fit)) +
     subtitle = "With a 95% Confidence Interval",
     caption = "Period of Record: April 1992 to July 2018")
 ```
+
 
 ##Model/Plot Adjustments based on meeting 11/9/2021
 
