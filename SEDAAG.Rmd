@@ -1367,5 +1367,30 @@ ggplot(data = df,
 At longer lags there are features that make natural fires somewhat more or less likely (e.g., Bradwell Bay Wilderness--swamp) 
 
 
+Trying file types to export plots to word
+```{r}
+#library(devEMF)
+
+emf(file = "C:/Users/zlaw9/OneDrive/Thesis/Thesis/Paper Figures/emf figures/pdf_trial")
+
+ggplot(TLH_1943.df, aes(x = Date, y = Qlcm, color = Qlcm)) +
+   geom_line() +
+ #  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
+   scale_color_distiller(palette = "BrBG",
+                         direction = -1,
+                         guide = 'none') +
+   scale_x_date(date_breaks = "20 years", date_labels = "%Y") +
+   ylab("Soil moisture deficit (cm)") + xlab("") +
+   geom_smooth(method = lm, se = FALSE, color = "white") +
+   facet_wrap(~ month, ncol = 12) +
+   theme_minimal() +
+   theme(axis.text.x = element_text(angle = 70, hjust = 1)) 
+#  labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
+#       subtitle = "Daily soil moisture deficit (mm)", 
+#       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee")
+
+dev.off()
+```
+
 
 
