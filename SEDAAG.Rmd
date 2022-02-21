@@ -713,6 +713,13 @@ extract_eq(logistic_DL, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 $$
 \log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -6.1967 + 0.2368(\operatorname{Qlcm}) + 0.0013(\operatorname{LightningCount})
 $$
+```{r}
+library(ggiraphExtra)
+
+ggPredict(logistic_DL)
+```
+
+
 
 
 ##Study how the burned area over the past year may impact fire occurance.
