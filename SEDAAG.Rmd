@@ -230,11 +230,32 @@ ggplot() +
                        "E: 300-999",
                        "F: 1000-4999",
                        "G: 5000+")) +
-  theme_bw() +
+  theme_bw() 
   labs(title = "Location of natural-caused wildfires in the\nApalachicola National Forest (1992-2018)",
        subtitle = "Darker color points indicates the fire resulted in a larger burn area",
        caption = "Data source: Short, Karen (2021)")
 ```
+adjustments to plot above
+```{r}
+FL_Counties.sf <- us_counties(states = "FL",
+                              resolution = "high") %>%
+  st_transform(crs = st_crs(anfbounds.sf)) %>%
+  st_crop(st_bbox(st_buffer(anfbounds.sf, dist = .25)) )
+
+ggplot() +
+  geom_sf(data = FL_Counties.sf, fill = "transparent", col = "gray80") +
+  geom_sf(data = anfbounds.sf, fill = "transparent") +
+  geom_sf(data = anf_LF.sf,
+          mapping = aes(col = FIRE_SIZE_CLASS)) +
+  scale_color_brewer(palette = "Oranges",
+                     direction = 1,
+                     name = "Size Class") +
+  theme_bw() 
+  #labs(title = "Location of natural-caused wildfires in the Apalachicola National Forest (1992-2018)",
+  #     subtitle = "Darker color points indicates the fire resulted in a larger burn area",
+  #     caption = "Data source: Short, Karen (2021)")
+```
+
 
 Plot the number of lightning fires per month
 Over 80% of lightning-sparked wildfires in the ANF occur during May-July
@@ -309,6 +330,39 @@ p2 <- ggplot(data = df,
 (p1 / p2) +
   labs(caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee")
 ```
+adjustments to plot above
+```{r}
+df <- TLH.df %>%
+  filter(Year >= 1943 & Year <= 2020) %>%
+  group_by(month) %>%
+  summarize(totalRain = sum(Rainfall24mm / 10),
+            avgMonthlyTotalRain = totalRain/(2020 - 1943 + 1),
+            avgDailyHighTemp = mean(MaxTemp))
+
+p1 <- ggplot(data = df,
+             mapping = aes(x = month, y = avgMonthlyTotalRain, fill = avgMonthlyTotalRain)) +
+        geom_col() +
+        scale_fill_distiller(palette = "Greens",
+                         direction = 1, 
+                         guide = 'none') +
+        theme_minimal() +
+        labs(x = "", y = "Rainfall (cm)", title = "A")
+
+p2 <- ggplot(data = df,
+             mapping = aes(x = month, y = avgDailyHighTemp, color = avgDailyHighTemp)) +
+        geom_point(size = 4) +
+        scale_color_distiller(palette = "Reds",
+                              direction = 1, 
+                              guide = 'none') +
+        scale_y_continuous(limits = c(60, 100)) +
+        theme_minimal() +
+        labs(x = "", y = "Temperature (°F)", title = "B")
+
+library(patchwork)
+p1 / p2
+```
+
+
 
 Average number of lightning strikes in the ANF
 ```{r}
@@ -338,6 +392,7 @@ lightningAvg.df %>%
   #theme_dark()
   theme_minimal()
 ```
+
 
 Monthly average soil moisture deficit.
 ```{r}
@@ -1148,7 +1203,7 @@ cor(temp$acresBurned,resid(glm3)) #0.04958
 Adjust data frames so that units are in cm
 ```{r}
 seasonFires_cm.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = "Year")) %>%
-  select("Year", "nFIRES", "Qlcm")
+  dplyr::select("Year", "nFIRES", "Qlcm")
 seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
 ```
 
@@ -1200,7 +1255,7 @@ Adjustments to set up multiple linear regression model
 Error in the select statement. Explore further
 ```{r}
 seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c("Year" = "forecastYear")) %>%
-  select("seasonFires_cm.sf$Year":"seasonFires_cm.sf$percentBurned") %>%
+  dplyr::select("seasonFires_cm.sf$Year":"seasonFires_cm.sf$percentBurned") %>%
   rename(nFIRES = nFIRES.x)
 ```
 
