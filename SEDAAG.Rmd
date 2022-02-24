@@ -41,7 +41,7 @@ library(tinytex)
 #library(mpm)
 #library(magrittr)
 library(texPreview)
-library(MASS)
+#library(MASS)
 ```
 
 Daily summary of the day values from Tallahassee (TLH)
@@ -1210,6 +1210,8 @@ seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
 Model reflecting only soil moisture deficit
 negative binomial regression
 ```{r}
+library(MASS)
+
 nbr1 <- glm.nb(nFIRES ~ Qlcm, data = seasonFires_cm.sf)
 
 #summary(nbr1)
@@ -1254,8 +1256,10 @@ seasonFires_cm.sf$nbr1_fit <- nbr1$fitted.values
 Adjustments to set up multiple linear regression model
 Error in the select statement. Explore further
 ```{r}
-seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c("Year" = "forecastYear")) %>%
-  dplyr::select("seasonFires_cm.sf$Year":"seasonFires_cm.sf$percentBurned") %>%
+seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c("Year" = "forecastYear"))
+
+seasonFires_cm.sf <- seasonFires_cm.sf %>%
+  dplyr::select("Year":"percentBurned") %>%
   rename(nFIRES = nFIRES.x)
 ```
 
@@ -1264,7 +1268,7 @@ Use temp dataframe because 1992 does not store all acres burned data.
 ```{r}
 temp_cm <- seasonFires_cm.sf %>%
   filter(Year >= 1993)
-nbr2 <- glm.nb(nFIRES ~  Qlcm + acresBurned, data = temp)
+nbr2 <- glm.nb(nFIRES ~  Qlcm + acresBurned, data = temp_cm)
 ```
 
 add nbr2 fitted values to dataframe to compare models
@@ -1274,7 +1278,7 @@ temp_cm$nbr2_fit <- nbr2$fitted.values
 
 explore the change in fitted values
 ```{r}
-temp_cm$change_fit <- temp$nbr1_fit - temp$nbr2_fit
+temp_cm$change_fit <- temp_cm$nbr1_fit - temp_cm$nbr2_fit
 ```
 
 
