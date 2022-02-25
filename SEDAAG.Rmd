@@ -1447,30 +1447,66 @@ ggplot(data = df,
 At longer lags there are features that make natural fires somewhat more or less likely (e.g., Bradwell Bay Wilderness--swamp) 
 
 
-Trying file types to export plots to word
+Diminishing effect of the start value
 ```{r}
-#library(devEMF)
+Q_value.df <- TLH.df %>%
+  select("Date", "Rainfall24", "MaxTemp", "NetR")
 
-emf(file = "C:/Users/zlaw9/OneDrive/Thesis/Thesis/Paper Figures/emf figures/pdf_trial")
+Q0 <- 0
+Q200 <- 200
+Q400 <- 400
+Q600 <- 600
+Q800 <- 800
 
-ggplot(TLH_1943.df, aes(x = Date, y = Qlcm, color = Qlcm)) +
-   geom_line() +
- #  scale_color_gradientn(colors = terrain.colors(5), guide = 'none') +
-   scale_color_distiller(palette = "BrBG",
-                         direction = -1,
-                         guide = 'none') +
-   scale_x_date(date_breaks = "20 years", date_labels = "%Y") +
-   ylab("Soil moisture deficit (cm)") + xlab("") +
-   geom_smooth(method = lm, se = FALSE, color = "white") +
-   facet_wrap(~ month, ncol = 12) +
-   theme_minimal() +
-   theme(axis.text.x = element_text(angle = 70, hjust = 1)) 
-#  labs(title = "Amount of water needed to bring soil moisture to full capacity in the Apalachicola National Forest",
-#       subtitle = "Daily soil moisture deficit (mm)", 
-#       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee")
+R <- 59.23 #Average annual rainfall for TLH in inches
 
-dev.off()
+source("droughtIndex.R")
+Q_value.df$Q0_Ql <- droughtIndex(Q0, R, Q_value.df$MaxTemp, Q_value.df$NetR)$Ql
+Q_value.df$Q0_Qlcm <- Q_value.df$Q0_Ql * .0254
+
+Q_value.df$Q200_Ql <- droughtIndex(Q200, R, Q_value.df$MaxTemp, Q_value.df$NetR)$Ql
+Q_value.df$Q200_Qlcm <- Q_value.df$Q200_Ql * .0254
+
+Q_value.df$Q400_Ql <- droughtIndex(Q400, R, Q_value.df$MaxTemp, Q_value.df$NetR)$Ql
+Q_value.df$Q400_Qlcm <- Q_value.df$Q400_Ql * .0254
+
+Q_value.df$Q600_Ql <- droughtIndex(Q600, R, Q_value.df$MaxTemp, Q_value.df$NetR)$Ql
+Q_value.df$Q600_Qlcm <- Q_value.df$Q600_Ql * .0254
+
+Q_value.df$Q800_Ql <- droughtIndex(Q800, R, Q_value.df$MaxTemp, Q_value.df$NetR)$Ql
+Q_value.df$Q800_Qlcm <- Q_value.df$Q800_Ql * .0254
 ```
 
+plot first year of data
+```{r}
+Q_plot1 <- Q_value.df %>%
+  filter(year(Date) < 1941) %>%
+  filter(month(Date) < 10) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(aes(y = Q0_Qlcm, color = "0"), size = 1.5) +
+    geom_line(aes(y = Q400_Qlcm, color = "400"), size = 1.5) +
+    geom_line(aes(y = Q800_Qlcm, color = "800"), size = 1.5) +
+    scale_color_manual("Initial Q-values",
+                       breaks = c("0", "400", "800"),
+                       values = c("wheat2", "tan", "goldenrod4")) +
+  ylab("Soil Moisture\nDeficit (cm)") +
+  scale_x_date(breaks = as.Date(c("1940-03-01", "1940-03-15", "1940-04-01", "1940-04-15", "1940-05-01", "1940-05-15", "1940-06-01", "1940-06-15", "1940-07-01", "1940-07-15", "1940-08-01", "1940-08-15", "1940-09-01", "1940-09-15")),
+               date_labels = "%b %e") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+Q_plot2 <- Q_value.df %>%
+  filter(year(Date) < 1941) %>%
+  filter(month(Date) < 10) %>%
+  ggplot(mapping = aes(x = Date)) +
+    geom_line(mapping = aes(y = Rainfall24), color = "blue3", size = 1.2) +
+    ylab("24Hr Net Rainfall (in)") +
+    scale_x_date(breaks = as.Date(c("1940-03-01", "1940-03-15", "1940-04-01", "1940-04-15", "1940-05-01", "1940-05-15", "1940-06-01", "1940-06-15", "1940-07-01", "1940-07-15", "1940-08-01", "1940-08-15", "1940-09-01", "1940-09-15")),
+               date_labels = "%b %e") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+Q_plot1/Q_plot2
+
+```
 
