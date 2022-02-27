@@ -781,6 +781,67 @@ ggPredict(logistic_DL)
 ```
 
 
+Adjustments to binomial model with two predictors (Soil Dryness and Lightning count).
+Set lightning count to its mean and plot predicted probabilities across the range of soil moisture deficit
+Set soil moisture deficit to its mean and plot predicted probabilities across the range of lightning count 
+```{r}
+logisticModel_Avg.df <- logisticModel.df %>%
+  select("Date", "fireBool", "Qlcm", "LightningCount") %>%
+  mutate(LightningAvg = mean(LightningCount), QlcmAvg = mean(Qlcm))
+
+logistic_SM <- glm(formula = fireBool ~ Qlcm + LightningAvg, family = binomial(link = "logit"), data = logisticModel_Avg.df)
+
+pred_SM <- predict(object = logistic_SM,
+                         type = "response",
+                         se.fit = TRUE)
+
+#creating confidence interval
+low_boundSM <- pred_SM$fit - (1.96*pred$se.fit)
+up_boundSM <- pred_SM$fit + (1.96*pred$se.fit)
+
+SM_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$Qlcm, y = logistic_SM$fit)) +
+  geom_ribbon(aes(ymin = low_boundSM, ymax = up_boundSM), fill = "grey") +
+  geom_line(color = "blue") +
+  theme_minimal() +
+  #ylab("Predicited Probablility") +
+  #theme(axis.title.y = element_text(hjust = .8)) +
+  ylab("Daily Fire\nProbability") +
+  xlab("Soil Moisture Deficit (cm)") 
+
+
+logistic_L <- glm(formula = fireBool ~ QlcmAvg + LightningCount, family = binomial(link = "logit"), data = logisticModel_Avg.df)
+
+pred_L <- predict(object = logistic_L,
+                         type = "response",
+                         se.fit = TRUE)
+
+#creating confidence interval
+low_boundL <- pred_L$fit - (1.96*pred_L$se.fit)
+up_boundL <- pred_L$fit + (1.96*pred_L$se.fit)
+
+L_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$LightningCount, y = logistic_L$fit)) +
+  geom_ribbon(aes(ymin = low_boundL, ymax = up_boundL), fill = "grey") +
+  geom_line(color = "blue") +
+  #ylab("Predicited Probablility") +
+  ylab("Daily Fire\nProbability") +
+  xlab("Daily Lightning Strike Count") +
+  theme_minimal()
+
+(SM_plot/L_plot)
+```
+
+```{r}
+newdat <- expand.grid(Qlcm = seq(0, 20, 0.5),
+                      LightningCount = seq(0, 5600, 100))
+z <- predict(logistic_DL, newdata = newdat, type = "response")
+newdat$br <- z
+
+ggplot(newdat, aes(x = Qlcm, y = LightningCount, fill = br)) + 
+        geom_tile() +
+        labs(fill = "Predicted Probability") +
+        xlab("Soil Moisture Deficit (cm)") + ylab("Lightning Strike Count") +
+        theme_minimal()
+```
 
 
 ##Study how the burned area over the past year may impact fire occurance.
