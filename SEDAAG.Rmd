@@ -784,6 +784,7 @@ ggPredict(logistic_DL)
 Adjustments to binomial model with two predictors (Soil Dryness and Lightning count).
 Set lightning count to its mean and plot predicted probabilities across the range of soil moisture deficit
 Set soil moisture deficit to its mean and plot predicted probabilities across the range of lightning count 
+
 ```{r}
 logisticModel_Avg.df <- logisticModel.df %>%
   select("Date", "fireBool", "Qlcm", "LightningCount") %>%
@@ -805,8 +806,9 @@ SM_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$Qlcm, y = logistic_SM$f
   theme_minimal() +
   #ylab("Predicited Probablility") +
   #theme(axis.title.y = element_text(hjust = .8)) +
-  ylab("Daily Fire\nProbability") +
-  xlab("Soil Moisture Deficit (cm)") 
+  ylab("Daily Fire Probability") +
+  xlab("Soil Moisture Deficit (cm)") +
+  theme(aspect.ratio = 6/5)
 
 
 logistic_L <- glm(formula = fireBool ~ QlcmAvg + LightningCount, family = binomial(link = "logit"), data = logisticModel_Avg.df)
@@ -823,11 +825,12 @@ L_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$LightningCount, y = logi
   geom_ribbon(aes(ymin = low_boundL, ymax = up_boundL), fill = "grey") +
   geom_line(color = "blue") +
   #ylab("Predicited Probablility") +
-  ylab("Daily Fire\nProbability") +
+  ylab("Daily Fire Probability") +
   xlab("Daily Lightning Strike Count") +
-  theme_minimal()
+  theme_minimal() +
+  theme(aspect.ratio = 6/5)
 
-(SM_plot/L_plot)
+SM_plot+L_plot
 ```
 
 ```{r}
@@ -838,9 +841,11 @@ newdat$br <- z
 
 ggplot(newdat, aes(x = Qlcm, y = LightningCount, fill = br)) + 
         geom_tile() +
+        scale_fill_distiller(palette = "Oranges", direction = 1) +
         labs(fill = "Predicted Probability") +
         xlab("Soil Moisture Deficit (cm)") + ylab("Lightning Strike Count") +
-        theme_minimal()
+        theme_minimal() +
+        theme(aspect.ratio = 1)
 ```
 
 
