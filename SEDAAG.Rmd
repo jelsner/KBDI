@@ -774,10 +774,9 @@ extract_eq(logistic_DL, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 $$
 \log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -6.1967 + 0.2368(\operatorname{Qlcm}) + 0.0013(\operatorname{LightningCount})
 $$
-```{r}
-library(ggiraphExtra)
 
-ggPredict(logistic_DL)
+```{r}
+summary(logistic_DL)
 ```
 
 
@@ -831,6 +830,12 @@ L_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$LightningCount, y = logi
   theme(aspect.ratio = 6/5)
 
 SM_plot+L_plot
+```
+
+Add fitted values to the logisticModel_Avg.df dataframe
+```{r}
+logisticModel_Avg.df$Qlcm_fit <- logistic_SM$fitted.values
+logisticModel_Avg.df$LightningCount_fit <- logistic_L$fitted.values
 ```
 
 ```{r}
