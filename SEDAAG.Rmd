@@ -1434,6 +1434,18 @@ TLH_1943.df %>%
 ```
 
 
+```{r}
+library(ggrepel)
+
+ggplot(data = seasonFires_cm.sf,
+       mapping = aes(x = Qlcm, y = nFIRES, label = Year)) +
+  geom_point() +
+  geom_label_repel() +
+  labs(x = "Soil moisture deficit (cm) on April 30th", y = "Number of fires in the ANF (May-Jul)") +
+  theme_minimal()
+```
+
+
 
 Are the locations of natural-caused wildfires during May, June, and July within the ANF clustered?
 
