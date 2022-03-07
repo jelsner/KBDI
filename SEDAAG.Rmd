@@ -1308,7 +1308,8 @@ ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
     #title = "Predicted Number of Fires During the Fire Season Based on April 30th Soil Moisture Deficit",
     #subtitle = "With a 95% Confidence Interval",
     #caption = "Period of Record: 1992 to 2018")
-  theme_minimal()
+  theme_minimal() +
+  theme(aspect.ratio = 1)
 ```
 
 Exploring predicted values and confidence intervals
