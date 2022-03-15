@@ -260,10 +260,12 @@ ggplot() +
 Plot the number of lightning fires per month
 Over 80% of lightning-sparked wildfires in the ANF occur during May-July
 ```{r}
-df <- anf_LF.sf %>%
+wfplot.df <- anf_LF.sf %>%
   st_drop_geometry() %>%
-  mutate(MonthF = factor(month.name[month(DISCOVERY_)], 
-                         levels = rev(month.name), 
+  #mutate(MonthF = factor(month.name[month(DISCOVERY_)],
+  mutate(MonthF = factor(month.abb[month(DISCOVERY_)],
+                         #levels = rev(month.name), 
+                         levels = month.abb,
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
   summarize(nF = n(),
@@ -291,9 +293,11 @@ ggplot(data = df,
 Plot average monthly rainfall and max temperatures
 ```{r}
 df <- TLH.df %>%
-  filter(Year >= 1941 & Year <= 2019) %>%
+  #filter(Year >= 1941 & Year <= 2019) %>%
+  filter(Year >= 1943 & Year <= 2020) %>%
   group_by(month) %>%
-  summarize(totalRain = sum(Rainfall24mm),
+  #summarize(totalRain = sum(Rainfall24mm),
+  summarize(totalRain = sum(Rainfall24mm / 10),
             avgMonthlyTotalRain = totalRain/(2019 - 1941 + 1),
             avgDailyHighTemp = mean(MaxTemp))
 
@@ -303,10 +307,11 @@ p1 <- ggplot(data = df,
         scale_fill_distiller(palette = "Greens",
                          direction = 1, 
                          guide = 'none') +
-        theme_dark() +
-        labs(x = "", y = "(mm)",
+        #theme_dark() +
+        theme_minimal() +
+        labs(x = "", y = "(cm)",
              title = "Average monthly rainfall amount in the Apalachicola National Forest",
-             subtitle = "1941-2019") +
+             subtitle = "1943-2020") +
         theme(plot.title = element_text(size = 15),
               plot.subtitle = element_text(size = 13),
               axis.text = element_text(size = 11))
@@ -319,16 +324,17 @@ p2 <- ggplot(data = df,
                               direction = 1, 
                               guide = 'none') +
         scale_y_continuous(limits = c(60, 100)) +
-        theme_dark() +
+        #theme_dark() +
+        theme_minimal() +
         labs(x = "", y = "(°F)",
              title = "Average daily high temperature in the Apalachicola National Forest",
-             subtitle = "1941-2019") +
+             subtitle = "1943-2020") +
         theme(plot.title = element_text(size = 15),
               plot.subtitle = element_text(size = 13),
-              axis.text = element_text(size = 10))
+              axis.text = element_text(size = 11))
 
 (p1 / p2) +
-  labs(caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee")
+  labs(caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee")
 ```
 adjustments to plot above
 ```{r}
@@ -368,11 +374,14 @@ Average number of lightning strikes in the ANF
 ```{r}
 lightningAvg.df <- lightning.df %>%
   filter(year(SEQDAY) <= 2012) %>%
-  mutate(MonthF = factor(month.name[month(SEQDAY)],
-                         levels = rev(month.name),
+  #mutate(MonthF = factor(month.name[month(SEQDAY)],
+  mutate(MonthF = factor(month.abb[month(SEQDAY)],
+                         #levels = rev(month.name),
+                         levels = month.abb,
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
-  summarize(avgLightningCount = sum(LightningCount)/(2012-1986))
+  #summarize(avgLightningCount = sum(LightningCount)/(2012-1986))
+  summarize(avgLightningCount = mean(LightningCount, na.rm = TRUE))
 ```
 
 Plot average lightning
@@ -392,6 +401,41 @@ lightningAvg.df %>%
   #theme_dark()
   theme_minimal()
 ```
+
+```{r}
+p1 <- ggplot(data = wfplot.df,
+       mapping = aes(x = MonthF, 
+                     y = perF,
+                     fill = perF)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Oranges",
+                       direction = 1,
+                       guide = "none") +
+  scale_y_continuous(labels = scales::percent_format(1L)) +
+  labs(x = "", y = "Wildfire frequency") +
+  labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest\noccur during May-July",
+       subtitle = "Percentage of all natural wildfires by month",
+       caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
+  theme_minimal()
+
+p2 <- ggplot(data = lightningAvg.df,
+       mapping = aes(x = MonthF, 
+                     y = avgLightningCount,
+                     fill = avgLightningCount)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Blues",
+                       direction = 1,
+                       guide = "none") +
+  labs(x = "", y = "Cloud-to-ground strikes",
+       #title = "B") +
+       title = "Lightning in the Apalachicola National Forest peaks from June-August",
+       subtitle = "Daily average cloud-to-ground lightning strikes by month",
+       caption = "Period of record: 1986-2012, Data source: NCEI") +
+  theme_minimal() 
+
+p1 / p2
+```
+
 
 
 Monthly average soil moisture deficit.
@@ -421,16 +465,19 @@ Another interpretation of soil moisture plot
 TLH.df %>%
   filter(Year >= 1943) %>%
   group_by(month, Year) %>%
-  summarise(Avg = mean(Qlm)) %>%
+  #summarise(Avg = mean(Qlm)) %>%
+  summarise(Avg = mean(Qlcm)) %>%
   ggplot(aes(x = Year, y = Avg, color = Avg)) +
   geom_smooth(method = lm, se = FALSE, color = "gray70") +
   geom_point() +  
   scale_color_gradientn(colors = terrain.colors(5), guide = "none") +
-  scale_y_continuous(limits = c(0, 201)) +
+  #scale_y_continuous(limits = c(0, 201)) +
+  scale_y_continuous(limits = c(0, 20)) +
   scale_x_continuous(limits = c(1940, 2020), breaks = c(1950, 1980, 2010)) +
   ylab("") + xlab("") +
   facet_wrap(~ month, ncol = 12) +
-  theme_dark() +
+  #theme_dark() +
+  theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
   #labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
        #subtitle = "Monthly average dryness (mm) by year with trend line (gray)", 
@@ -829,7 +876,11 @@ L_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$LightningCount, y = logi
   theme_minimal() +
   theme(aspect.ratio = 6/5)
 
-SM_plot+L_plot
+patchworkplot <- SM_plot+L_plot
+
+patchworkplot + plot_annotation(
+    title = "Predicted probability of daily fire occurrence for each predictor",
+    subtitle = "Assuming the second predictor is equal to its mean")
 ```
 
 Add fitted values to the logisticModel_Avg.df dataframe
@@ -850,7 +901,8 @@ ggplot(newdat, aes(x = Qlcm, y = LightningCount, fill = br)) +
         labs(fill = "Predicted Probability") +
         xlab("Soil Moisture Deficit (cm)") + ylab("Lightning Strike Count") +
         theme_minimal() +
-        theme(aspect.ratio = 1)
+        theme(aspect.ratio = 1) +
+  labs(title = "Predicted probability of daily fire occurrence")
 ```
 
 
@@ -1304,12 +1356,10 @@ ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
               #method.args = list(family = poisson(link = "log"))) +
   ylab("Number of Fires in the ANF (May - July)") +
   xlab("Soil Moisture Deficit on April 30th (cm)") +
-  #labs(
-    #title = "Predicted Number of Fires During the Fire Season Based on April 30th Soil Moisture Deficit",
-    #subtitle = "With a 95% Confidence Interval",
-    #caption = "Period of Record: 1992 to 2018")
   theme_minimal() +
-  theme(aspect.ratio = 1)
+  theme(aspect.ratio = 1) +
+  labs(
+    title = "Predicted number of fires during\nthe fire season")
 ```
 
 Exploring predicted values and confidence intervals
