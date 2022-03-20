@@ -889,6 +889,14 @@ logisticModel_Avg.df$Qlcm_fit <- logistic_SM$fitted.values
 logisticModel_Avg.df$LightningCount_fit <- logistic_L$fitted.values
 ```
 
+adjust logistic model data frame so it can be used as a table snapshot in a PowerPoint slide
+```{r}
+Logistic_PPointTable <- logisticModel.df %>%
+  select("Date":"LightningCount") %>%
+  rename(KBDI_cm = Qlcm)
+```
+
+
 ```{r}
 newdat <- expand.grid(Qlcm = seq(0, 20, 0.5),
                       LightningCount = seq(0, 5600, 100))
@@ -1428,8 +1436,8 @@ predict.glm(nbr2, newdata = temp.df, type = "response", se.fit = TRUE)
 Clean up data frame to be exported to table in paper
 ```{r}
 appendix_table.df <- temp_cm %>%
-  dplyr::select("Year":"acresBurned", "nbr1_fit", "nbr2_fit") %>%
-  rename(NumberOfFires = nFIRES, SoilMoistureDeficit_cm = Qlcm, BurnedGroupInteval = burnedGroupInterval, AcresBurned = acresBurned, Model1Fit = nbr1_fit, Model2Fit = nbr2_fit)
+  dplyr::select("Year":"Qlcm", "burnedGroupInterval":"acresBurned") %>%
+  rename(NumberOfFires = nFIRES, KBDI_cm = Qlcm, BurnedGroupInteval = burnedGroupInterval, AcresBurned = acresBurned)
 ```
 
 Export the data frame to an excel table
