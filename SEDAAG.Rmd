@@ -433,7 +433,8 @@ p2 <- ggplot(data = lightningAvg.df,
        caption = "Period of record: 1986-2012, Data source: NCEI") +
   theme_minimal() 
 
-p1 / p2
+#p1 / p2
+p2/p1
 ```
 
 
