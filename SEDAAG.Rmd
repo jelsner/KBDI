@@ -480,9 +480,9 @@ TLH.df %>%
   #theme_dark() +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  #labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
-       #subtitle = "Monthly average dryness (mm) by year with trend line (gray)", 
-       labs(caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") 
+  labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
+       subtitle = "Monthly average dryness (cm) by year with trend line (gray)", 
+       caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") 
 ```
 
 ##General linear regression - Study how KBDI impacts lightning wildfire occurrence.
@@ -1476,7 +1476,7 @@ ggplot(TLH_1943.df, aes(x = Date, y = Qlcm, color = Qlcm)) +
 
 Number of days per year with KBDI above 650 (hundredths of an inch) (Qlcm = 16.51)
 ```{r}
-#library(MASS)
+library(MASS)
 
 TLH_1943.df %>%
   group_by(Year) %>%
@@ -1490,6 +1490,9 @@ TLH_1943.df %>%
 #              formula = y ~ x, 
 #              se = FALSE,
 #              col = "red") +
+  labs(title = "Prior to 1980, the annual number of days\nexceeding 16 cm KBDI was rarely more than 25",
+  subtitle = "Since then, nearly half of the years have had at least 25 days above 16cm KBDI", 
+  caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
   theme_minimal()
 ```
 
