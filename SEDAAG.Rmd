@@ -479,10 +479,10 @@ TLH.df %>%
   facet_wrap(~ month, ncol = 12) +
   #theme_dark() +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   #labs(title = "Risk of wildfires is increasing in the Apalachicola National Forest.",
        #subtitle = "Monthly average dryness (mm) by year with trend line (gray)", 
-       #caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") 
+       labs(caption = "Period of record: 1941-2019, Data source: NWSFO Tallahassee") 
 ```
 
 ##General linear regression - Study how KBDI impacts lightning wildfire occurrence.
