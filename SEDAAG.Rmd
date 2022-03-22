@@ -264,14 +264,15 @@ wfplot.df <- anf_LF.sf %>%
   st_drop_geometry() %>%
   #mutate(MonthF = factor(month.name[month(DISCOVERY_)],
   mutate(MonthF = factor(month.abb[month(DISCOVERY_)],
+                         levels = rev(month.abb),
                          #levels = rev(month.name), 
-                         levels = month.abb,
+                         #levels = month.abb,
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
   summarize(nF = n(),
             perF = nF/nrow(anf_LF.sf))
 
-ggplot(data = df,
+ggplot(data = wfplot.df,
        mapping = aes(y = MonthF, 
                      x = perF,
                      fill = perF)) +
@@ -310,11 +311,12 @@ p1 <- ggplot(data = df,
         #theme_dark() +
         theme_minimal() +
         labs(x = "", y = "(cm)",
-             title = "Average monthly rainfall amount in the Apalachicola National Forest",
-             subtitle = "1943-2020") +
-        theme(plot.title = element_text(size = 15),
-              plot.subtitle = element_text(size = 13),
-              axis.text = element_text(size = 11))
+             title = "Average monthly rainfall amount",
+             #subtitle = "1943-2020")
+             caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") #+
+        #theme(plot.title = element_text(size = 15),
+              #plot.subtitle = element_text(size = 13),
+              #axis.text = element_text(size = 11))
 
 
 p2 <- ggplot(data = df,
@@ -333,8 +335,8 @@ p2 <- ggplot(data = df,
               plot.subtitle = element_text(size = 13),
               axis.text = element_text(size = 11))
 
-(p1 / p2) +
-  labs(caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee")
+#(p1 / p2) +
+  #labs(caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee")
 ```
 adjustments to plot above
 ```{r}
@@ -403,22 +405,28 @@ lightningAvg.df %>%
 ```
 
 ```{r}
-p1 <- ggplot(data = wfplot.df,
-       mapping = aes(x = MonthF, 
-                     y = perF,
-                     fill = perF)) +
+p3 <- ggplot(data = wfplot.df,
+       #mapping = aes(x = MonthF, 
+                     #y = perF,
+                     #fill = perF)) +
+       mapping = aes(x = perF,
+                     y = MonthF,
+                     fill = perF))+
   geom_col() +
   scale_fill_distiller(palette = "Oranges",
                        direction = 1,
                        guide = "none") +
-  scale_y_continuous(labels = scales::percent_format(1L)) +
-  labs(x = "", y = "Wildfire frequency") +
-  labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest\noccur during May-July",
-       subtitle = "Percentage of all natural wildfires by month",
+  #scale_y_continuous(labels = scales::percent_format(1L)) +
+  scale_x_continuous(labels = scales::percent_format(1L)) +
+  #labs(x = "", y = "Wildfire frequency") +
+  labs(x = "wildfire frequency", y = "") +
+  #labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest\noccur during May-July",
+  labs(title = "Percentage of all natural\nwildfires by month",
+       #subtitle = "Percentage of all natural wildfires by month",
        caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
   theme_minimal()
 
-p2 <- ggplot(data = lightningAvg.df,
+p4 <- ggplot(data = lightningAvg.df,
        mapping = aes(x = MonthF, 
                      y = avgLightningCount,
                      fill = avgLightningCount)) +
@@ -428,15 +436,20 @@ p2 <- ggplot(data = lightningAvg.df,
                        guide = "none") +
   labs(x = "", y = "Cloud-to-ground strikes",
        #title = "B") +
-       title = "Lightning in the Apalachicola National Forest peaks from June-August",
-       subtitle = "Daily average cloud-to-ground lightning strikes by month",
+       #title = "Lightning in the Apalachicola National Forest peaks from June-August",
+       title = "Daily average cloud-to-ground\nlightning strikes",
+       #subtitle = "Daily average cloud-to-ground lightning strikes by month",
        caption = "Period of record: 1986-2012, Data source: NCEI") +
   theme_minimal() 
 
 #p1 / p2
-p2/p1
+#p3/p4
 ```
 
+Create three panel plot with precip, lightning, and wildfires
+```{r}
+(p1/p4) | p3
+```
 
 
 Monthly average soil moisture deficit.
