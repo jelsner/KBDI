@@ -1450,8 +1450,8 @@ predict.glm(nbr2, newdata = temp.df, type = "response", se.fit = TRUE)
 Clean up data frame to be exported to table in paper
 ```{r}
 appendix_table.df <- temp_cm %>%
-  dplyr::select("Year":"Qlcm", "burnedGroupInterval":"acresBurned") %>%
-  rename(NumberOfFires = nFIRES, KBDI_cm = Qlcm, BurnedGroupInteval = burnedGroupInterval, AcresBurned = acresBurned)
+  dplyr::select("Year":"Qlcm", "acresBurned") %>%
+  rename(NumberOfFires = nFIRES, KBDI_cm = Qlcm, AcresBurned = acresBurned)
 ```
 
 Export the data frame to an excel table
