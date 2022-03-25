@@ -867,7 +867,7 @@ SM_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$Qlcm, y = logistic_SM$f
   #ylab("Predicited Probablility") +
   #theme(axis.title.y = element_text(hjust = .8)) +
   ylab("Daily Fire Probability") +
-  xlab("Soil Moisture Deficit (cm)") +
+  xlab("Soil Dryness (cm)") +
   theme(aspect.ratio = 6/5)
 
 
@@ -921,7 +921,7 @@ ggplot(newdat, aes(x = Qlcm, y = LightningCount, fill = br)) +
         geom_tile() +
         scale_fill_distiller(palette = "Oranges", direction = 1) +
         labs(fill = "Predicted Probability") +
-        xlab("Soil Moisture Deficit (cm)") + ylab("Lightning Strike Count") +
+        xlab("Soil Dryness (cm)") + ylab("Lightning Strike Count") +
         theme_minimal() +
         theme(aspect.ratio = 1) +
   labs(title = "Predicted probability of daily fire occurrence")
@@ -1377,7 +1377,7 @@ ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
   geom_smooth(method = "glm.nb") + #, formula = y ~ x,
               #method.args = list(family = poisson(link = "log"))) +
   ylab("Number of Fires in the ANF (May - July)") +
-  xlab("Soil Moisture Deficit on April 30th (cm)") +
+  xlab("Soil Dryness on April 30th (cm)") +
   theme_minimal() +
   theme(aspect.ratio = 1) +
   labs(
@@ -1496,7 +1496,7 @@ TLH_1943.df %>%
   summarize(nD = sum(Qlcm > 16)) %>%
   ggplot(aes(Year, nD)) +
   geom_point() +
-  labs(x = "", y = "Number of days\nSoil moisture deficit exceeded 16 cm") +
+  labs(x = "", y = "Number of days\ndryness exceeded 16 cm") +
 #  labs(title = "Number of days KBDI exceeds 160 mm",
 #       x = "", y = "") +
 #  stat_smooth(method = "glm.nb",
