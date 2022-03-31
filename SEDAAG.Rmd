@@ -264,9 +264,9 @@ wfplot.df <- anf_LF.sf %>%
   st_drop_geometry() %>%
   #mutate(MonthF = factor(month.name[month(DISCOVERY_)],
   mutate(MonthF = factor(month.abb[month(DISCOVERY_)],
-                         levels = rev(month.abb),
+                         #levels = rev(month.abb),
                          #levels = rev(month.name), 
-                         #levels = month.abb,
+                         levels = month.abb,
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
   summarize(nF = n(),
@@ -406,24 +406,25 @@ lightningAvg.df %>%
 
 ```{r}
 p3 <- ggplot(data = wfplot.df,
-       #mapping = aes(x = MonthF, 
-                     #y = perF,
-                     #fill = perF)) +
-       mapping = aes(x = perF,
-                     y = MonthF,
-                     fill = perF))+
+       mapping = aes(x = MonthF, 
+                     y = perF,
+                     fill = perF)) +
+       #mapping = aes(x = perF,
+                     #y = MonthF,
+                     #fill = perF))+
   geom_col() +
   scale_fill_distiller(palette = "Oranges",
                        direction = 1,
                        guide = "none") +
-  #scale_y_continuous(labels = scales::percent_format(1L)) +
-  scale_x_continuous(labels = scales::percent_format(1L)) +
-  #labs(x = "", y = "Wildfire frequency") +
-  labs(x = "wildfire frequency", y = "") +
+  scale_y_continuous(labels = scales::percent_format(1L)) +
+  #scale_x_continuous(labels = scales::percent_format(1L)) +
+  labs(x = "", y = "Wildfire frequency",
+       title = "A") +
+  #labs(x = "wildfire frequency", y = "") +
   #labs(title = "Over 80% of natural wildfires in the Apalachicola National Forest\noccur during May-July",
-  labs(title = "Percentage of all natural\nwildfires by month",
+  #labs(title = "Percentage of all natural\nwildfires by month",
        #subtitle = "Percentage of all natural wildfires by month",
-       caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
+       #caption = "Period of record: 1992-2018, Data source: Short, Karen (2021)") +
   theme_minimal()
 
 p4 <- ggplot(data = lightningAvg.df,
@@ -435,15 +436,14 @@ p4 <- ggplot(data = lightningAvg.df,
                        direction = 1,
                        guide = "none") +
   labs(x = "", y = "Cloud-to-ground strikes",
-       #title = "B") +
+       title = "B") +
        #title = "Lightning in the Apalachicola National Forest peaks from June-August",
-       title = "Daily average cloud-to-ground\nlightning strikes",
+       #title = "Daily average cloud-to-ground\nlightning strikes",
        #subtitle = "Daily average cloud-to-ground lightning strikes by month",
-       caption = "Period of record: 1986-2012, Data source: NCEI") +
+       #caption = "Period of record: 1986-2012, Data source: NCEI") +
   theme_minimal() 
 
-#p1 / p2
-#p3/p4
+p3/p4
 ```
 
 Create three panel plot with precip, lightning, and wildfires
