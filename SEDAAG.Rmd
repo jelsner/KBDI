@@ -256,7 +256,6 @@ ggplot() +
   #     caption = "Data source: Short, Karen (2021)")
 ```
 
-
 Plot the number of lightning fires per month
 Over 80% of lightning-sparked wildfires in the ANF occur during May-July
 ```{r}
@@ -1540,7 +1539,7 @@ W <- anfbounds.sf %>%
   as.owin()
 
 NF.ppp <- anf_LF.sf %>% 
-  filter(month(DISCOVERY_) %in% c(5, 6, 7)) %>%
+  #filter(month(DISCOVERY_) %in% c(5, 6, 7)) %>%
   #filter(month(DISCOVERY_) == 05 | month(DISCOVERY_) == 06 | month(DISCOVERY_) == 07) %>%
   st_geometry() %>%
   st_transform(crs = 2779) %>%
@@ -1553,7 +1552,7 @@ NF.ppp <- NF.ppp[W] %>%
 summary(NF.ppp)
 ```
 
-Area is 2,564 square km. There are 356 natural wildfires for an average spatial intensity of 13.9 fires per 10 square kilometer during May-July over the 27-year period.
+Area is 2,564 square km. There are 437 natural wildfires for an average spatial intensity of 17.05 fires per 10 square kilometer during May-July over the 27-year period.
 ```{r}
 NF.ppp %>%
   density() %>%
