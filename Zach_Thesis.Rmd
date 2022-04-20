@@ -441,7 +441,8 @@ KBDI_fire.df$fireBool <- !is.na(KBDI_fire.df$FireCount)
 ```
 
 
-Regression Model
+Binomial Regression Model. Predicting the probability of wildfire occurrence using soil dryness as a predictor.
+Ql units = 100th inches
 ```{r}
 glmQl <- glm(formula = fireBool~Ql, family = binomial, data = KBDI_fire.df)
 
@@ -554,7 +555,7 @@ count_cFires.df <- county_LF.sf %>%
   rename(FireCount = n, Date = DISCOVERY_)
 ```
 
-Each data set must have the same time bounds
+Each data set must have the same temporal bounds
 ```{r}
 count_cFiresYrs.df <- count_cFires.df %>%
   filter(year(Date) <= 2012)
@@ -572,7 +573,7 @@ light_fires.df <- left_join(x = lightningYrs.df, y = count_cFiresYrs.df, by = c(
 light_fires.df$FireBool <- !is.na(light_fires.df$FireCount)
 ```
 
-general linear regression
+binomial regression
 ```{r}
 glmLightning <- glm(formula = FireBool ~ LightningCount, family = binomial, data = light_fires.df)
 
@@ -652,9 +653,9 @@ ggplot(mapping = aes(x = light_firesFS.df$LightningCount, y = pred_glmLightning$
 
 Include daily soil dryness and daily lightning count in one model.
 
-First, create one data frame which includes both data sets
-combine KBDI_fire.df and light_fires.df which were used in building each individual model
-Both data frames start on the same date, left join on light_fires.df because data period stops in 2012
+First, create one data frame which includes both data sets.
+combine KBDI_fire.df and light_fires.df which were used in building each individual model.
+Both data frames start on the same date, left join on light_fires.df because data period stops in 2012.
 Important to note in the merge. The bounds of the forest are not quite the same. The lightning data frame bounds the data by county and the dryness data frame bounds the data by forest boundaries. We will assume the lightning count data is an approximation for the forest count here and will reference the fire count and firebool from the soil dryness data frame.
 ```{r}
 logisticModel.df <- left_join(light_fires.df, KBDI_fire.df, by = c("Date" = "Date"))
@@ -703,8 +704,8 @@ pred_SM <- predict(object = logistic_SM,
                          se.fit = TRUE)
 
 #creating confidence interval
-low_boundSM <- pred_SM$fit - (1.96*pred$se.fit)
-up_boundSM <- pred_SM$fit + (1.96*pred$se.fit)
+low_boundSM <- pred_SM$fit - (1.96*pred_SM$se.fit)
+up_boundSM <- pred_SM$fit + (1.96*pred_SM$se.fit)
 
 SM_plot <- ggplot(mapping = aes(x = logisticModel_Avg.df$Qlcm, y = logistic_SM$fit)) +
   geom_ribbon(aes(ymin = low_boundSM, ymax = up_boundSM), fill = "grey") +
@@ -878,7 +879,7 @@ cor(burnedArea.sf$percentBurned, resid(percentBurnedGLM))
 ```
 
 
-##Model/Plot Adjustments based on meeting 11/9/2021
+##Model Preseason Soil Dryness as a Predictor
 
 Create a bar chart showing the number of fires per year over the data period
 ```{r}
@@ -920,21 +921,16 @@ seasonFires.sf <- left_join(x = seasonFires.sf, y = burnedArea.sf, by = c("Year"
   rename(nFIRES = nFIRES.x)
 ```
 
-Acres burned is not statistically significant (p-value = 0.092)
+Create a temp data frame to start in 1993 because we do not have all acres burned prior to 1992 to be included in the 1992 preseason count.
 ```{r}
 temp <- seasonFires.sf %>%
   filter(Year >= 1993)
-formula2 <- lm(nFIRES ~ KBDI_April30 + acresBurned, data = temp)
-#glm2 <- glm(formula2, data = temp, family = poisson)
-
-#summary(glm2)
 ```
 
 
 
-##Make correction to the models
 1) set soil moisture deficit units to cm (SI units)
-2) fit a negative binomial regression model instead of Poisson
+2) fit a negative binomial regression model
 
 Adjust data frames so that units are in cm
 ```{r}
@@ -994,7 +990,7 @@ seasonFires_cm.sf$nbr1_fit <- nbr1$fitted.values
 
 
 
-Setting up multiple regression model to include both soil moisture deficit and prior area burned
+Setting up data to carry out a multiple regression model which will include both soil moisture deficit and prior area burned
 ```{r}
 seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c("Year" = "forecastYear"))
 
