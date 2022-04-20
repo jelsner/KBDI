@@ -1,5 +1,5 @@
 ---
-title: "SEDAAG"
+title: "Zach_Thesis"
 author: "Zach"
 date: "10/2/2021"
 output: html_document
@@ -7,40 +7,33 @@ editor_options:
   chunk_output_type: console
 ---
 
-This file will document/organize work flow as it will be presented at the SEDAAG conference
+This file will document/organize work flow for the Master's thesis
 
 
 ##Abstract
-Seasonal Prediction of Natural Fires in the Apalachicola National Forest
+Wildfires in the Apalachicola National Forest, USA From 1992-2018:
+Relationships to Soil Dryness and Lightning
 
-Anthropogenic climate change is shifting the risk of wildfires worldwide. The influence of climate change on fire hazards are diverse and complex and varying by region. Understandably, literature on the U.S. wildfire threat holds a western centric viewpoint. In this study we investigate the fire threat in the Southeast United States. In particular, we examine the association between soil dryness and lightning-ignited wildfires in the Apalachicola National Forest (ANF) located in the Florida Big Bend region. We quantify, for the first time, the relationship between pre-fire season dryness and the number of fires during the fire season with a statistical model. We show that lightning-ignited wildfires are frequent, seasonal events. We define the fire season as occurring from May to July when over 80% of natural fires since 1992 have occurred. We show a strong relationship between dryness in the forest duff layer during April and the number of natural wildfires during the subsequent May through July time period. We estimate soil dryness in the duff layer using the Keetch-Byram Drought Index (KBDI) which is a measure of moisture deficit based on temperature and net rainfall easily computed using daily summary of the day values from first-order weather stations. Given the strong relationship between the KBDI and the number of wildfires we suggest that a skillful seasonal prediction model of fire-season severity might be possible.
+Anthropogenic climate change is shifting the risk of wildfires worldwide. The influence of climate change on fire hazards is diverse and complex and varies by region. Regional studies provide a more local perspective on the changing climate. In this study, the fire threat in the Southeast United States is investigated and the association between soil dryness and lightning-ignited wildfires in the Apalachicola National Forest (ANF) is examined. The relationship between pre-fire season dryness and the number of fires during the fire season is quantified with a statistical model. Soil dryness in the duff layer is estimated using the Keetch-Byram Drought Index (KBDI) which is a measure of moisture deficit based on temperature and net rainfall computed using daily summary-of-the-day values from the nearby first-order weather station. The probability of daily wildfire occurrence in the ANF is found to increase by 27% for every centimeter increase in daily soil moisture deficit and by 14% for every 100 daily lightning strikes. Given the strong statistical relationship between the KBDI during April and wildfires in the ANF from May to July, a seasonal prediction model is constructed to skillfully portend the occurrence of wildfires. Results show nearly a 20% increase in the average rate of wildfires from May through July for every one-centimeter increase in soil moisture deficit during April. Long-term upward trends in soil dryness are also shown, with the trend most pronounced during the driest months. This analysis indicates the potential for a greater risk of fires in the ANF in the future. Finally, the opportunity for future work is highlighted, and another model is proposed to further distinguish between a season with many small fires versus a season with a few big fires.
+
 
 ##Import libraries and data sets
 ```{r}
 library(lubridate)
 library(tidyverse)
-library(ggplot2)
-#library(ggrepel)
 library(ggpp)
 library(ggpubr)
 library(scales)
 library(patchwork)
 library(tidycensus)
-library(dplyr)
-library(readr)
 library(sf)
 library(tmap)
 library(rgeos)
 library(RColorBrewer)
 library(rgdal)
 library(USAboundaries)
-library(XML)
 library(units)
 library(equatiomatic)
-library(tinytex)
-#library(mpm)
-#library(magrittr)
-library(texPreview)
 #library(MASS)
 ```
 
@@ -76,7 +69,7 @@ TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
 TLH.df$DroughtIndex <- droughtIndex(Q,R,TLH.df$MaxTemp,TLH.df$NetR)$DroughtIndex
 ```
 
-Include a Ql centimeters column in the TLH.df data frame
+Include a Ql centimeters column (drough index in cm) in the TLH.df data frame
 ```{r}
 TLH.df <- TLH.df %>%
   mutate(Qlcm = Qlm/10)
@@ -167,7 +160,7 @@ lightning.df <- lightning.df %>%
   summarise(LightningCount = sum(FCOUNT_NLDN))
 ```
 
-Viewing fires within the Apalachicola National Forest (437 observations)
+Viewing lightning fires within the Apalachicola National Forest (437 observations)
 ```{r}
 tmap_mode("view")
 
@@ -183,15 +176,13 @@ tm_shape(anf_LF.sf) +
 Cause of Fires in the Apalachicola National Forest
 Natural fires account for nearly 40% of fires in the ANF
 ```{r}
-#table(Fires.sf$NWCG_GENERAL_CAUSE)
+#table(anf_Fires.sf$NWCG_GENERAL_CAUSE)
 
 df <- anf_Fires.sf %>%
   st_drop_geometry() %>%
   group_by(NWCG_GENERAL_CAUSE) %>%
   summarize(nF = n(),
             perF = nF/nrow(anf_Fires.sf))
-
-#png("C:/Users/zlaw9/OneDrive/Thesis/SEDAAG/PresentationFigures/FireCause.png", width = 733, height = 412)
 
 ggplot(df,
        mapping = aes(y = reorder(NWCG_GENERAL_CAUSE, perF),
@@ -214,28 +205,6 @@ ggplot(df,
 ```
 
 Locations of lightning fires in the ANF
-```{r}
-ggplot() +
-  geom_sf(data = anfbounds.sf, fill = "transparent") +
-  geom_sf(data = anf_LF.sf,
-          mapping = aes(col = FIRE_SIZE_CLASS)) +
-  scale_color_brewer(palette = "Oranges",
-                     direction = 1,
-                     name = "Size Class: Acres Burned",
-                     labels = c(
-                       "A: 0-0.25",
-                       "B: 0.26-9.9",
-                       "C: 10.0-99.9",
-                       "D: 100-299",
-                       "E: 300-999",
-                       "F: 1000-4999",
-                       "G: 5000+")) +
-  theme_bw() 
-  labs(title = "Location of natural-caused wildfires in the\nApalachicola National Forest (1992-2018)",
-       subtitle = "Darker color points indicates the fire resulted in a larger burn area",
-       caption = "Data source: Short, Karen (2021)")
-```
-adjustments to plot above
 ```{r}
 FL_Counties.sf <- us_counties(states = "FL",
                               resolution = "high") %>%
@@ -293,53 +262,6 @@ ggplot(data = wfplot.df,
 Plot average monthly rainfall and max temperatures
 ```{r}
 df <- TLH.df %>%
-  #filter(Year >= 1941 & Year <= 2019) %>%
-  filter(Year >= 1943 & Year <= 2020) %>%
-  group_by(month) %>%
-  #summarize(totalRain = sum(Rainfall24mm),
-  summarize(totalRain = sum(Rainfall24mm / 10),
-            avgMonthlyTotalRain = totalRain/(2019 - 1941 + 1),
-            avgDailyHighTemp = mean(MaxTemp))
-
-p1 <- ggplot(data = df,
-             mapping = aes(x = month, y = avgMonthlyTotalRain, fill = avgMonthlyTotalRain)) +
-        geom_col() +
-        scale_fill_distiller(palette = "Greens",
-                         direction = 1, 
-                         guide = 'none') +
-        #theme_dark() +
-        theme_minimal() +
-        labs(x = "", y = "(cm)",
-             title = "Average monthly rainfall amount",
-             #subtitle = "1943-2020")
-             caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") #+
-        #theme(plot.title = element_text(size = 15),
-              #plot.subtitle = element_text(size = 13),
-              #axis.text = element_text(size = 11))
-
-
-p2 <- ggplot(data = df,
-             mapping = aes(x = month, y = avgDailyHighTemp, color = avgDailyHighTemp)) +
-        geom_point(size = 4) +
-        scale_color_distiller(palette = "Oranges",
-                              direction = 1, 
-                              guide = 'none') +
-        scale_y_continuous(limits = c(60, 100)) +
-        #theme_dark() +
-        theme_minimal() +
-        labs(x = "", y = "(°F)",
-             title = "Average daily high temperature in the Apalachicola National Forest",
-             subtitle = "1943-2020") +
-        theme(plot.title = element_text(size = 15),
-              plot.subtitle = element_text(size = 13),
-              axis.text = element_text(size = 11))
-
-#(p1 / p2) +
-  #labs(caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee")
-```
-adjustments to plot above
-```{r}
-df <- TLH.df %>%
   filter(Year >= 1943 & Year <= 2020) %>%
   group_by(month) %>%
   summarize(totalRain = sum(Rainfall24mm / 10),
@@ -370,7 +292,6 @@ p1 / p2
 ```
 
 
-
 Average number of lightning strikes in the ANF
 ```{r}
 lightningAvg.df <- lightning.df %>%
@@ -381,7 +302,6 @@ lightningAvg.df <- lightning.df %>%
                          levels = month.abb,
                          ordered = TRUE)) %>%
   group_by(MonthF, .drop = FALSE) %>%
-  #summarize(avgLightningCount = sum(LightningCount)/(2012-1986))
   summarize(avgLightningCount = mean(LightningCount, na.rm = TRUE))
 ```
 
@@ -515,17 +435,9 @@ countfires.df <- anf_LF.sf %>%
 Merge the KBDI and fire count data sets
 ```{r}
 KBDI_fire.df <- left_join(x = TLH_fireYrs.df, y = countfires.df, by = c("Date" = "Date")) %>%
-  select(Date, FireCount, Ql, Qlm, DroughtIndex)
+  select(Date, FireCount, Ql, Qlm, Qlcm, DroughtIndex)
 
 KBDI_fire.df$fireBool <- !is.na(KBDI_fire.df$FireCount)
-```
-
-
-this can be edited in the future because I have now included a cm column in the base data frame (TLH.df)
-Create a cm column for daily soil moisture deficit
-```{r}
-KBDI_fire.df <- KBDI_fire.df %>%
-  mutate(Qlcm = Qlm / 10)
 ```
 
 
@@ -554,56 +466,11 @@ ggplot(mapping = aes(x = KBDI_fire.df$Ql, y = pred_glmQl$fit)) +
 ```
 
 ```{r}
-#extract_eq(glmQl, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
+extract_eq(glmQl, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
-
-
 $$
 \log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -5.5013 + 0.0049(\operatorname{Ql})
 $$
-
-Create a data frame to show a further distribution of the data
-```{r}
-KBDI_fire.df %>%
-  group_by(DroughtIndex) %>%
-  count(DroughtIndex)
-
-ggplot(KBDI_fire.df, aes(x = DroughtIndex)) + geom_histogram()
-```
-
-
-Another way of plotting
-```{r}
-KBDI_fire.df$glmQl_Pred <- glmQl$fitted.values
-```
-
-This code chunk takes a long time to knit
-```{r}
-#ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
-  #geom_line(color = "blue") +
-#  geom_smooth(method = "glm", formula = y ~ x,
-#              method.args = list(family = poisson(link = "log")))+
-#  ylab("Predicited Probablility") +
-#  xlab("Daily KBDI") +
-#  labs(
-#    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
-#    subtitle = "With 95% Confidence Interval",
-#    caption = "Period of Record: 1992 to 2018")
-```
-
-
-This is a plot of the generalized linear regression fitted values
-```{r}
-ggplot(KBDI_fire.df, aes(x = Ql, y = glmQl_Pred)) +
-  #geom_line(color = "blue") +
-  geom_smooth(method = "glm")+
-  ylab("Predicited Probablility") +
-  xlab("Daily KBDI") +
-  labs(
-    title = "Predicted Probability of Lightning Fire Occurrence Based on Daily KBDI Values",
-    subtitle = "With 95% Confidence Interval",
-    caption = "Period of Record: 1992 to 2018")
-```
 
 Ql is statistically significant
 ```{r}
@@ -641,9 +508,6 @@ summary(glmQlFS)
 ```
 
 
-
-
-
 Adjust Binomial Regression model to represent KBDI in cm (SI units)
 ```{r}
 glmQlcm <- glm(formula = fireBool~Qlcm, family = binomial, data = KBDI_fire.df)
@@ -670,16 +534,15 @@ ggplot(mapping = aes(x = KBDI_fire.df$Qlcm, y = pred_glmQlcm$fit)) +
 ```{r}
 extract_eq(glmQlcm, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
-
 $$
 \log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -5.5013 + 0.1937(\operatorname{Qlcm})
 $$
 
+predicting the probability of fire occurrance based on Qlm values
 ```{r}
 temp.df <- data.frame(Qlcm = 19.60179)
 predict.glm(glmQlcm, newdata = temp.df, type = "response", se.fit = TRUE)
 ```
-
 
 
 ##General linear regression - Study how the number of lightning strikes on a given day impacts lightning wildfire occurrence
@@ -754,7 +617,6 @@ predict.glm(glmLightning, newdata = temp.df, type = "response", se.fit = TRUE)
 ```{r}
 extract_eq(glmLightning, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
-
 $$
 \log\left[ \frac { \widehat{P( \operatorname{FireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{FireBool} = \operatorname{TRUE} )} } \right] = -3.2102 + 0.0012(\operatorname{LightningCount})
 $$
@@ -816,31 +678,16 @@ add fitted values within a column in the data frame
 logisticModel.df$fit <- logistic_DL$fitted.values
 ```
 
-visualize data
-```{r}
-ggplot(mapping = aes(y= logistic_DL$fit, x= logisticModel.df$Qlcm, color= logisticModel.df$LightningCount))+
-  geom_point()+
-  ylab("Predicited Probablility\nof a Fire Occurrence") +
-  xlab("Daily Soil Moisture Deficit (cm)") +
-  labs(color = "Daily Lightning Strike Count") +
-  theme_minimal()
-```
 
 Equation of model
 ```{r}
 extract_eq(logistic_DL, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
 ```
-
 $$
 \log\left[ \frac { \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} }{ 1 - \widehat{P( \operatorname{fireBool} = \operatorname{TRUE} )} } \right] = -6.1967 + 0.2368(\operatorname{Qlcm}) + 0.0013(\operatorname{LightningCount})
 $$
 
-```{r}
-summary(logistic_DL)
-```
-
-
-Adjustments to binomial model with two predictors (Soil Dryness and Lightning count).
+Further visualize and plot the binomial model with two predictors (Soil Dryness and Lightning count).
 Set lightning count to its mean and plot predicted probabilities across the range of soil moisture deficit
 Set soil moisture deficit to its mean and plot predicted probabilities across the range of lightning count 
 
@@ -909,7 +756,7 @@ Logistic_PPointTable <- logisticModel.df %>%
   rename(KBDI_cm = Qlcm)
 ```
 
-
+Model vizualization
 ```{r}
 newdat <- expand.grid(Qlcm = seq(0, 20, 0.5),
                       LightningCount = seq(0, 5600, 100))
@@ -927,6 +774,7 @@ ggplot(newdat, aes(x = Qlcm, y = LightningCount, fill = br)) +
 ```
 
 
+
 ##Study how the burned area over the past year may impact fire occurance.
 
 Create a data frame to include the area that was burned over the past year.
@@ -935,10 +783,6 @@ anf_Fires.sf <- anf_Fires.sf %>%
   mutate(InSeason = DISCOVERY_ >= as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30")) & DISCOVERY_ <= as.Date(paste0(as.character(FIRE_YEAR+1), "-04", "-29"))) %>%
    mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30"))) %>%
    mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-04", "-29")))
-
-#anf_Fires.sf <- anf_Fires.sf %>%
-#  mutate(burnedGroupStart = as.Date(paste0(as.character(FIRE_YEAR), "-04", "-30"))) %>%
-#  mutate(burnedGroupEnd = as.Date(paste0(as.character(FIRE_YEAR+1), "-04", "-29")))
 
 for(i in 1:length(anf_Fires.sf$InSeason)){
   if (anf_Fires.sf$InSeason[i] == FALSE){
@@ -984,11 +828,8 @@ burnedArea.sf <- left_join(x = burnedArea.sf, y = seasonFires.sf, by = c("foreca
 burnedArea.sf$nFIRES <- replace_na(burnedArea.sf$nFIRES, 0)
 ```
 
-The model finds that the number of acres burned over the past year is not statistically significant
-There is minimal evidence of a relationship between the number of acres burned and the number of natural fires that occur during the fire season.
-p-value = 0.0604
-correlation coefficient = 0.0966; we would expect a negative slope and a negative correlation.
-correlation coefficient model residuals = -0.0029
+The model finds that the number of acres burned over the past year is not statistically significant when modeled by itself.
+p-value = 0.0525
 ```{r}
 burnedGLM <- glm(formula = nFIRES ~ acresBurned, family = poisson, data = burnedArea.sf)
 
@@ -1020,9 +861,7 @@ burnedArea.sf <- burnedArea.sf %>%
 ```
 
 create model based on the percent of forest that was burned.
-We find the percent of forest burned is not statistically significant (p-value = 0.146)
-The correlation coefficient suggests no relationship (0.0773)
-The correlation coefficient of the residuals = -0.00292 (Same as the area burned model)
+We find the percent of forest burned is not statistically significant (p-value = 0.0525, same value)
 ```{r}
 percentBurnedGLM <- glm(formula = nFIRES ~ percentBurned, family = poisson, data = burnedArea.sf)
 
@@ -1036,44 +875,6 @@ cor(burnedArea.sf$percentBurned, burnedArea.sf$nFIRES)
 
 #correlation of model residuals
 cor(burnedArea.sf$percentBurned, resid(percentBurnedGLM))
-```
-
-Create a poisson plot
-Percentage Burned
-```{r}
-#creating confidence interval
-low_bound <- pred_percentBurnedGLM$fit - (1.96*pred_percentBurnedGLM$se.fit)
-up_bound <- pred_percentBurnedGLM$fit + (1.96*pred_percentBurnedGLM$se.fit)
-
-ggplot(mapping = aes(x = burnedArea.sf$percentBurned, y = pred_percentBurnedGLM$fit)) +
-  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
-  geom_line(color = "blue") +
-  ylab("Predicted Number of Fires") +
-  xlab("Percentage of Forest Burned") +
-  labs(
-    title = "Predicted Number of Fires Based on the Forest Area Burned in the Last Year",
-    subtitle = "With a 95% Confidence Interval",
-    caption = "Period of Record: April 1992 to July 2018")
-```
-
-Area Burned
-```{r}
-#creating confidence interval
-low_bound <- pred_burnedGLM$fit - (1.96*pred_burnedGLM$se.fit)
-up_bound <- pred_burnedGLM$fit + (1.96*pred_burnedGLM$se.fit)
-
-ggplot(mapping = aes(x = burnedArea.sf$acresBurned, y = pred_burnedGLM$fit)) +
-  geom_ribbon(aes(ymin = low_bound, ymax = up_bound), fill = "grey") +
-  geom_line(color = "blue") +
-  geom_point(aes(x = burnedArea.sf$acresBurned, y = burnedArea.sf$nFIRES)) +
-  stat_regline_equation() +
-  stat_cor(aes(label = ..rr.label..), label.x = 0, label.y = 40) +
-  ylab("Predicted Number of Fires") +
-  xlab("Acres of Forest Burned") +
-  labs(
-    title = "Predicted Number of Fires Based on the Forest Area Burned in the Last Year",
-    subtitle = "With a 95% Confidence Interval",
-    caption = "Period of Record: April 1992 to July 2018")
 ```
 
 
@@ -1094,11 +895,11 @@ seasonFires.sf %>%
   labs(
     title = "Total Number of Fires During the Fire Season",
     caption = "Period of Record: 1992 to 2018") +
-  theme_dark()
+  theme_minimal()
 ```
 
 
-Add April 30th KBDI to the seasonFires.sf data frame
+Add April 30th KBDI to the seasonFires.sf data frame. This will represent preliminary season dryness
 ```{r}
 April30.df <- KBDI_fire.df %>%
   filter(month(Date) == 04 & day(Date) == 30) %>%
@@ -1111,154 +912,6 @@ seasonFires.sf <- left_join(x = April30.df, y = seasonFires.sf, by = c("Year" = 
   select("Year", "nFIRES", "KBDI_April30")
 seasonFires.sf$nFIRES <- replace_na(seasonFires.sf$nFIRES, 0)
 ```
-
-Create a linear null model and general linear regression
-```{r}
-formula0 <- lm(nFIRES ~ 1, data = seasonFires.sf)
-glm0 <- glm(formula0, data = seasonFires.sf, family = poisson)
-summary(glm0)
-```
-
-create linear model of nFIRES and KBDI
-```{r}
-formula1 <- lm(nFIRES ~ KBDI_April30, data = seasonFires.sf)
-#glm1 <- glm(formula1, data = seasonFires.sf, family = poisson)
-```
-
-
-Poisson Regression
-```{r}
-glm1 <- glm(nFIRES ~ KBDI_April30, data = seasonFires.sf, family = poisson)
-```
-
-
-compare models. How is this interpreted? Google
-```{r}
-anova(glm0, glm1)
-```
-
-visualize the data with actual fire points
-```{r}
-ggplot(glm1, aes(x= KBDI_April30, y = nFIRES)) +
-  geom_point()+
-  geom_smooth(method = "glm") +
-  ylab("Number of Fires") +
-  xlab("KDBI on April 30th") +
-  labs(
-    title = "Predicted Number of Fires During the Fire Season Based on April 30th KBDI",
-    subtitle = "With a 95% Confidence Interval",
-    caption = "Period of Record: 1992 to 2018")
-```
-
-Explore the Predicted Values
-```{r}
-seasonFires.sf$glm1_fit <- glm1$fitted.values
-```
-
-view fire plot with predicted values based on april KBDI (fitted values of the model)
-```{r}
-ggplot(seasonFires.sf, aes(x = KBDI_April30, y = glm1_fit)) +
-  geom_point() +
-  geom_smooth(method = "glm")+
-  stat_regline_equation() +
-  ylab("Predicted Number of Fires") +
-  xlab("KDBI on April 30th") +
-  labs(
-    title = "Predicted Number of Fires During the Fire Season Based on April 30th KBDI",
-    subtitle = "With a 95% Confidence Interval",
-    caption = "Period of Record: 1992 to 2018")
-```
-
-visualize the poisson model
-```{r}
-ggplot(seasonFires.sf, aes(x = KBDI_April30, y = nFIRES)) +
-  geom_point() +
-  geom_smooth(method = "glm", formula = y ~ x,
-              method.args = list(family = poisson(link = "log"))) +
-  #stat_regline_equation(formula = y ~ x) +
-  ylab("Number of Fires") +
-  xlab("KDBI on April 30th") +
-  labs(
-    title = "Predicted Number of Fires During the Fire Season Based on April 30th KBDI",
-    subtitle = "With a 95% Confidence Interval",
-    caption = "Period of Record: 1992 to 2018")
-```
-
-Equation of glm1 regression line
-```{r}
-extract_eq(glm1, use_coefs = TRUE, coef_digits = 4, fix_signs = FALSE)
-```
-
-$$
-\log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.7296 + 0.0046(\operatorname{KBDI\_April30})
-$$
-
-Exploring the confidence intervals
-```{r}
-temp.df <- data.frame(KBDI_April30 = 0)
-predict.glm(glm1, newdata = temp.df, type = "response", se.fit = TRUE)
-```
-
-create histogram to show the distribution of the data
-April 30 KBDI
-```{r}
-ggplot(seasonFires.sf, aes(x = KBDI_April30)) + 
-  geom_histogram(aes(y = ..density..), binwidth = 50, color = "darkblue", fill = "lightblue") +
-  scale_x_continuous(breaks = seq(0,700, 100)) +
-  geom_density(alpha = .2, fill = 'blue') +
-  geom_vline(aes(xintercept = mean(KBDI_April30)),
-             color = "red", linetype = "solid", size = 1) +
-  geom_vline(aes(xintercept = median(KBDI_April30)),
-             color = "black", linetype = "dashed", size = 1)
-  
-```
-
-Fires
-```{r}
-ggplot(seasonFires.sf, aes(x = nFIRES)) + 
-  geom_histogram(aes(y = ..density..), binwidth = 5, color = "darkblue", fill = "lightblue") +
-  scale_x_continuous(breaks = seq(0, 50, 5)) +
-  geom_density(alpha = .2, fill = 'blue') +
-  geom_vline(aes(xintercept = mean(nFIRES)),
-             color = "red", linetype = "solid", size = 1) +
-  geom_vline(aes(xintercept = median(nFIRES)),
-             color = "black", linetype = "dashed", size = 1)
-```
-
-
-
-```{r}
-# Install from CRAN
-##install.packages('rmarkdown')
-
-# Or if you want to test the development version,
-# install from GitHub
-#if (!requireNamespace("devtools"))
-#  install.packages('devtools')
-#devtools::install_github('rstudio/rmarkdown')
-```
-
-
-
-```{r}
-#tinytex::install_tinytex()
-
-#tinytex::parse_install()
-
-#installr::install.MikTeX
-
-#update.packages(ask = FALSE, checkBuilt = TRUE)
-#tinytex::tlmgr_update()
-
-#tinytex::pdflatex('test.tex')
-
-#tinytex::latexmk()
-
-#tex_preview(extract_eq(glm1, use_coefs = TRUE, fix_signs = FALSE))
-```
-
-
-Model 2 will predict the number of fires by adding the prior area burned to the model.
 
 add the area burned over the prior season to seasonFires.sf
 ```{r}
@@ -1275,67 +928,6 @@ formula2 <- lm(nFIRES ~ KBDI_April30 + acresBurned, data = temp)
 #glm2 <- glm(formula2, data = temp, family = poisson)
 
 #summary(glm2)
-```
-
-
-Poisson Regression
-```{r}
-temp <- seasonFires.sf %>%
-  filter(Year >= 1993)
-glm2 <- glm(nFIRES ~ KBDI_April30 + acresBurned, data = temp, family = poisson)
-```
-
-Include fitted values in temp table
-```{r}
-temp$glm2_fit <- glm2$fitted.values
-```
-
-change in fitted values
-```{r}
-temp$change <- temp$glm1_fit - temp$glm2_fit
-```
-
-
-```{r}
-extract_eq(glm2, use_coefs = TRUE, coef_digits = 6, fix_signs = FALSE)
-```
-
-$$
-\log ({ \widehat{E( \operatorname{nFIRES} )} })  = 0.735669 + 0.004732(\operatorname{KBDI\_April30}) + -1.1e-05(\operatorname{acresBurned})
-$$
-
-Exploring the confidence intervals
-```{r}
-temp.df <- data.frame(KBDI_April30 = 0, acresBurned = 518.07)
-predict.glm(glm2, newdata = temp.df, type = "response", se.fit = TRUE)
-```
-
-
-
-Distribution of acres burned
-```{r}
-ggplot(temp, aes(x = acresBurned)) + 
-  geom_histogram(aes(y = ..density..), binwidth = 1000, color = "darkblue", fill = "lightblue") +
-  scale_x_continuous(breaks = seq(0, 35000, 4000)) +
-  geom_density(alpha = .2, fill = 'blue') +
-  geom_vline(aes(xintercept = mean(acresBurned)),
-             color = "red", linetype = "solid", size = 1) +
-  geom_vline(aes(xintercept = median(acresBurned)),
-             color = "black", linetype = "dashed", size = 1)
-```
-
-
-
-Is acres burned statistically significant when standing alone? (p-value = 0.0657)
-```{r}
-temp <- seasonFires.sf %>%
-  filter(Year >= 1993)
-formula3 <- lm(nFIRES ~ acresBurned, data = temp)
-glm3 <- glm(formula3, data = temp, family = poisson)
-
-summary(glm3)
-
-cor(temp$acresBurned,resid(glm3)) #0.04958
 ```
 
 
@@ -1359,6 +951,8 @@ library(MASS)
 nbr1 <- glm.nb(nFIRES ~ Qlcm, data = seasonFires_cm.sf)
 
 #summary(nbr1)
+
+detach(package:MASS, unload=TRUE)
 ```
 
 ```{r}
@@ -1371,6 +965,8 @@ $$
 
 visualize the negative binomial regression model
 ```{r}
+library(MASS)
+
 ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
   geom_point() +
   geom_smooth(method = "glm.nb") + #, formula = y ~ x,
@@ -1381,6 +977,8 @@ ggplot(seasonFires_cm.sf, aes(x = Qlcm, y = nFIRES)) +
   theme(aspect.ratio = 1) +
   labs(
     title = "Predicted number of fires during\nthe fire season")
+
+detach(package:MASS, unload=TRUE)
 ```
 
 Exploring predicted values and confidence intervals
@@ -1396,8 +994,7 @@ seasonFires_cm.sf$nbr1_fit <- nbr1$fitted.values
 
 
 
-Adjustments to set up multiple linear regression model
-Error in the select statement. Explore further
+Setting up multiple regression model to include both soil moisture deficit and prior area burned
 ```{r}
 seasonFires_cm.sf <- left_join(x = seasonFires_cm.sf, y = burnedArea.sf, by = c("Year" = "forecastYear"))
 
@@ -1406,12 +1003,16 @@ seasonFires_cm.sf <- seasonFires_cm.sf %>%
   rename(nFIRES = nFIRES.x)
 ```
 
-Multiple negative binominal regression model. Soil moisture deficit and prior acres burned.
-Use temp dataframe because 1992 does not store all acres burned data.
+Multiple negative binomial regression model. Soil moisture deficit and prior acres burned.
+Use temp data frame because 1992 does not store all acres burned data.
 ```{r}
+library(MASS)
+
 temp_cm <- seasonFires_cm.sf %>%
   filter(Year >= 1993)
 nbr2 <- glm.nb(nFIRES ~  Qlcm + acresBurned, data = temp_cm)
+
+detach(package:MASS, unload=TRUE)
 ```
 
 add nbr2 fitted values to dataframe to compare models
@@ -1446,26 +1047,13 @@ predict.glm(nbr2, newdata = temp.df, type = "response", se.fit = TRUE)
 ```
 
 
-Clean up data frame to be exported to table in paper
-```{r}
-appendix_table.df <- temp_cm %>%
-  dplyr::select("Year":"Qlcm", "acresBurned") %>%
-  rename(NumberOfFires = nFIRES, KBDI_cm = Qlcm, AcresBurned = acresBurned)
-```
 
-Export the data frame to an excel table
-```{r}
-write_csv(appendix_table.df, "C:\\Users\\zlaw9\\OneDrive\\Thesis\\Thesis\\Paper Figures\\appendix\\appendixtable.csv")
-```
-
-
-##editing plots
+##editing Thesis plots and figures
 Create a filtered data frame from 1943 to 2020 to omit missing data
 ```{r}
 TLH_1943.df <- TLH.df %>%
   filter(Year >= 1943)
 ```
-
 
 Exploring paper plots in centimeters
 ```{r}
@@ -1506,6 +1094,7 @@ TLH_1943.df %>%
   subtitle = "Since then, nearly half of the years have had at least 25 days above 16cm KBDI", 
   caption = "Period of record: 1943-2020, Data source: NWSFO Tallahassee") +
   theme_minimal()
+detach(package:MASS, unload=TRUE)
 ```
 
 
@@ -1521,7 +1110,7 @@ ggplot(data = seasonFires_cm.sf,
 ```
 
 
-
+##exploring potential clustering
 Are the locations of natural-caused wildfires during May, June, and July within the ANF clustered?
 
 Create a {spatstat} object containing the locations of lightning-kindled fires in the ANF during May-July. Get a planar projection suggested from `suggest_crs()`. Here projected 2779 NAD83(HARN) / Florida North
@@ -1631,7 +1220,7 @@ acf(seasonFires_cm.sf$nFIRES, pl = FALSE)
 ```
 
 
-
+##Thesis Apendix C
 Diminishing effect of the start value
 ```{r}
 Q_value.df <- TLH.df %>%
