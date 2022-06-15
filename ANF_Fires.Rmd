@@ -1,5 +1,5 @@
 ---
-title: "Lightning-Kindled Wildfires in the Apalachicola National Forest (ANF)"
+title: "Natural Wildfires in the Apalachicola National Forest (ANF)"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -342,7 +342,7 @@ cor.test(df$nFires[-1], df$totalAcresBurned[-24])
 
 No significant inter-seasonal autocorrelation. Significant correlation between number of fires and burned area as expected.
 
-Future work: Make fire size an ordered factor and create a model that predicts the probability by size category similar to what we did for predicting tornado EF rating.
+Future work: Make fire size an ordered factor and create a model that predicts the probability by size category similar to what we did for predicting tornado EF rating. See `PredictTorFreqByEF.Rmd` in the `EF-dist` distribution.
 ```{r}
 NaturalFires.sf |>
   group_by(SizeF) |>
@@ -759,6 +759,15 @@ SeasonalFires <- NaturalFires.sf %>%
             totalAcresBurned = sum(Size)) %>%
   mutate(Year = 1992:2018)
 
+SeasonalFires2 <- AllFires.sf %>%
+  st_drop_geometry() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2018), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nFires = n(),
+            totalAcresBurned = sum(Size)) %>%
+  mutate(Year = 1992:2018)
+
 Dryness <- TLH.df %>%
   dplyr::filter(Year >= 1992 & Year <= 2018) %>%
   dplyr::filter(month == "Apr") %>%
@@ -787,6 +796,8 @@ df <- data.frame(Year = Dryness$Year,
                  AvgQlm = Dryness$AvgQlm,
                  nFires = SeasonalFires$nFires, 
                  AcresBurned = SeasonalFires$totalAcresBurned,
+                 nFiresAll = SeasonalFires2$nFires,
+                 AcresBurnedAll = SeasonalFires2$totalAcresBurned,
                  preYearAcresBurned = PreviousYearBurnArea.df$BurnArea)
 #                 AprilSOI = AprilSOI)
 

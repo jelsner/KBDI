@@ -1,5 +1,5 @@
 ---
-title: "Seasonal prediction of lightning-sparked wildfires in the Apalachicola National Forest (ANF)"
+title: "Seasonal prediction of natural wildfires in the Apalachicola National Forest (ANF)"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -23,9 +23,11 @@ library(xtable)
 The data are organized in the file `ANF_Fires.Rmd`. Change moisture deficit units to cm.
 ```{r}
 SeasonalData.df <- read_csv(file = "SeasonalForecastModelData.csv") %>%
-  mutate(QlmLastDay = QlmLastDay / 10) # change units from mm to cm
+  mutate(QlmLastDay = QlmLastDay / 10) %>% # change units from mm to cm
+  mutate(nFiresDiff = nFiresAll - nFires) %>%
+  mutate(AcresBurnedDiff = AcresBurnedAll - AcresBurned)
 
-W <- SeasonalData.df$nFires
+W <- SeasonalData.df$nFiresAll
 ```
 
 ```{r}
@@ -35,7 +37,7 @@ model0 <- glm.nb(W ~ 1)
 
 summary(model0)
 
-model1 <- glm.nb(nFires ~ QlmLastDay,
+model1 <- glm.nb(nFiresAll ~ QlmLastDay,
                  data = SeasonalData.df)
 
 summary(model1)
