@@ -1,0 +1,12 @@
+{
+  "retrieved_date": "2026-10-15",
+  "urls": {
+    "metadata": "https://wcc.sc.egov.usda.gov/awdbRestApi/services/v1/stations?stationTriplets=2009:FL:SCAN&returnStationElements=true&activeOnly=false",
+    "observations": "https://wcc.sc.egov.usda.gov/awdbRestApi/services/v1/data?stationTriplets=2009:FL:SCAN&elements=SMS:*&duration=DAILY&beginDate=1996-12-10&endDate=2026-10-12&periodRef=END&returnFlags=true&returnSuspectData=false"
+  },
+  "md5": {
+    "Data/raw/scan-wakulla/metadata.json": "f7e8bb4237dddbb9714c5e065319ae1a",
+    "Data/raw/scan-wakulla/observations.json": "b6009ecd7fac3adff69e05e21726dd66"
+  },
+  "notes": "Downloaded directly from official NRCS AWDB REST API; suspect data filtered by provider. Preserve flags and original JSON."
+}

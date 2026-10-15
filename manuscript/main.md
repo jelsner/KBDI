@@ -1,10 +1,18 @@
 ---
 title: "Long-term increases in station-derived drought near Apalachicola National Forest, Florida"
-date: "Revised draft, 15 October 2026"
+author: "James B. Elsner and Zachery T. Law"
+date: "Revised preprint draft, 15 October 2026"
 bibliography: references.bib
 link-citations: true
 lang: en-US
 ---
+
+Department of Geography, Florida State University, Tallahassee, FL 32306, USA
+
+**Corresponding author:** James B. Elsner, <jelsner@fsu.edu>
+
+*Revision draft of the April 2022 EarthArXiv preprint
+[10.31223/X5H350](https://eartharxiv.org/repository/view/3268/). This manuscript has not been peer reviewed.*
 
 # Abstract
 
@@ -34,41 +42,62 @@ seasonal drought; wildfire; Florida.
 
 # 1. Introduction
 
-Drought affects the environmental conditions under which wildfires ignite and
-spread. The relationship is mediated by fuels, ignition sources, weather, and
-management, so a change in drought exposure need not translate directly into a
-change in recorded fire counts. Studies of western US forests have linked
-warming-related fuel aridity with wildfire area [@AbatzoglouWilliams2016]. Such
-regional evidence motivates local investigation, but its magnitude and causal
-interpretation cannot simply be transferred to a humid forest in Florida.
+Long weather records provide a way to detect changes in local drought exposure
+that shorter observational networks cannot resolve. Their interpretation requires
+care: a weather-derived drought index describes a particular response to
+meteorological conditions, whereas soil moisture, ecological stress, and fire
+activity depend on additional processes. Recent work has sharpened both the
+need to assess change and the need to distinguish these quantities. @Hoylman2022 show that historical reference periods can misrepresent
+contemporary drought severity when climate distributions shift. Estimating a
+long-term trend and classifying present drought against a stationary baseline
+are therefore different tasks.
 
-Near Apalachicola National Forest (ANF), a long airport weather record provides
-an opportunity to examine drought exposure over several decades. The
-Keetch-Byram Drought Index (KBDI) integrates daily maximum temperature and
-precipitation into an estimate of accumulated moisture deficit relevant to
-forest-fire conditions [@KeetchByram1968]. It offers a consistent calculation
-through time when direct long-term soil-water measurements are unavailable.
-Its advantages also define its limits: a station-derived index is a proxy for
-local weather-driven drying, and it does not directly observe forest-wide
-water storage or fuel moisture.
+The Keetch-Byram Drought Index (KBDI) provides a daily measure of accumulated
+weather-related moisture deficiency from maximum temperature and precipitation
+[@KeetchByram1968]. Its long history in fire applications makes it useful for
+examining how drying conditions vary across years and seasons. However, the
+index's nominal water-deficit units do not make it a measurement of water
+storage in a specified soil profile. In a national comparison of drought
+indicators with observed soil moisture, @Hoylman2024 found
+that correspondence depends on depth and timescale, with several soil-moisture
+models outperforming the meteorological indices they evaluated. Their study
+did not directly validate KBDI. It motivates comparing our index with local
+observations rather than assuming equivalence with measured soil moisture.
 
-This study asks two primary questions. First, how have annual mean moisture
-deficit and the frequency of high-deficit days changed in the Tallahassee
-station record? Second, how is that change distributed through the year? We
-place the annual and seasonal drought results at the center of the analysis.
-We then examine their sensitivity to index assumptions, period selection,
-serial-dependence treatment, and an ENSO covariate. A short historical gridded
-comparison assesses how closely the airport-derived index corresponds with
-estimates across ANF.
+Apalachicola National Forest (ANF), in the Florida Panhandle, offers a useful
+setting for such an assessment. The nearby Tallahassee airport record permits
+consistent drought-index calculations over eight decades. The regional fire
+context is also changing: @Donovan2023 report spatially
+heterogeneous changes in large wildfires across the eastern United States.
+That regional evidence concerns a different spatial scale and fire response
+from natural-fire counts in ANF. Western US attribution studies likewise
+motivate investigation without supplying a local causal explanation
+[@AbatzoglouWilliams2016].
 
-Seasonal wildfire prediction provides an application rather than the main test
-of drought change. We assess whether April 30 moisture deficit adds information
-about the number of natural wildfires during May-July, using updated fire data
-and retrospective hindcasts trained only on preceding seasons. This ordering
-keeps three questions separate: whether drought exposure changed at the
-station, whether station and forest-grid estimates correspond over their
-shared record, and whether pre-season drought improves seasonal count
-prediction. Evidence for one does not establish the others.
+We ask how annual mean KBDI-derived deficit and high-deficit-day exposure have
+changed in the station record, and how the changes differ among calendar
+months. The main contribution is a reproducible assessment of long-term
+station-derived drought change, with explicit missing-data rules and
+sensitivity to index settings, record period, serial dependence, and ENSO.
+A historical PRISM comparison assesses temporal correspondence across the
+forest footprint. A supplemental comparison with in-situ Wakulla soil moisture
+examines recent local correspondence and its limitations.
+
+Seasonal wildfire prediction is an application of this drought record. We test
+whether April 30 deficit improves retrospective forecasts of May-July natural
+fire counts over a climatological baseline, training each hindcast on preceding
+seasons. This separates detection of station-derived drought change from the
+predictive value of a pre-season indicator. It also avoids assuming that a
+trend in drought must produce an equivalent trend in fires: fuels, ignitions,
+suppression, and prescribed burning can alter that relationship. Recent
+southeastern US research treats prescribed burning and wildfire as interacting
+responses to climate and management [@Hashida2025].
+
+This manuscript revises the earlier ANF preprint [@LawElsner2022], extending
+the weather and fire snapshots, correcting the rainfall implementation, and
+reorganizing the analysis around long-term drought change. The wildfire season
+and April 30 predictor are retained from that work; the updated hindcasts
+use preceding-year training and explicitly quantify paired skill uncertainty.
 
 # 2. Study setting and data
 
@@ -119,7 +148,21 @@ with changing observations [@PRISMData]. Neither high temporal correlation over
 this short period nor the availability of a long airport record establishes
 spatially homogeneous drought change throughout the forest.
 
-## 2.3. Wildfire observations for the application
+## 2.3. Independent soil-moisture observations
+
+For an exploratory supplemental comparison, we use the USDA NRCS Wakulla #1
+Soil Climate Analysis Network (SCAN) station (`2009:FL:SCAN`) at 30.30585 degrees
+N, 84.42477 degrees W [@NRCSWakulla]. This location intersects our fixed ANF
+polygon and is 12.03 km from the airport. Observations begin in December 1996
+at depths of 5.08, 10.16, 20.32, and 50.8 cm, and in April 1997 at 101.6 cm.
+The downloaded record extends to 12 October 2026, with substantial gaps.
+These are in-situ sensor observations independent of the airport weather
+inputs, but they describe one soil profile. NRCS documents conversion using
+a loam equation; undocumented sensor changes and calibration uncertainty
+limit interpretation of absolute values and long-term shifts [@NRCSWakulla].
+The complete comparison rules and diagnostics are given in the supplement.
+
+## 2.4. Wildfire observations for the application
 
 The seventh edition of the Fire Program Analysis Fire-Occurrence Database
 (FPA FOD) supplies ignition locations, discovery dates, reported causes, and
@@ -342,7 +385,7 @@ significant May drying across the tested monthly family. Similarly, describing
 SOI as the cause of the observed deficit change is not supported by this
 regression.
 
-## 4.4. Historical spatial correspondence is substantial but limited in scope
+## 4.4. Spatial and soil-moisture comparisons delimit the interpretation
 
 Across the 170 intersecting PRISM cells, the area-weighted mean raw squared
 correlation with station-derived deficits is 0.77. After removing each
@@ -357,6 +400,15 @@ Because PRISM uses station observations and this comparison is limited to
 long-term station trend. We retain the station-derived description of the main
 finding rather than treating these correlations as evidence of equivalent
 change throughout ANF.
+
+The independent Wakulla comparison provides a different check. Across depths,
+raw correlations between measured moisture and the preceding day's index
+range from -0.11 to -0.42; removing month-of-year means gives -0.09 to -0.42.
+The inverse sign is physically expected, but the correspondence is modest.
+Record gaps, pronounced level shifts, and sensitivity to depth and date
+alignment qualify interpretation (Supplementary Figures S4-S5 and Table S9).
+We report this as exploratory correspondence, not calibration of absolute
+water deficit or independent verification of the historical trend.
 
 # 5. Application: pre-season drought and natural wildfire counts
 
@@ -405,9 +457,9 @@ The principal result is an increase in station-derived annual moisture deficit,
 together with increased exposure above a specified high-deficit threshold,
 over the available long record. The seasonal comparison places May ahead of
 April as the clearest monthly signal under the present specification and
-multiplicity adjustment. This changes the paper's emphasis: the evidence is
-stronger for observed drought exposure than for an operational prediction
-claim based on a small natural-fire sample.
+multiplicity adjustment. The long record and seasonal analysis provide the principal evidence; the
+small natural-fire evaluation sample gives a more tentative assessment of
+predictive utility.
 
 The agreement between corrected and original algorithms on the same annual
 periods supports the persistence of the mean-deficit finding. It does not
@@ -416,6 +468,21 @@ robustness to the tested KBDI settings supports the May pattern within this
 index framework, but is not a validation of KBDI against direct soil-water
 measurements. Differences between long-record and later-start exposure trends
 show why the estimated period belongs alongside any rate of change.
+
+Long-term change and operational drought severity also require different
+reference frames. @Hoylman2022 caution against treating a long
+historical distribution as stationary when assessing present conditions.
+Here we retain a fixed KBDI formulation to describe change through time; we
+do not estimate contemporary return periods from the pooled record. Updating
+a monitoring baseline would answer a different question and would not remove
+the need to examine the full record for change.
+
+Annual means and threshold counts describe two aspects of exposure. They do
+not resolve drought onset, duration, recovery, or rainfall interruptions.
+The KBDI-based drought-feature framework of @Elias2024 illustrates
+how these characteristics can be separated in a Mediterranean setting.
+Applying that approach locally could test seasonal timing, but our monthly
+slopes alone do not establish a lengthening drought or wildfire season.
 
 ## 6.2. Mechanisms, scale, and management interpretation
 
@@ -426,9 +493,15 @@ contributions or attribute them to anthropogenic forcing. Regional attribution
 studies use additional modeling and evidence [@AbatzoglouWilliams2016]; our
 single-station analysis does not perform that attribution.
 
-The forest is a managed landscape rather than a setting free of human
-influences. Ignition, suppression, prescribed fire, fuels, and reporting can
-alter the relationship between weather-derived dryness and observed wildfires.
+Ignition, suppression, prescribed fire, fuels, and reporting all influence
+observed fires in this managed landscape. @Hashida2025
+explicitly model the interaction between climate, prescribed burning, and
+large wildfire in the southeastern United States. Southeast FireMap also
+provides regional evidence on changes in frequent burning across ownerships
+and landscapes [@Nowell2026]. Those burned-area and management analyses concern
+different outcomes from our ignition counts. Their results support considering
+management in future local work without implying that our count model measures
+its effectiveness.
 A weak or uncertain burn-area predictor cannot show that management is
 effective, and a positive drought coefficient does not identify how management
 would change the response. The forecast application instead shows how a drought
@@ -451,15 +524,20 @@ inference could refine uncertainty. The May comparison remains exploratory,
 and the shorter ENSO-adjusted record does not justify a stronger monthly-family
 claim. The 2009-2018 spatial check cannot supply a homogenized forest-wide
 long-term trend; a suitable spatial record or independent soil/fuel-moisture
-measurements would be needed to extend that interpretation.
+measurements would be needed to extend that interpretation. The Wakulla
+observations begin much later and show level changes whose causes are
+unresolved. They add independent local context but do not validate the
+1944-onward trend. Consistent with @Hoylman2024, depth and
+season should be specified in any soil-moisture assessment; maintenance
+history and temporal uncertainty analysis are prerequisites for a stronger
+validation claim.
 
 For wildfire prediction, only 15 hindcast seasons are available. Source release
 delays were not reconstructed, conditional count intervals omit parameter
 uncertainty, and comparisons among added specifications reuse the same test
 period. Independent future evaluation, a longer stable fire record, and an
 explicitly reconstructed issue-date workflow would be needed before judging
-operational utility. A validated burned-area model and new Bayesian fits are
-outside the results reported here.
+operational utility.
 
 # 7. Conclusions
 
@@ -479,11 +557,13 @@ This work was supported by Florida State University.
 
 # Data and code availability
 
-Source data are available from NOAA GHCN-Daily and NOAA PSL, PRISM, and the
-Forest Service FPA FOD archive. The project repository is
+Source data are available from NOAA GHCN-Daily and NOAA PSL, PRISM, the
+Forest Service FPA FOD archive, and USDA NRCS SCAN. The project repository is
 <https://github.com/jelsner/KBDI>. The revised reproduction workflow uses
 `scripts/run-all.R`; `scripts/paper-figures.R` redraws all manuscript figures
 from prepared results, and `scripts/paper-tables.R` exports the tables.
+The supplemental Wakulla comparison is reproduced with
+`scripts/soil-moisture-check.R` and `scripts/paper-soil-supplement.R`.
 Small source snapshots, derived data, settings, and checksums are documented
 in the repository. Large historical PRISM grids remain local, with a compact
 forest extraction sufficient to repeat the spatial comparison. Figure and

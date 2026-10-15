@@ -1,0 +1,15 @@
+{
+  "created_utc": "2026-10-15 21:29:36 UTC",
+  "input_md5": {
+    "outputs/soil-moisture-monthly.csv": "1ffe0bea4a9894dd09bd48a99cde13f4",
+    "outputs/soil-moisture-coverage.csv": "cfa0f71be26a8a58bf5820eb1739978d",
+    "outputs/soil-moisture-correspondence.csv": "b7d0d430e0f97eab23fce1a03a0b799f",
+    "outputs/soil-moisture-manifest.json": "bf4c201f3442e069d92fea249a052487"
+  },
+  "output_md5": {
+    "manuscript/figures/figS04-wakulla-soil-moisture.pdf": "18a8920c4baee3e05ba093f66adc53ef",
+    "manuscript/figures/figS04-wakulla-soil-moisture.png": "ee68ac0cb9fc3cd5d69ccd34197e9f8b",
+    "manuscript/figures/figS05-wakulla-coverage.pdf": "96ee246d612330569f1abc6d2c256fa6",
+    "manuscript/figures/figS05-wakulla-coverage.png": "e4189f7ba595cd629165ac7cfb03a224"
+  }
+}

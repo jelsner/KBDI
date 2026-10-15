@@ -1,0 +1,18 @@
+{
+  "created_utc": "2026-10-15 20:49:44 UTC",
+  "station": "2009:FL:SCAN",
+  "latitude": 30.3058,
+  "longitude": -84.4248,
+  "InsideStudyPolygon": true,
+  "AirportDistanceKm": 12.029,
+  "units": "Percent volumetric soil moisture; KBDI deficit in mm",
+  "timing": "Midnight SMS on D paired with end-of-day KBDI on D-1; same-date sensitivity reported",
+  "primary_qc": "V only; V and N sensitivity; E excluded; API returnSuspectData=false",
+  "status": "Exploratory independent-observation comparison, not historical trend validation or calibrated water-deficit validation",
+  "input_md5": {
+    "Data/raw/scan-wakulla/metadata.json": "f7e8bb4237dddbb9714c5e065319ae1a",
+    "Data/raw/scan-wakulla/observations.json": "b6009ecd7fac3adff69e05e21726dd66",
+    "Data/processed/daily-weather.csv": "06ed483c3fa6f34a860d245bc0564eb3",
+    "Data/raw/anf-boundary.gpkg": "546db43b70644d67b0f482fc15d5df6d"
+  }
+}

@@ -12,6 +12,8 @@ seasonal wildfire prediction as an application.
 - [Methods and reproduction](docs/methods-and-reproduction.md) explains data,
   statistical assumptions, dependencies, and limitations.
 - [Repository map](docs/repository-map.md) explains the directory structure.
+- [Independent soil-moisture check](docs/soil-moisture-validation.md): Wakulla SCAN observations,
+  coverage, and exploratory comparison with airport KBDI.
 
 ```sh
 Rscript scripts/run-all.R              # reproduce from cached data
