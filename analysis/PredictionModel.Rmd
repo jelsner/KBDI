@@ -72,5 +72,5 @@ this is a sensitivity analysis, not an operationally reconstructed predictor.
 `scripts/bayesian.R` preserves separate Bayesian count fits with explicit priors,
 four chains, seeds, and saved posterior predictive draws. It requires optional
 `brms` and a working Stan toolchain. Those fits were not run during modernization.
-The original exploratory exponential acreage fit is retained in `legacy/`;
+The original exploratory exponential acreage fit is retained in `archive/legacy/`;
 it is not treated as a validated burned-area forecast.

@@ -1,16 +1,19 @@
-.Rproj.user
+.DS_Store
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
 .RDataTmp
-Data/
+*.download
+/archive/workspaces/
 
-# Modern paper workflow: retain local historical archives, ignore bulky generated files.
-.DS_Store
-.RDataTmp
-/Data/PRISM/
-/Data/FPA_FOD_*.gpkg
+# Keep large historical sources local; permit compact active source snapshots.
+/Data/*
+!/Data/raw/
+!/Data/processed/
+
+# Generated HTML and fitted model objects are reproducible.
 /outputs/*.html
 /outputs/*-models.rds
 /outputs/bayesian/
-*.download
+/manuscript/*.html

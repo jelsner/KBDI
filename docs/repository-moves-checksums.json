@@ -1,0 +1,385 @@
+[
+  {
+    "source": ".RData",
+    "destination": "archive/workspaces/.RData",
+    "sha256": "ae3daf067624c034066d2b3b3414368ed00f53b1ad49369d0835da5d7b6cb830"
+  },
+  {
+    "source": ".RDataTmp",
+    "destination": "archive/workspaces/.RDataTmp",
+    "sha256": "8732e702663191cfd7a63ac10ea1d8f23a4e7f088ed32d3e16c13a7bff9c4fa4"
+  },
+  {
+    "source": ".Rhistory",
+    "destination": "archive/workspaces/.Rhistory",
+    "sha256": "3ee6ca9737df7ef819d95a3676bfc3ddfaa908aaa7841c6afda99e6040d66613"
+  },
+  {
+    "source": "ANF_Fires.Rmd",
+    "destination": "analysis/ANF_Fires.Rmd",
+    "sha256": "e5ee601c8a8c0a0d9dff7b5bcc675c8c34ccdbabe59c057b4ab9469139cd78f9"
+  },
+  {
+    "source": "Causes.png",
+    "destination": "archive/figures/Causes.png",
+    "sha256": "dcbcd8771712a78b4592fec70d3dcc1490d30651e647aaa7ac1a2a2e708e287f"
+  },
+  {
+    "source": "CorrelationFunctionDate.png",
+    "destination": "archive/figures/CorrelationFunctionDate.png",
+    "sha256": "627f309cf84c1e176e22b185b4622e4071a780f1061ddf9cee5346eff560acd9"
+  },
+  {
+    "source": "Correlations.png",
+    "destination": "archive/figures/Correlations.png",
+    "sha256": "2f9478ecac46059e67f4edc2db2788c8d37cdc79aed8a00900a9b39ac719c477"
+  },
+  {
+    "source": "DailyKBDI.png",
+    "destination": "archive/figures/DailyKBDI.png",
+    "sha256": "b6fc5a501423976300710054c4773766af9269849a2c7d9d06f24e1f0d24e33d"
+  },
+  {
+    "source": "DailyMonthlyDeficits.pdf",
+    "destination": "archive/figures/DailyMonthlyDeficits.pdf",
+    "sha256": "7c5bab4840663bbf374fe72a5f38bdb89f2f6976cab88145577587590e7ca8ae"
+  },
+  {
+    "source": "Daily_Temperatures.Rmd",
+    "destination": "archive/notebooks/Daily_Temperatures.Rmd",
+    "sha256": "3aa2bee12b527d4cf021630a39fa895b56f0d00e83e46c614ffad9f5f64908f6"
+  },
+  {
+    "source": "DoY_Trends_Analyses.Rmd",
+    "destination": "archive/notebooks/DoY_Trends_Analyses.Rmd",
+    "sha256": "ffa5de1d9728fa8756ad46d8edebacc2e1eebfab421e838d871f50eb795ae407"
+  },
+  {
+    "source": "DoY_Trends_Model.Rmd",
+    "destination": "archive/notebooks/DoY_Trends_Model.Rmd",
+    "sha256": "df834985e5141ca4267df7ad76bddfe4b124b27dc9665418a1f1d260d7d5f63c"
+  },
+  {
+    "source": "Draw_DAGs.Rmd",
+    "destination": "archive/notebooks/Draw_DAGs.Rmd",
+    "sha256": "9e2fb8f30893b37d47add00926ecbbc7be76ff3973c5c3caa0c679ea7c0bca2b"
+  },
+  {
+    "source": "DrynessVsFireNumber.png",
+    "destination": "archive/figures/DrynessVsFireNumber.png",
+    "sha256": "5a68d838069bd24aba7f6c5a38a4f609a37cdba2fbc62100e4ddbbc76c370297"
+  },
+  {
+    "source": "ERL_Soil_Dryness_and_Wildfires_in_the_ANF.zip",
+    "destination": "archive/original-manuscript.zip",
+    "sha256": "a5789dd4afe5870d4a006c66b0de9586d8ca7520b4548bc02e363cb3987a2865"
+  },
+  {
+    "source": "ExceedanceTrend.pdf",
+    "destination": "archive/figures/ExceedanceTrend.pdf",
+    "sha256": "00f9f386bddbc193f333e9bec1b376f5bd93d94b93a3a007c825397ecee25259"
+  },
+  {
+    "source": "ExplainedVariance.png",
+    "destination": "archive/figures/ExplainedVariance.png",
+    "sha256": "03b13a709bf047a2cd2d2f600fd482d57efbc402029d28cdf725dbfe9d4474f2"
+  },
+  {
+    "source": "ExploratoryAnalysis_committee.Rmd",
+    "destination": "archive/notebooks/ExploratoryAnalysis_committee.Rmd",
+    "sha256": "2e54974744d14818bc5d4b191fcca24dd7960c05733ac02c965124859c45f2cc"
+  },
+  {
+    "source": "GenerativeModel.Rmd",
+    "destination": "archive/notebooks/GenerativeModel.Rmd",
+    "sha256": "2bd8c22fbf87e693ea65140df272baa92454d4e94685b294db4876a14aced73f"
+  },
+  {
+    "source": "GriddedClimateData.Rmd",
+    "destination": "archive/notebooks/GriddedClimateData.Rmd",
+    "sha256": "7c2737fa9df7f072a5ac186b51e4303418800a22751cae3edfa6b64ec4321e2d"
+  },
+  {
+    "source": "Gridded_KBDI.Rmd",
+    "destination": "analysis/Gridded_KBDI.Rmd",
+    "sha256": "678823a0bf68d4832e39079440387a828f58b7429f6e60a9e260cc3f6f11f2e6"
+  },
+  {
+    "source": "HistoryFeb3_2021.Rhistory",
+    "destination": "archive/workspaces/HistoryFeb3_2021.Rhistory",
+    "sha256": "0ab27d5ad6583be800c446f8cffe5d93c8fdacffba8bb6b5b9afd4d042c5cba4"
+  },
+  {
+    "source": "HistoryJan20_2021.Rhistory",
+    "destination": "archive/workspaces/HistoryJan20_2021.Rhistory",
+    "sha256": "3d47891909b0b25469f2163707a2c620ad5dc7df0c15a41d69ec93a282831a64"
+  },
+  {
+    "source": "KBDI.Rmd",
+    "destination": "analysis/KBDI.Rmd",
+    "sha256": "39a2f64cbfddb940ad2410d660f6dfc9fb9efd88f8f7f630bb38348a55cfdd30"
+  },
+  {
+    "source": "LocationMap.tiff",
+    "destination": "archive/figures/LocationMap.tiff",
+    "sha256": "4280428a3f67abb26858a97238fe9a56e58e6ffb987fd28f8cf44957be8a39f7"
+  },
+  {
+    "source": "MapFireLocations.png",
+    "destination": "archive/figures/MapFireLocations.png",
+    "sha256": "c1663d4fdb3d7cdd1ea52f654de9449999a9726cf4a194a0a460f85a8a94e389"
+  },
+  {
+    "source": "ModelPrediction.png",
+    "destination": "archive/figures/ModelPrediction.png",
+    "sha256": "894f3674b19c671dd81bc3aaa6a43029986dcfd72fc68cb078cc0bd79f7d7ced"
+  },
+  {
+    "source": "ModelPredictions.pdf",
+    "destination": "archive/figures/ModelPredictions.pdf",
+    "sha256": "ea68f23e72a33b3839e3dc64f0f26f4c69fcedd0f85a3ab433b637a4beaac703"
+  },
+  {
+    "source": "MonthFrequency.png",
+    "destination": "archive/figures/MonthFrequency.png",
+    "sha256": "1bcbec2d6cb4f33da62a84c006a06547f57981a780f733e438790b07ce2fcee2"
+  },
+  {
+    "source": "MonthRainfallTemperature.png",
+    "destination": "archive/figures/MonthRainfallTemperature.png",
+    "sha256": "2e9dd9adaa83fbfa2f98afc2b1d4347270d3fc33c052937c1de50c69f10e8093"
+  },
+  {
+    "source": "MonthlyFiresLightning.pdf",
+    "destination": "archive/figures/MonthlyFiresLightning.pdf",
+    "sha256": "299b24e7d382b046afc35bfa71981a193eafc5c1f1627faa6d47b4dff7642b08"
+  },
+  {
+    "source": "MonthlyFrequency.png",
+    "destination": "archive/figures/MonthlyFrequency.png",
+    "sha256": "b9feeedf3bd72f0ee85a899a61eb907cea80371ee8af62c2744b1dbeb1c57c61"
+  },
+  {
+    "source": "MonthlyLightning.png",
+    "destination": "archive/figures/MonthlyLightning.png",
+    "sha256": "9ef449b1c93ed1827c877cfe1319cf264884467cec9a4093ff5d90687a5be456"
+  },
+  {
+    "source": "MonthlyRainTemp.pdf",
+    "destination": "archive/figures/MonthlyRainTemp.pdf",
+    "sha256": "27fe778c890f4e466069c960535e9103a0814d8adcb54ffe96a4ce3c5115c691"
+  },
+  {
+    "source": "MonthlySoilMoistureDeficit.pdf",
+    "destination": "archive/figures/MonthlySoilMoistureDeficit.pdf",
+    "sha256": "74608b59464273c48c27be0229a2b0a76d6577f224d1ff499fd0d74df1b84602"
+  },
+  {
+    "source": "MonthlySoilMoistureDeficit.png",
+    "destination": "archive/figures/MonthlySoilMoistureDeficit.png",
+    "sha256": "f039f4d75ee7f5abcb3d22c378405887087544e6403ba0f55a2d1933a8f90b73"
+  },
+  {
+    "source": "MonthlyTimeSeries.png",
+    "destination": "archive/figures/MonthlyTimeSeries.png",
+    "sha256": "b1b020de52357f257bf675b6d05a478b62d396c4a172e6941c821f3213b1c419"
+  },
+  {
+    "source": "NumberOfWildfires.pdf",
+    "destination": "archive/figures/NumberOfWildfires.pdf",
+    "sha256": "2ecc203592199116ab6050eba9ecbcea07237da5cd97c59b15a54eb5f3005749"
+  },
+  {
+    "source": "Personal_Wx_History.Rmd",
+    "destination": "archive/notebooks/Personal_Wx_History.Rmd",
+    "sha256": "23afe8c73f2d3d76f37a7ce19cc2937f04edfacc488433e3ac510d46c5907baf"
+  },
+  {
+    "source": "PosteriorPredictions.png",
+    "destination": "archive/figures/PosteriorPredictions.png",
+    "sha256": "7d893967cec22564beffee01409945e80e2fbcb1646cbe43b796dee2b152cb7a"
+  },
+  {
+    "source": "PredictionModel.Rmd",
+    "destination": "analysis/PredictionModel.Rmd",
+    "sha256": "770bd88725d2e270ab217ecbb89eebc122273cd4d0128f8a0e7a2340fca836b5"
+  },
+  {
+    "source": "Rplot.tiff",
+    "destination": "archive/figures/Rplot.tiff",
+    "sha256": "5183ed4dc9aa55bf1c19dbaccf0bf8a4c5cbe64d68034310d086bd23655f8395"
+  },
+  {
+    "source": "Rplot01.pdf",
+    "destination": "archive/figures/Rplot01.pdf",
+    "sha256": "7b7c0819757979af07a7f8045877207e0a0d3e57b02f22359d50a8d965264346"
+  },
+  {
+    "source": "Scatterplot.pdf",
+    "destination": "archive/figures/Scatterplot.pdf",
+    "sha256": "ea6ed25d933000434cd1dad14411559a9c7b4afc15c3a909c2417787deddd668"
+  },
+  {
+    "source": "SeasonalForecastModelData.csv",
+    "destination": "archive/data/SeasonalForecastModelData.csv",
+    "sha256": "a6e9339b5f1b1a0a67a4bf70cd90385772c70f1e7b3ca6739ecce1658d4ca001"
+  },
+  {
+    "source": "SeasonalVariation.png",
+    "destination": "archive/figures/SeasonalVariation.png",
+    "sha256": "b42869fa1359ad1a42da7813d308a1fd823c4e516677a9594e66c14d9b8a0087"
+  },
+  {
+    "source": "TempVsPrecipSeasonal.jpeg",
+    "destination": "archive/figures/TempVsPrecipSeasonal.jpeg",
+    "sha256": "96466a029f5ab0280c7e032b0613f312efc96ccec6acea72cabdfd485c3b9925"
+  },
+  {
+    "source": "TestMap.tiff",
+    "destination": "archive/figures/TestMap.tiff",
+    "sha256": "70caae5bc13f1a3ba2c4718faba98d33992bc57d2baf1de781b9799b338004df"
+  },
+  {
+    "source": "TimeSeriesAvgMinTemp.pdf",
+    "destination": "archive/figures/TimeSeriesAvgMinTemp.pdf",
+    "sha256": "6e73f963babbe3c5a6772d2ed90b8139e2359e6145bc791f62b6fd0b5e587a3c"
+  },
+  {
+    "source": "TrendNumberDays.png",
+    "destination": "archive/figures/TrendNumberDays.png",
+    "sha256": "e4e8e8761bfa197d5c6396284692030449aad8074751996d7db8b3eef3bd579f"
+  },
+  {
+    "source": "Trends.pdf",
+    "destination": "archive/figures/Trends.pdf",
+    "sha256": "104806cb376f2223e75f5e41d84ed479abd2b89036e8ba7855f7ff57838f39f4"
+  },
+  {
+    "source": "TrendsKBDI.png",
+    "destination": "archive/figures/TrendsKBDI.png",
+    "sha256": "b32d671e26ef4e641887bcaf13d8ffe9ce414acd9b364f269baa6a6e126d2af3"
+  },
+  {
+    "source": "VarianceExplained.pdf",
+    "destination": "archive/figures/VarianceExplained.pdf",
+    "sha256": "0f5e6c0bbf64cbd54cc58cc5da6c7a866d8b97e5072849df69356cac9a58f17a"
+  },
+  {
+    "source": "VarianceExplained.png",
+    "destination": "archive/figures/VarianceExplained.png",
+    "sha256": "a65c80d696c6de5edd11bbe3893db44d46e66b7500cd97913056309935583fc5"
+  },
+  {
+    "source": "WeatherSTEM.Rmd",
+    "destination": "archive/notebooks/WeatherSTEM.Rmd",
+    "sha256": "d6411921f1db17d940ffc5cb5104959f2efd86f18b64a031a53a4820260cf841"
+  },
+  {
+    "source": "WildfireLocations.pdf",
+    "destination": "archive/figures/WildfireLocations.pdf",
+    "sha256": "50159b9b8ad0a76cd398bda9f11c190ca47dfd6423553f2a4a8e7d9fb9b45e15"
+  },
+  {
+    "source": "WildfireRisk.Rmd",
+    "destination": "archive/notebooks/WildfireRisk.Rmd",
+    "sha256": "c5a4d59abe3f9e033e177d6fe9064a049497886464069255077740ecdef5e908"
+  },
+  {
+    "source": "Zach_Fires.Rmd",
+    "destination": "archive/notebooks/Zach_Fires.Rmd",
+    "sha256": "f6aa4044b1e15d9e95eac4da6b492b06df8016215da321a3a8e7d993144e7e85"
+  },
+  {
+    "source": "Zach_Thesis.Rmd",
+    "destination": "archive/notebooks/Zach_Thesis.Rmd",
+    "sha256": "b4657786bdaba67d8384889f47cd6afe3beb162660ffd1a130c6915570d1c3b5"
+  },
+  {
+    "source": "compare.rmd",
+    "destination": "archive/notebooks/compare.rmd",
+    "sha256": "c37bcfa3dbd8abd7d543e9d3c696f2ab6236f8f28d4a92d7920757338e5ddf84"
+  },
+  {
+    "source": "droughtIndex.R",
+    "destination": "archive/compatibility/droughtIndex.R",
+    "sha256": "6be3e39b5cbf45aee41d34572912ded0f56694c6dde97a4c2cff2327a6ba276d"
+  },
+  {
+    "source": "netRainfall.R",
+    "destination": "archive/compatibility/netRainfall.R",
+    "sha256": "942dd168c051ae56f7d5434e76cb97050fc3b6da309f6959113cf9de80f65c6d"
+  },
+  {
+    "source": "legacy",
+    "destination": "archive/legacy",
+    "files": {
+      "droughtIndex.R": "6ded45b4d985ffbe1cf6d1a26d0328addcd2611f271d893cb1fa9b730ddbbd87",
+      "PredictionModel.Rmd": "43ac2c65546794ef932b69673a013a464421cf366c84e3522b55b9be449565d8",
+      "gitignore-before-modernization.txt": "b107f73e846c3880bb58ab070437148bcfda2f8a7c4ffc44286d652d09dd7157",
+      "README-before-modernization.md": "e2356f54f35b04bbf2cd143e0a83c80f558dbb5a9729e1f58d112ed93d28f385",
+      "ANF_Fires.Rmd": "a0575429578bde243bec4e64c420f0d5d87dad2806a4773b700ef7acff294f2d",
+      "KBDI.Rmd": "48e4db1ac1a2028eb0006dea4a448f827b2385bc526fb1828a57fece20d86072",
+      "KBDI-before-modernization.Rproj": "3a81ccc25a62f1a31c7d3404389935ced50831abea5e848408745ad1a1bf6126",
+      "netRainfall.R": "6bd81759b96f6f0d546d4c8a595c6fa20ee6f08fb3301259e41bbdc0a6a1b6f1",
+      "README.md": "65659bbe643c07d0717a1492932fc07410ae68aa09f091a0246b6e1e786d97a4",
+      "Gridded_KBDI.Rmd": "c60ff31342b522af70d49b0d6e273417f7a110738177483d98fbed7bec990857"
+    }
+  },
+  {
+    "source": "fits",
+    "destination": "archive/fits",
+    "files": {
+      "fit1.1.rds": "79c5d5015746d81949397e6554f314a75d0637ce8e2b582ce978f82ec53440a8"
+    }
+  },
+  {
+    "source": "S_USA.NFSLandUnit",
+    "destination": "archive/reference/S_USA.NFSLandUnit",
+    "files": {
+      "S_USA.NFSLandUnit.sbn": "9fc321f6b3bb78bd5385719fbc3853cf7b30ca838ee9e22123f437fe03532a41",
+      "S_USA.NFSLandUnit.prj": "84cf5b9a3c1a444f83ac30ff76f8c5035990223027ba69b2f4d628388adcbd65",
+      "S_USA.NFSLandUnit.shx": "bb66b47283eeadfb4a809529c3ef24cd479c6de532ea9d0eeb9901432e2d36f0",
+      "S_USA.NFSLandUnit.sbx": "808957aaeb6d8037535566ae405c3b7cf9d5ae40d9e83b67788f6c2971b8baf5",
+      "S_USA.NFSLandUnit.shp": "1c1fe800db7616c600135b53f9ede98e7dceb437c844957b5fb79e7dbb990157",
+      "S_USA.NFSLandUnit.cpg": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
+      "S_USA.NFSLandUnit.dbf": "9e043faa1006b6cc6a5ff55be2dc3f8c4b8a1dc0301f45bf939a3e0d74f91470"
+    }
+  },
+  {
+    "source": "ERL_Soil_Dryness_and_Wildfires_in_the_ANF",
+    "destination": "archive/original-manuscript",
+    "files": {
+      "DailyMonthlyDeficits.pdf": "7c5bab4840663bbf374fe72a5f38bdb89f2f6976cab88145577587590e7ca8ae",
+      "ModelPredictions.pdf": "ea68f23e72a33b3839e3dc64f0f26f4c69fcedd0f85a3ab433b637a4beaac703",
+      "MonthlyRainTemp.pdf": "27fe778c890f4e466069c960535e9103a0814d8adcb54ffe96a4ce3c5115c691",
+      "main.md": "2d3b7d7d8f8c007bbc261c750bb7dbd2cf0ef34b7953722952fa1a1437016e08",
+      "MonthlyFiresLightning.pdf": "299b24e7d382b046afc35bfa71981a193eafc5c1f1627faa6d47b4dff7642b08",
+      "Scatterplot.pdf": "ea6ed25d933000434cd1dad14411559a9c7b4afc15c3a909c2417787deddd668",
+      "WildfireLocations.pdf": "50159b9b8ad0a76cd398bda9f11c190ca47dfd6423553f2a4a8e7d9fb9b45e15",
+      "ExceedanceTrend.pdf": "00f9f386bddbc193f333e9bec1b376f5bd93d94b93a3a007c825397ecee25259",
+      "VarianceExplained.pdf": "0f5e6c0bbf64cbd54cc58cc5da6c7a866d8b97e5072849df69356cac9a58f17a",
+      "NumberOfWildfires.pdf": "2ecc203592199116ab6050eba9ecbcea07237da5cd97c59b15a54eb5f3005749",
+      "Trends.pdf": "104806cb376f2223e75f5e41d84ed479abd2b89036e8ba7855f7ff57838f39f4"
+    }
+  },
+  {
+    "source": "scripts/paper-summary.R",
+    "destination": "archive/scripts/paper-summary.R",
+    "sha256": "be02e3ff937541daf86bacfc87d9bc725cf6c48b0ad82948455dbc59f720715f"
+  },
+  {
+    "source": "manuscript/revision-plan.md",
+    "destination": "archive/planning/revision-plan.md",
+    "sha256": "003775e12ea4f0d6f25eb4192b5fe31880312b192e97f98ed5f3d30e4fb2b79c"
+  },
+  {
+    "source": "manuscript/revision-plan.md.in",
+    "destination": "archive/planning/revision-plan.md.in",
+    "sha256": "bf77fd66cd6acc415608be6e0f85fccc34f48f335305212f4e5fb996be9be9db"
+  },
+  {
+    "source": "manuscript/analysis-summary.tex.in",
+    "destination": "archive/planning/analysis-summary.tex.in",
+    "sha256": "f436e5fad934b32d06106907d96d803c286ac5297d8387c82550a230ff6bd012"
+  }
+]

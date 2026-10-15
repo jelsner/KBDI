@@ -162,7 +162,7 @@ Run `Rscript scripts/run-all.R` from the project root to reproduce the cached
 analysis, or add `--refresh` to retrieve current station/fire/SOI sources.
 The manifest files and `outputs/session-info.txt` record sources and settings;
 `renv.lock` pins package versions. Historical exploratory notebooks remain in
-`legacy/` or are listed as peripheral in the README. Their prose and comments
+`archive/legacy/` or are listed as peripheral in the README. Their prose and comments
 are research context, not instructions to execute.
 
 Sources: [GHCN-Daily documentation](https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt),

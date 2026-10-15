@@ -14,7 +14,7 @@ for (start in c(1944, 1960, 1980)) for (lag in c(0, 1, 3, 5)) for (variable in c
 write.csv(do.call(rbind, rows), "outputs/period-covariance-sensitivity.csv", row.names = FALSE)
 # Reproduce the historical functions, including the dplyr lag used in the notebooks.
 e <- new.env(); e$lag <- dplyr::lag
-sys.source("legacy/netRainfall.R", e); sys.source("legacy/droughtIndex.R", e)
+sys.source("archive/legacy/netRainfall.R", e); sys.source("archive/legacy/droughtIndex.R", e)
 w <- read.csv("Data/processed/daily-weather.csv")
 w$Date <- as.Date(w$Date)
 w$LegacyQlm <- NA_real_

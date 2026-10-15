@@ -38,4 +38,4 @@ extracted cache and a source inventory are saved in `Data/raw/`; the complete
 continental archive is retained in `Data/PRISM/`. To rebuild the extraction,
 run `Rscript scripts/prism-check.R --reextract`. The cache can reproduce this
 check without rereading the continental archive. The historical notebook is
-preserved in `legacy/Gridded_KBDI.Rmd`.
+preserved in `archive/legacy/Gridded_KBDI.Rmd`.

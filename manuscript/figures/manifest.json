@@ -1,0 +1,38 @@
+{
+  "created_utc": "2026-10-15 12:06:56 UTC",
+  "station_metadata": {
+    "latitude": 30.3935,
+    "longitude": -84.3514,
+    "url": "https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail",
+    "checked": "2026-10-15"
+  },
+  "inputs_md5": {
+    "Data/raw/anf-boundary.gpkg": "546db43b70644d67b0f482fc15d5df6d",
+    "Data/processed/annual-climate.csv": "4cb4ecca59936be6f92214619ee9476c",
+    "Data/processed/monthly-climate.csv": "0a775cfa96c8776cab0f7f1f102f63af",
+    "Data/processed/daily-weather.csv": "06ed483c3fa6f34a860d245bc0564eb3",
+    "outputs/annual-trends.csv": "4bdb6d0db4e8022d17a3e7d344dd3c52",
+    "outputs/monthly-trends.csv": "76b464926ba95c070c015917a68fe38d",
+    "outputs/hindcasts.csv": "60689b0433252c53a2504b1515fb9544",
+    "outputs/metrics.csv": "6f4ccdf77cc61505c1e47186f4ea8a58",
+    "outputs/forecast-skill-uncertainty.csv": "227ae7183ef6117f58758150593d0b2a",
+    "outputs/period-covariance-sensitivity.csv": "904ac2a3e13a796d02671d6681fa8060",
+    "outputs/prism-station-check.csv": "07ca133c7706dc5cccdd89c9302e667f"
+  },
+  "output_md5": {
+    "manuscript/figures/fig01-setting-seasonality.pdf": "4ca1e157919795212e1f16fc5a180d50",
+    "manuscript/figures/fig01-setting-seasonality.png": "043fc05c08577d5cc1c75318f1ea3f34",
+    "manuscript/figures/fig02-annual-drought-change.pdf": "f1c40a21b2475a425216c7cccd6f4031",
+    "manuscript/figures/fig02-annual-drought-change.png": "fc9aea634e59dce2ae3f9b898c051f50",
+    "manuscript/figures/fig03-monthly-drought-trends.pdf": "0de5a4ab71f33a49f466fee89b1f7e1b",
+    "manuscript/figures/fig03-monthly-drought-trends.png": "b345220e5d8cc0acc89b66f45acd0fde",
+    "manuscript/figures/fig04-natural-fire-application.pdf": "41210d461a07e487c3911dd80a47d11d",
+    "manuscript/figures/fig04-natural-fire-application.png": "57453d4593273aa68b7d5d6360609a2a",
+    "manuscript/figures/figS01-daily-drought.pdf": "ecc3424c83cd89404cdb667cb2004b7c",
+    "manuscript/figures/figS01-daily-drought.png": "c7854aa0d455923d5fb6ebf211f6e140",
+    "manuscript/figures/figS02-period-covariance-sensitivity.pdf": "e64345f86d99b4c030780565f6eb9840",
+    "manuscript/figures/figS02-period-covariance-sensitivity.png": "f950ed014efe2b249dd2875c52576ea4",
+    "manuscript/figures/figS03-prism-anomaly-correspondence.pdf": "956d461c5a91c890ce3d51802867907c",
+    "manuscript/figures/figS03-prism-anomaly-correspondence.png": "5ab21f6553c8d7e09cfb2182a62f3887"
+  }
+}

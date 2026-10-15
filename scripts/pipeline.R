@@ -10,7 +10,7 @@ refresh <- "--refresh" %in% commandArgs(TRUE)
 # Cached snapshots imported from the ANF refresh on 2026-10-15 UTC.
 retrieval_path <- "Data/raw/retrieval.json"
 service <- "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_FireOccurrenceCurrentEdition_01/MapServer/0"
-weather_url <- "https://www.ncei.noaa.gov/pub/Data/ghcn/daily/all/USW00093805.dly"
+weather_url <- "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00093805.dly"
 get_file <- function(url, path) {
   tmp <- paste0(path, ".download")
   download.file(url, tmp, mode = "wb", quiet = TRUE)
@@ -29,7 +29,7 @@ query_url <- function(base, args) paste0(base, "/query?", paste(paste0(names(arg
 # Keep the original study boundary fixed so historical comparisons retain their footprint.
 boundary_path <- "Data/raw/anf-boundary.gpkg"
 if (!file.exists(boundary_path)) {
-  b <- sf::st_read("S_USA.NFSLandUnit", quiet = TRUE)
+  b <- sf::st_read("archive/reference/S_USA.NFSLandUnit", quiet = TRUE)
   b <- b[b$NFSLANDU_2 == "Apalachicola National Forest", c("NFSLANDU_2", "geometry")]
   stopifnot(nrow(b) == 1)
   sf::st_write(b, boundary_path, quiet = TRUE)
@@ -187,6 +187,6 @@ manifest <- list(run_utc = format(Sys.time(), tz = "UTC", usetz = TRUE), fire_se
   retrieval = jsonlite::fromJSON(retrieval_path),
   raw_md5 = as.list(tools::md5sum(list.files("Data/raw", full.names = TRUE))))
 jsonlite::write_json(manifest, "outputs/manifest.json", pretty = TRUE, auto_unbox = TRUE)
-capture.output(sessionInfo(), file = "outputs/session-info.txt")
+writeLines(trimws(capture.output(sessionInfo()),which="right"), "outputs/session-info.txt")
 print(metrics)
 cat("Fire coverage:", coverage, "; ANF records:", nrow(fires), "; eligible seasons per cause:", sum(seasonal$eligible) / 3, "\n")

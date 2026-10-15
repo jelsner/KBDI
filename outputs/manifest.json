@@ -1,8 +1,8 @@
 {
-  "run_utc": "2026-10-15 04:41:13 UTC",
+  "run_utc": "2026-10-15 11:51:54 UTC",
   "fire_service": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_FireOccurrenceCurrentEdition_01/MapServer/0",
   "fire_coverage": [1992, 2024],
-  "weather_url": "https://www.ncei.noaa.gov/pub/Data/ghcn/daily/all/USW00093805.dly",
+  "weather_url": "https://www.ncei.noaa.gov/pub/data/ghcn/daily/all/USW00093805.dly",
   "weather_last_day": "2026-10-12",
   "boundary": "Original NFSLandUnit study footprint; not refreshed",
   "initial_kbdi": 400,
