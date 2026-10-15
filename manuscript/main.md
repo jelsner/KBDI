@@ -1,6 +1,6 @@
 ---
 title: "Long-term increases in station-derived drought near Apalachicola National Forest, Florida"
-author: "James B. Elsner and Zachery T. Law"
+author: "James B. Elsner"
 date: "Revised preprint draft, 15 October 2026"
 bibliography: references.bib
 link-citations: true
@@ -553,7 +553,11 @@ operational wildfire forecast.
 
 # Acknowledgements
 
-This work was supported by Florida State University.
+The initial work was conducted by Zach T. Law as a graduate student at
+Florida State University and formed the basis of the initial manuscript
+[10.31223/X5H350](https://doi.org/10.31223/X5H350). His contribution to the
+foundation of this study is gratefully acknowledged. This work was supported
+by Florida State University.
 
 # Data and code availability
 

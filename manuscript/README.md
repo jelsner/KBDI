@@ -42,8 +42,9 @@ the main paper, supplement, and a shared bibliography into
 existing XeLaTeX installation. The small `preprint-header.tex` file supplies
 layout settings; it is not a separate manuscript source.
 
-The revised author order is James B. Elsner followed by Zachery T. Law,
-as requested. The affiliation follows the original EarthArXiv PDF;
+James B. Elsner is the sole author of this revision, as requested.
+Zach T. Law is credited in the acknowledgements for the initial graduate-student
+work and manuscript. The affiliation follows the original EarthArXiv PDF;
 James B. Elsner is the corresponding author at jelsner@fsu.edu, as requested.
 This is a revision of preprint 10.31223/X5H350, not a new unrelated submission.
 The export remains a review draft pending scientific review and confirmation

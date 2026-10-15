@@ -44,14 +44,15 @@ The original is EarthArXiv preprint 10.31223/X5H350 (record 3268), posted
 record's revision workflow rather than creating a duplicate preprint. Author
 order and affiliation were verified from its original PDF: Zachery T. Law and
 James B. Elsner; Department of Geography, Florida State University, Tallahassee,
-FL 32306, USA. The revised author order is James B. Elsner followed by Zachery T. Law,
-as requested by the user; the original preprint citation retains its original
-author order. The corresponding email is jelsner@fsu.edu.
+FL 32306, USA. James B. Elsner is the sole author of this revision, as requested by the user.
+Zach T. Law is acknowledged for conducting the initial work as a graduate student
+and for the initial manuscript; the original preprint citation retains its
+original author order. The corresponding email is jelsner@fsu.edu.
 The original record lists CC BY 4.0; confirm the license for the revised version
 when completing the live submission form.
 Confirm the inherited Florida State University funding statement and supply
 conflict-of-interest and author-contribution statements as applicable.
-Choose the submission license with all authors' agreement.
+Confirm the submission license for this revision.
 
 Create and publish a versioned code/data release, and insert its actual commit
 or archive DOI into the data-availability statement. Local revisions and new
