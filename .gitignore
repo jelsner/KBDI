@@ -8,9 +8,9 @@
 /archive/workspaces/
 
 # Keep large historical sources local; permit compact active source snapshots.
-/Data/*
-!/Data/raw/
-!/Data/processed/
+/data/*
+!/data/raw/
+!/data/processed/
 
 # Generated HTML and fitted model objects are reproducible.
 /outputs/*.html
