@@ -4,3 +4,13 @@
 .Ruserdata
 .RDataTmp
 Data/
+
+# Modern paper workflow: retain local historical archives, ignore bulky generated files.
+.DS_Store
+.RDataTmp
+/Data/PRISM/
+/Data/FPA_FOD_*.gpkg
+/outputs/*.html
+/outputs/*-models.rds
+/outputs/bayesian/
+*.download

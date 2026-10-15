@@ -1,0 +1,920 @@
+---
+title: "Drought/Lightning/Fires"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Climatic classification of drought typologies
+https://essd.copernicus.org/articles/12/741/2020/
+https://github.com/robertmonjo/drought
+
+From Michael Keys: Three regions of North Florida with extensive public lands, primarily the National Forests in Florida, were selected. Within these regions, a 10km2 hexagon grid was overlain in ArcMap 10.7 and only hexagons with >90% public lands were selected for analysis. These regions are some of the state’s largest intact natural areas where lightning-initiated fires are a seasonally common occurrence and wildfire size/distribution is not radically influenced by confounding effects of urbanization, agricultural land or roadways. While such publicly managed natural areas deploy various proactive and reactive fire suppression resources, the incidence of large lightning-initiated fires is still largely a climactic and fuels-driven phenomenon. These landscapes are among the largest remaining semi-wild areas of fire-maintained longleaf pine savanna in the SE United States while the Ocala NF features the largest single complex of sand pine dominated scrub habitat in the state. The resulting 528,987-hectare landscape footprint was imported as a simple feature data frame and corresponding lightning and wildfire point data were similarly imported from shapefiles uploaded to Dropbox.
+
+## Functions for weeks and days of the year
+```{r}
+cal <- function(dt) {
+    # Reads a date object and returns a tuple (weekrow, daycol)
+    # where weekrow starts at 1 and daycol starts at 1 for Sunday
+    #http://swingleydev.org/blog/tag/r/
+    year <- year(dt)
+    month <- month(dt)
+    day <- day(dt)
+    wday_first <- wday(ymd(paste(year, month, 1, sep = '-'), quiet = TRUE))
+    offset <- 7 + (wday_first - 2)
+    weekrow <- ((day + offset) %/% 7) - 1
+    daycol <- (day + offset) %% 7
+
+    c(weekrow, daycol)
+}
+weekrow <- function(dt) {
+    cal(dt)[1]
+}
+daycol <- function(dt) {
+    cal(dt)[2]
+}
+vweekrow <- function(dts) {
+    sapply(dts, weekrow)
+}
+vdaycol <- function(dts) {
+    sapply(dts, daycol)
+}
+```
+
+## Keetch & Byram drought index computed from data collected at the Tallahassee airport
+
+Original paper outlining the rationale and how to create it: https://www.srs.fs.usda.gov/pubs/rp/rp_se038.pdf
+
+https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USW00093805/detail
+https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/readme.txt
+Column explanations: https://docs.google.com/document/d/1q2WEpXndpMx9lUq-0ON63GojkaOzixrGyYEhI_xkPtw/edit?usp=sharing
+AWND = Average daily wind speed (tenths of meters per second) 
+
+The Keetch-Byram Drought Index assesses the risk of fire by representing the net effect of evapotranspiration and precipitation in producing cumulative moisture deficiency in deep duff and upper soil layers. The index ranges from zero, the point of no moisture deficiency, to 800, the maximum drought that is possible. Keetch-Byram Drought Index (KBDI) is a mathematical system for relating current and recent weather conditions to potential or expected fire behavior. KBDI was originally developed for the Southeast and is based primarily on recent rainfall patterns. It is one of the only drought indices specifically developed to equate the effects of drought with potential fire behavior. KBDI provides a number ranging from 0 to 800 that describes the moisture deficit of the top eight inches of soil. A drought index of 0 defines the point where there is no moisture deficiency and 800 defines maximum drought. 
+
+Import the data.
+```{r}
+library(lubridate)
+library(dplyr)
+library(tidyr)
+
+TLH.df <- read.csv(file = 'TLH_Daily1940.csv',
+                   stringsAsFactors = FALSE,
+                   header = TRUE) %>%
+  mutate(Date = as.Date(DATE)) %>%
+#  filter(Date >= as.Date("1990-01-01")) %>%
+  mutate(Year = year(Date), 
+         month = month(Date, label = TRUE, abbr = TRUE),
+         doy = yday(Date),
+         weekrow = vweekrow(Date),
+         daycol = vdaycol(Date), 
+         MaxTemp = TMAX,
+         MinTemp = TMIN,
+         Rainfall24 = PRCP,
+         Rainfall24 = replace_na(Rainfall24, 0),
+         Rainfall24mm = Rainfall24 * 25.4,
+         AWND = AWND,
+         ACMH = ACMH)
+
+TLH.df$MaxTemp[TLH.df$Date == "2005-07-08"] <- 96
+```
+
+Find dates since 1990 in April when ACMH = 0 and AWND < 5
+```{r}
+X <- TLH.df %>%
+  dplyr::filter(!is.na(AWND)) %>%
+  dplyr::filter(month == "Apr") %>%
+  dplyr::filter(ACMH == 0 & AWND < 5) 
+```
+
+Current index by county in FL: http://currentweather.freshfromflorida.com/kbdi_index.html
+
+Leon County, May 1, 2017: http://currentweather.freshfromflorida.com/kbdi/cgi-bin/get_archive_v2.py?date=2017-05-01 (only past three years are available). Annual avg precipitation for Tallahassee, FL: https://www.usclimatedata.com/climate/tallahassee/florida/united-states/usfl0479 : 59.23 in.
+
+Step one: Compute net rainfall. Make this a function called `netRainfall()`.
+```{r}
+Rainfall24 <- TLH.df$Rainfall24
+TLH.df$NetR <- netRainfall(Rainfall24)
+```
+
+Step two: Compute drought index. Make this a function called `droughtIndex()`.
+```{r}
+Q <- 269
+R <- 59.23
+MaxTemp <- TLH.df$MaxTemp
+NetR <- TLH.df$NetR
+
+x <- droughtIndex(Q, R, MaxTemp, NetR)
+
+Ql <- numeric()
+DeltaQl <- numeric()
+for(i in 1:length(Rainfall24)){
+  DeltaQ <- (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) /(1 + 10.88 * exp(-.0441 * R)) * .001 
+  Q <- ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
+  Q <- ifelse(Q < 0, 0, Q) 
+  Ql <- c(Ql, Q)
+  DeltaQl <- c(DeltaQl, DeltaQ)
+}
+
+TLH.df$Ql <- Ql
+TLH.df$Qlm <- Ql * .254  # tenth of an inch to mm
+TLH.df$DeltaQl <- DeltaQl
+TLH.df$DroughtIndex <- floor(Ql/100)
+
+TLH.df <- TLH.df %>%
+ dplyr::filter(Year >= 1946 & Year <= 2019) # Only full years
+range(TLH.df$Ql)
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(TLH.df, aes(x = Date, y = Ql)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 800)) +
+  ylab("") + xlab("") +
+#  geom_quantile(quantiles = c(.25, .5, .75, .9)) +
+  geom_smooth(method = lm) +
+  theme_minimal() +
+  ggtitle("Keetch-Byram Drought Index", 
+          subtitle = "Based on data from the NWSFO, Tallahassee, FL  (1940-2020)")
+```
+
+It terms of frequency by Drought Index category.
+```{r}
+TLH.df %>%
+  group_by(Year, DroughtIndex) %>%
+  summarize(N = n()) %>%
+  ggplot(aes(x = Year, y = N)) +
+  geom_col(aes(fill = as.factor(DroughtIndex))) +
+  scale_fill_viridis_d(name = "KBDI") +
+  scale_x_continuous(name = "", breaks = seq(1948, 2019, 4)) +
+  scale_y_reverse() +
+  theme_minimal() +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  guides(fill = guide_legend(reverse=T))
+```
+
+```{r}
+ggplot(TLH2.df, aes(x = doy, y = Year, fill = factor(DroughtIndex))) +
+  geom_tile() +
+  scale_y_reverse(breaks = 2000:2015) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
+  ylab("") + xlab("") +
+  theme_minimal()
+
+( gg <- ggplot(TLH2.df, aes(x = doy, y = Year, fill = Ql * .254)) +
+  geom_tile() +
+  scale_y_reverse(breaks = 2000:2015) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+  ylab("") + xlab("") +
+#  theme_minimal() +
+  ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
+          subtitle = "Amount of water needed to bring soil moisture to full capacity") )
+
+( gg <- ggplot(TLH2.df, aes(x = doy, y = Year, fill = AWND)) +
+  geom_tile() +
+  scale_y_reverse(breaks = 2000:2015) +
+  scale_x_continuous(breaks = c(15,	46,	75,	106, 136, 167, 197, 228, 259, 289, 320, 350),
+                     labels = month.abb, position = "top") +
+  scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+  ylab("") + xlab("") +
+#  theme_minimal() +
+#  ggtitle("Daily soil moisture deficit (mm), Tallahassee, FL", 
+#          subtitle = "Amount of water needed to bring soil moisture to full capacity") )
+   ggtitle("Daily Average Wind Speed (m/s) in Tallahassee, Florida") )
+```
+
+Number of days per year with KBDI above 700.
+```{r}
+library(MASS)
+
+TLH.df %>%
+  filter(Year != 2020) %>%
+  group_by(Year) %>%
+  summarize(nD = sum(Ql > 700)) %>%
+  ggplot(aes(Year, nD)) +
+  geom_point() +
+  stat_smooth(method = "glm.nb",
+              formula = y ~ x, 
+              se = FALSE,
+              col = "orange") 
+```
+
+Render in 3D. https://www.tylermw.com/3d-ggplots-with-rayshader/. Uses X11.
+```{r, eval=FALSE}
+library(rayshader)
+
+plot_gg(gg, multicore = FALSE, 
+        width = 5, 
+        height = 5, 
+        scale = 150,
+        background = "#afceff",
+        shadowcolor = "#3a4f70",
+        windowsize = c(1400, 866), # higher resolution images
+        zoom = 0.75, phi = 30)
+render_snapshot()
+```
+
+To video. Plotting device must be open.
+```{r, eval=FALSE}
+png("TLH%i.png", width = 1280, height = 1280)
+angles = seq(0, 360, length.out = 141)[-1]
+for(i in 1:140) {
+  render_camera(theta=-45+angles[i])
+  render_snapshot(filename = sprintf("TLH%i.png", i), 
+                  title_text = "",
+                  title_bar_color = "#1f5214", title_color = "white", title_bar_alpha = 1)
+}
+rgl::rgl.close()
+
+av::av_encode_video(sprintf("TLH%d.png", seq(1, 140, by=1)), framerate = 10,
+                    output = "test.mp4")
+utils::browseURL('test.mp4')
+```
+
+## Calendar map of KDBI
+
+```{r}
+ggplot(TLH.df) + 
+    aes(daycol, weekrow, fill = DroughtIndex) + 
+  geom_tile(colour = "transparent") + 
+  scale_y_reverse() +
+  facet_grid(Year ~ month) + 
+    scale_fill_gradient2(name = "", low = "#FC8B93", mid = "#965784", high = "#D9DE6E") +
+#   scale_fill_ordinal(name = "", direction = 1, alpha = .6) +
+    theme_minimal() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        strip.text  = element_text(angle=0),
+        strip.text.y = element_text(angle=0),
+        panel.spacing = unit(0, "lines")) 
+
+ggplot(TLH.df) + 
+    aes(daycol, weekrow, fill = MaxTemp) + 
+  geom_tile(colour = "transparent") + 
+  scale_y_reverse() +
+  facet_grid(Year ~ month) + 
+  scale_fill_gradient(low = "green", high = "red",
+                      name = "°F") +
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        strip.text  = element_text(angle=0),
+        strip.text.y = element_text(angle=0),
+        panel.spacing = unit(0, "lines")) +
+  ggtitle("Official Daily High Temperature in Tallahassee, Florida", 
+          subtitle = "Every day since I arrived")
+```
+
+## Public land footprint
+
+Download the footprint of North Florida public land hexagon border where the proportion of public land, (mostly USFS) is >= 90% of the area.
+```{r}
+download.file(url = "https://www.dropbox.com/s/wo52hwy6ol83nt8/NorthFloridaPublicLandHexagons10km.zip?dl=1",
+              destfile = "TempPubLand.zip")
+unzip("TempPubLand.zip")
+
+LandHex.sf <- read_sf(dsn = "Data/NorthFloridaPublicLandHexagons10km.shp")
+#  filter(NAME == "APALACHICOLA")
+plot(LandHex.sf$geometry)
+```
+
+## Wildfires
+
+Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
+```{r}
+Fires.sf <- st_read(dsn = "FL_Fires",
+                       layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(LandHex.sf)) %>%
+  filter(STAT_CAU_1 == "Lightning") %>%
+  st_intersection(LandHex.sf)
+
+plot(Fires.sf$geometry, add = TRUE)
+
+Fires.sf <- Fires.sf %>%
+  mutate(Year = year(DISCOVERY_),
+         Month = month(DISCOVERY_),
+         Day = day(DISCOVERY_),
+         YDay = yday(DISCOVERY_),
+         YDayF = factor(YDay, levels = as.character(1:366))) %>%
+  dplyr::select(Year, Month, Day, YDay, YDayF)
+```
+
+```{r}
+Fires.sf %>%
+  as.data.frame() %>%
+  mutate(MonthF = factor(Month, levels = as.character(1:12), ordered = TRUE)) %>%
+  group_by(MonthF, .drop = FALSE) %>%
+  summarize(nF = n()) %>%
+ggplot(aes(x = MonthF, y = nF)) +
+  geom_bar(stat = "identity")
+
+Yearly <- 
+  Fires.sf %>%
+  as.data.frame() %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  mutate(YearF = factor(Year, levels = as.character(1992:2015), ordered = TRUE)) %>%
+  group_by(YearF, .drop = FALSE) %>%
+  summarize(nF = n())
+
+ggplot(Yearly, aes(x = YearF, y = nF)) +
+  geom_point()
+
+PSDI <- TLH2.df %>%
+  filter(month == "Apr") %>%
+  group_by(Year) %>%
+  summarize(KBDI = last(Ql))
+cor(PSDI$KBDI, Yearly$nF)
+```
+
+Negative binomial regression.
+```{r}
+library(MASS)
+
+df <- data.frame(Year = PSDI$Year, 
+                 nF = Yearly$nF,
+                 KBDI = PSDI$KBDI * .0254) # convert to cm of soil moisture deficit
+
+var(df$nF)/mean(df$nF)
+exp(coef(glm.nb(nF ~ 1, data = df)))
+exp(coef(glm.nb(nF ~ KBDI, data = df))) # 1.189 or 19% increase in the risk of a wildfire per cm increase in soil moisture deficit
+
+
+model <- glm.nb(nF ~ KBDI, data = df)
+
+ggplot(df, aes(x = KBDI, y = nF)) +
+  geom_point() + 
+  geom_line(aes(y = fitted(model)))
+```
+
+## Lightning data
+
+Download the POSITIVE lightning strikes within the public lands footprint for the time period.
+```{r}
+download.file(url = "https://www.dropbox.com/s/82vn5u0r0n99xrb/NorthFloridaLightningHexagonsPos.zip?dl=1",
+              destfile = "TempLightning.zip")
+unzip("TempLightning.zip")
+
+Lightning.sf <- st_read(dsn = "NorthFloridaLightningHexagonsPos.shp") %>%
+  st_transform(crs = st_crs(LandHex.sf)) %>%
+  mutate(Year = year(Date),
+         Month = month(Date),
+         Day = day(Date))
+head(Lightning.sf)
+```
+
+```{r}
+Lightning.df <- Lightning.sf %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  group_by(Year) %>%
+  summarize(nL = sum(AMP >= 20))
+ggplot(Lightning.df, aes(x = Year, y = nL)) +
+  geom_point()
+
+df2 <- df %>%
+  filter(Year >= 2000) %>%
+  mutate(nL = Lightning.df$nL)
+
+cor(df2$nF, df2$nL)
+```
+
+More lightning fewer lightning caused wild fires. More rainfall?
+
+```{r}
+RainLightning <- TLH2.df %>%
+  mutate(Month = month(DATE)) %>%
+  filter(Month %in% c(5, 6, 7)) %>%
+  group_by(Year) %>%
+  summarize(AvgKBDI = mean(Ql)) %>%
+  filter(Year >= 2000) %>%
+  mutate(nL = Lightning.df$nL,
+         AprilKBDI = df$KBDI[df$Year >= 2000],
+         nF = df$nF[df$Year >= 2000])
+
+cor(RainLightning$AvgKBDI, RainLightning$nL)
+
+summary(glm.nb(nF ~ AprilKBDI + nL + AvgKBDI, data = RainLightning))
+```
+
+
+## Florida USNG
+https://usngcenter.org/portfolio-item/usng-gis-data/
+```{r}
+library(sf)
+unzip("FL_USNG.zip")
+FL16 <- st_read(dsn = "FL_USNG_UTM16.shp")
+FL17 <- st_read(dsn = "FL_USNG_UTM17.shp") %>%
+  st_transform(crs = st_crs(FL16))
+
+FL1617 <- rbind(FL16, FL17)
+```
+
+We may need UTM17 for eastern most boundary of the ANF.
+
+Trim the FL grid to the land border. The first way keeps all partial grid boxes. The second way keeps only grid boxes completely inside the land border. 
+```{r}
+FL1617i <- st_intersection(LandHex.sf, FL1617)
+plot(FL1617i$geometry)
+
+Index <- st_contains_properly(LandHex.sf, FL1617, sparse = TRUE)
+FL1617c <- FL1617[Index[[1]], ]
+plot(FL1617c$geometry)
+```
+
+
+
+Aggregate lightning strikes to grids.
+```{r}
+library(tidyverse)
+library(lubridate)
+
+LG.sf <- Lightning.sf %>%
+           mutate(Mo = month(Date))
+LG.sf <- aggregate(LG.sf[, "OBJECTID"], 
+                   by = FL16c, 
+                   FUN = length) %>%
+    rename(Count = OBJECTID) 
+
+LG.sf$Count[is.na(LG.sf$Count)] <- 0
+
+library(tmap)
+
+tmap_mode("view")
+tm_shape(LG.sf) +
+  tm_polygons(col = "Count", alpha = .6, border.col = "transparent")
+```
+
+Compute spatial autocorrelation. Compare with random counts generated from a Poisson model.
+```{r}
+library(spdep)
+
+nbs <- poly2nb(LG.sf)
+wts <- nb2listw(nbs)
+
+moran.test(LG.sf$Count,
+           listw = wts)
+
+CountR <- rpois(n = m, lambda = mean(LG.sf$Count))
+moran.test(CountR,
+           listw = wts)
+
+LG.sf$CountR <- CountR
+tm_shape(LG.sf) +
+  tm_polygons(col = "CountR", 
+              alpha = .6, 
+              border.col = "transparent")
+```
+
+## Wildfires
+
+Get Florida wild fire data. See `Get_Wildfires.Rmd` on Dropbox.
+```{r}
+FL_Fires.sf <- st_read(dsn = "FL_Fires",
+                       layer = "FL_Fires")  %>%
+  st_transform(crs = st_crs(FL16c)) %>%
+  filter(STAT_CAU_1 == "Lightning")
+
+FIp.sf <- st_intersection(LandHex.sf, FL_Fires.sf)
+plot(FIp.sf$geometry)
+
+FIg.sf <- aggregate(FIp.sf[, "OBJECTID"], 
+                    by = FL16c, 
+                    FUN = length) %>%
+    rename(Count = OBJECTID) 
+
+FIg.sf$Count[is.na(FIg.sf$Count)] <- 0
+
+moran.test(FIg.sf$Count,
+           listw = wts)
+
+tm_shape(FIg.sf) +
+  tm_polygons(col = "Count", alpha = .6, border.col = "transparent")
+
+lightning <- LG.sf$Count
+fires <- FIg.sf$Count
+
+mean(lightning[fires == 0])
+mean(lightning[fires == 1])
+mean(lightning[fires == 2])
+mean(lightning[fires == 3])
+
+```
+
+Make a map
+```{r}
+library(USAboundaries)
+
+FLcty <- us_counties(state = "FL")
+
+library(tmap)
+
+tm_shape(FLcty) +
+  tm_borders() +
+tm_shape(FL_Fires.sf) +
+  tm_dots()
+```
+
+Tallahassee airport location: Lat: 30.3931° N Lon: -84.3533° W
+```{r}
+TLH.df <- data.frame(Longitude = -84.3533, Latitude = 30.3931)
+TLH.sf <- st_as_sf(TLH.df,
+                   coords = c("Longitude", "Latitude"),
+                   crs = 4326) %>%
+  st_transform(crs = st_crs(FL_Fires.sf))
+TLH_Area.sf <- st_buffer(TLH.sf, dist = 100000)
+
+tm_shape(TLH_Area.sf) +
+  tm_borders() +
+tm_shape(FL_Fires.sf) +
+  tm_dots() +
+tm_shape(FLcty) +
+  tm_borders()
+```
+
+Simplify data frame and add empty geometries.
+```{r}
+library(lubridate)
+
+FL_Fires2.sf <- FL_Fires.sf %>%
+  st_intersection(TLH_Area.sf)
+
+  mutate(YMD = ymd(as.Date(DISCOVERY_))) %>%
+  group_by(YMD) %>%
+  summarize(nF = n())
+
+DateSequence.df <- data.frame(YMD = seq(as.Date("1992-01-01"), as.Date("2015-12-31"), 
+                                        by = "days"))
+XY <- left_join(alldays.df, FL_Fires2.sf, by = "YMD") %>%
+  st_as_sf()
+
+r <- st_is_empty(XY)
+```
+
+## County-level lightning
+
+Data location: https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/
+
+Get Florida fips codes.
+```{r}
+library(tidycensus)
+library(dplyr)
+
+FLfips <- fips_codes %>%
+  filter(state == "FL") %>%
+  pull(county_code)
+
+```
+
+Import the data.
+```{r}
+fn <- paste0("https://www1.ncdc.noaa.gov/pub/data/swdi/reports/county/byFips/swdireport-12", FLfips, "-BETA.csv")
+
+df <- data.frame()
+for(i in 1:length(fn)){
+  X <- read.csv(fn[i], na.strings = "NULL", header = TRUE, stringsAsFactors = FALSE)
+  df <- rbind(df, X)
+}
+```
+
+Change `SEQDAY` into a date object. Add day, month, and year colunns.
+```{r}
+library(lubridate)
+
+df <- df %>%
+  mutate(SEQDAY = as.Date(SEQDAY),
+         DAY = day(SEQDAY),
+         MONTH = month(SEQDAY),
+         YEAR = year(SEQDAY))
+```
+
+Seasonal cycle.
+```{r}
+sc <- df %>%
+  group_by(MONTH, DAY) %>%
+  summarize(AvgCount = mean(FCOUNT_NLDN, na.rm = TRUE),
+            SEQDAY = first(SEQDAY)) %>%
+  mutate(YearDay = yday(SEQDAY))
+
+library(ggplot2)
+
+ggplot(sc, aes(YearDay, AvgCount)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335), 
+                     labels = month.abb) +
+  ylab("Average") +
+  xlab("") +
+  ggtitle("Daily average number of cloud to ground lightning strikes in Florida",
+          subtitle = "1986-2012")
+```
+
+Group by FIPS and compute the average.
+```{r}
+ByFIPS <- df %>%
+  group_by(FIPS) %>%
+  summarize(Avg = mean(FCOUNT_NLDN, na.rm = TRUE))
+```
+
+Join this data frame to a simple feature data frame of county boundaries.
+```{r}
+library(USAboundaries)
+
+FLcty <- us_counties(state = "FL") %>%
+  mutate(FIPS = as.integer(geoid))
+
+ByFIPS.sf <- left_join(FLcty, ByFIPS, by = "FIPS")
+```
+
+Make a map.
+```{r}
+library(tmap)
+
+tm_shape(ByFIPS.sf) +
+  tm_polygons(col = "Avg")
+```
+
+Change the CRS and compute the daily average per square km by dividing by area.
+```{r}
+ByFIPS.sf <- st_transform(ByFIPS.sf, crs = 3857)
+
+areas <- st_area(ByFIPS.sf)
+ByFIPS.sf <- ByFIPS.sf %>%
+  mutate(AvgPerArea = Avg/areas * 10^10)
+
+tm_shape(ByFIPS.sf) +
+  tm_polygons(col = "AvgPerArea")
+```
+
+
+
+## A simple equation for rainfall statistics 
+
+https://iopscience.iop.org/article/10.1088/1748-9326/ab2bb2
+
+$$
+\Pr(X > x) = f_w \exp(-x/\mu)
+$$
+where $X$ is the 24 h rainfall and $x$ is the threshold defining heavy precipitation, $f_w$ is the wet-day frequency and $\mu$ is the wet-day mean.
+
+Start with April rainfall only.
+```{r}
+April.df <- TLH.df %>%
+  filter(Month == 4)
+```
+
+```{r}
+df <- TLH.df %>%
+#  filter(Month %in% c(9, 10, 11)) %>%
+  group_by(Year) %>%
+  summarize(nD = n(),
+            fw = sum(Rainfall24mm >= 1)/nD,
+            mu = mean(Rainfall24mm[Rainfall24mm > 1]),
+            q75 = quantile(Rainfall24mm[Rainfall24mm > 1], probs = .75),
+            q95 = quantile(Rainfall24mm[Rainfall24mm > 1], probs = .95),
+            q99 = quantile(Rainfall24mm[Rainfall24mm > 1], probs = .99),
+            Pr = fw * exp(-50/mu),
+            xbar = mu * fw,
+            xbar2 = mean(Rainfall24mm[Rainfall24mm >= 0]),
+            fraction = sum(Rainfall24mm > 50)/nD,
+            avgTmax = mean(MaxTemp[Rainfall24mm > 1]),
+            avgTmin = mean(MinTemp[Rainfall24mm > 1])) %>%
+  group_by(Month) %>%
+  summarize(cc = cor.test(fw, q95)$estimate)
+
+  ggplot(data = df, aes(x = Year, y = avgTmax)) +
+    geom_point() +
+    geom_smooth(method = lm) +
+  facet_wrap(~ Month)
+  
+ggplot(df, aes(x = q75, y = fw, color = Year)) + 
+  geom_point() +
+  scale_color_viridis_c()
+```
+
+Use percentiles instead of mu? See FreqInt.Rmd on Desktop. Use avgTmax and correlate with EOFs of freq vs intensity.
+
+```{r}
+theta = seq(1, 180, by = 1)
+r = NULL ; pval = NULL
+for (k in theta){
+  C1 = cos(k * pi/180)
+  C2 = sin(k * pi/180)
+  Rclim = C1 * scale(df$q99) + C2 * scale(df$fw)
+  ctest = cor.test(Rclim, df$avgTmax)
+  r = c(r, as.numeric(ctest$estimate))
+  pval = c(pval, as.numeric(ctest$p.value))
+}
+range(r)
+
+signif = .05
+plot(-10, -10, xlim=c(-1, 1.3), ylim=c(-1, 1.3), axes=FALSE, xlab='', ylab='', main='')
+
+i = seq(0, 360, .5)
+Outl = cbind(cos(i * pi/180), sin(i * pi/180))
+Innl = cbind(.5 * cos(i * pi/180), .5 * sin(i * pi/180))
+
+polygon(Outl[, 1], Outl[, 2], border=colors()[229], col='white', lwd=2)
+polygon(Innl[, 1], Innl[, 2], border=colors()[229], col=NULL, lwd=2)
+
+Line.xcord = c(-1, 1, NA, 0, 0, NA, -cos(pi/4), cos(pi/4), NA, -cos(pi/4), cos(pi/4))
+Line.ycord = c(0, 0, NA, -1, 1, NA, sin(pi/4), -sin(pi/4), NA, -sin(pi/4), sin(pi/4))
+lines(Line.xcord, Line.ycord, col=colors()[229], lwd=1)
+
+text(par('usr')[2] - 0.29, 0.0, srt=0, adj = 0, labels = 'INT', xpd = TRUE, cex=1.3) 
+text(par('usr')[2] - 0.6, 0.81, srt=0, adj = 0, labels = 'ACT', xpd = TRUE, cex=1.3)
+text(par('usr')[2] - 1.52, 1.17, srt=0, adj = 0, labels = 'FRQ', xpd = TRUE, cex=1.3)
+text(par('usr')[2] - 0.6, -0.81, srt=0, adj = 0, labels = 'EINT', xpd = TRUE, cex=1.3)
+text(0,0.55, '0.5', cex=1.4, col=colors()[229])
+text(0,1.05, '1.0', cex=1.4, col=colors()[229])
+
+dg = theta
+polygon(r * cos(dg * pi/180), r * sin(dg * pi/180), border="#ff9900", lwd=7, col=NULL)
+r2 = c(r[which.max(pval):length(pval)], r[1:(which.max(pval) - 1)])
+pval2 = c(pval[which.max(pval):length(pval)], pval[1:(which.max(pval) - 1)])
+dg2 = c(dg[which.max(pval):length(pval)], dg[1:(which.max(pval) - 1)])
+lines(r2[pval2 <= signif] * cos(dg2[pval2 <= signif] * pi/180),
+      r2[pval2 <= signif] * sin(dg2[pval2 <= signif] * pi/180), col="#cc3300", lwd=7) 
+```
+
+Not very enlightening: avgTmax responds to precipitation rather than precipitation as a response to temperature.
+
+Also for plotting see https://dominicroye.github.io/en/2020/visualize-climate-anomalies/
+
+Winter rainfall getting more intense.
+
+## Prism data
+
+Get and manipulate prism rainfall data.
+```{r}
+library(prism)
+
+options(prism.path = "Data/PRISM")
+
+get_prism_dailys(
+  type = "tmax", 
+  minDate = "2008-08-19", 
+  maxDate = "2008-08-19", 
+  keepZip = FALSE 
+)
+```
+
+When we use `get_prism_dailys()` to download data, it creates one folder for each day. So, I have about folders inside the folder I designated as the download destination above with the `options()` function.
+
+```{r}
+library(raster)
+
+tmax.r <- raster("Data/PRISM/PRISM_tmax_stable_4kmD2_20080819_bil/PRISM_tmax_stable_4kmD2_20080819_bil.bil") 
+
+library(tmap)
+tm_shape(tmax.r) +
+  tm_raster() 
+```
+
+```{r}
+library(USAboundaries)
+
+FL.sf <- us_states(states = "FL") %>%
+  st_transform(crs = projection(tmax.r))
+
+tmax.r <- crop(tmax.r, FL.sf)
+
+tm_shape(tmax.r) +
+  tm_raster() 
+
+LandHex.sf <- LandHex.sf %>%
+  st_transform(crs = projection(tmax.r))
+tmax.r2 <- crop(tmax.r, LandHex.sf)
+
+tm_shape(tmax.r2) +
+  tm_raster() 
+```
+
+Hypothesis: Daily high temperatures have larger spatial correlation compared with daily low temperatures during spring.
+```{r}
+get_prism_dailys(
+  type = "tmax",
+  minDate = "2020-04-19", 
+  maxDate = "2020-04-19", 
+  keepZip = FALSE 
+)
+
+tmax.r <- raster("Data/PRISM/PRISM_tmax_provisional_4kmD2_20200419_bil/PRISM_tmax_provisional_4kmD2_20200419_bil.bil")
+tmax.r <- crop(tmax.r, FL.sf)
+plot(tmax.r)
+Moran(tmax.r)
+
+get_prism_dailys(
+  type = "tmin",
+  minDate = "2020-04-19", 
+  maxDate = "2020-04-19", 
+  keepZip = FALSE 
+)
+
+tmin.r <- raster("Data/PRISM/PRISM_tmin_provisional_4kmD2_20200419_bil/PRISM_tmin_provisional_4kmD2_20200419_bil.bil")
+tmin.r <- crop(tmin.r, FL.sf)
+plot(tmin.r)
+Moran(tmin.r)
+
+Leon.sf <- us_counties(states = "FL") %>%
+  dplyr::filter(name == "Leon") %>%
+  st_transform(crs = projection(tmax.r))
+
+tmin.r2 <- crop(tmin.r, Leon.sf)
+tmax.r2 <- crop(tmax.r, Leon.sf)
+Moran(tmin.r2)
+Moran(tmax.r2)
+```
+
+Another day.
+```{r}
+get_prism_dailys(
+  type = "tmax",
+  minDate = "2020-04-10", 
+  maxDate = "2020-04-10", 
+  keepZip = FALSE 
+)
+get_prism_dailys(
+  type = "tmin",
+  minDate = "2020-04-10", 
+  maxDate = "2020-04-10", 
+  keepZip = FALSE 
+)
+
+tmin.r <- raster("Data/PRISM/PRISM_tmin_provisional_4kmD2_20200410_bil/PRISM_tmin_provisional_4kmD2_20200410_bil.bil")
+tmax.r <- raster("Data/PRISM/PRISM_tmax_provisional_4kmD2_20200410_bil/PRISM_tmax_provisional_4kmD2_20200410_bil.bil")
+
+tmin.r2 <- crop(tmin.r, Leon.sf)
+tmax.r2 <- crop(tmax.r, Leon.sf)
+Moran(tmin.r2)
+Moran(tmax.r2)
+
+Sites.df <- data.frame(Name = c("Regional Airport", "Downtown", 
+                                "Dale Mabry Field", "Municipal Airport"), 
+                       Latitude = c(30.39306, 30.43333, 30.44, 30.38),
+                       Longitude = c(-84.35333, -84.28333, -84.338, -84.37))
+Sites.sf <- st_as_sf(Sites.df, coords = c("Longitude", "Latitude"),
+                     crs = 4326) %>%
+  st_transform(crs = projection(tmax.r))
+
+tm_shape(tmin.r2) +
+  tm_raster() +
+tm_shape(Leon.sf) +
+  tm_borders() +
+tm_shape(Sites.sf) +
+  tm_dots(size = .1)
+```
+
+30-yr normals.
+```{r}
+get_prism_normals(type = "tmin",
+                  mon = 4,
+                  resolution = "800m")
+tmin.r <- raster("Data/PRISM/PRISM_tmin_30yr_normal_800mM2_04_bil/PRISM_tmin_30yr_normal_800mM2_04_bil.bil")
+tmin.r2 <- crop(tmin.r, Leon.sf)
+
+tmap_mode("view")
+
+tm_shape(tmin.r2) +
+  tm_raster(alpha = .5) +
+tm_shape(Leon.sf) +
+  tm_borders() 
+#tm_shape(Sites.sf) +
+#  tm_dots(size = .1)
+
+Moran(tmin.r2)
+
+get_prism_normals(type = "tmax",
+                  mon = 4,
+                  resolution = "800m")
+tmax.r <- raster("Data/PRISM/PRISM_tmax_30yr_normal_800mM2_04_bil/PRISM_tmax_30yr_normal_800mM2_04_bil.bil")
+tmax.r2 <- crop(tmax.r, Leon.sf)
+tm_shape(tmax.r2) +
+  tm_raster(alpha = .5) +
+tm_shape(Leon.sf) +
+  tm_borders() +
+tm_shape(Sites.sf) +
+  tm_dots(size = .1)
+
+Moran(tmax.r2)
+
+get_prism_normals(type = "ppt",
+                  mon = 4,
+                  resolution = "800m")
+ppt.r <- raster("Data/PRISM/PRISM_ppt_30yr_normal_800mM2_04_bil/PRISM_ppt_30yr_normal_800mM2_04_bil.bil")
+ppt.r2 <- crop(ppt.r, Leon.sf)
+
+tm_shape(ppt.r2) +
+  tm_raster(alpha = .5, palette ="Greens")
+
+```
+
+https://tmieno2.github.io/R-as-GIS-for-Economists/
+

@@ -1,321 +1,41 @@
 ---
-title: "KBDI using PRISM temperature and precipitation"
+title: "Historical PRISM check of airport drought representativeness"
 output: html_document
-editor_options: 
-  chunk_output_type: console
 ---
 
-Compute KBDI using PRISM temp/precip data.
-1. Read PRISM .bil files as {stars} objects (see `stars.Rmd`)
-2. Crop the space-time {stars} objects to the ANF boundary
-3. Compute KBDI at each grid cell
-4. Compute KBDI using TLH data
-5. Map correlations between gridded Qlm and TLH_Qlm 
-6. Convert space-time object to vector simple feature and merge correlations
-
-```{r}
-library(stars)
-library(tidyverse)
-library(lubridate)
-library(rgdal) # before library(sf)
-library(sf)
-library(here)
-library(prism)
-library(ggthemes)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+p <- jsonlite::fromJSON("outputs/prism-manifest.json")
+s <- read.csv("outputs/prism-station-check.csv")
 ```
 
-## Read PRISM data (.bil) files as {stars} objects
+The original PRISM archive contains daily precipitation and maximum temperature
+for 2009–2018. This supplementary analysis recomputes KBDI over **`r p$cells`**
+grid cells intersecting ANF, using `terra` instead of retired `rgdal` workflows.
+It reads only the forest window, pairs the two variables by date, and uses
+intersection-area weights. Missing precipitation is never silently set to zero.
+Both station and grid calculations require one year of complete spin-up.
 
-Download daily PRISM data using functions from the {prism} package. About 35 (23) minutes per year per variable of daily data at home (apartment) internet speeds. Temperature is in C and precipitation is in mm.
-```{r}
-prism_set_dl_dir("Data/PRISM/")
-
-ts <- proc.time()
-get_prism_dailys(type = "ppt",
-                 minDate = "2009-01-01",
-                 maxDate = "2015-12-31")
-proc.time() - ts
+```{r map}
+knitr::include_graphics("outputs/prism-anomaly-correspondence.png")
 ```
 
-Create a {stars} object using high temperature (`tmax`) and daily rainfall (`ppt`). About 4 minutes to read ten years of daily temperature and rainfall.
-```{r}
-ts <- proc.time()
-t0 <- 2009
-t1 <- 2018
-dates <- seq(as_date(paste0(t0, "-01-01")), 
-             as_date(paste0(t1, "-12-31")), 
-             by = "day")
+Area-weighted daily R² is **`r round(p$raw_r2_area_weighted, 2)`**. After removing
+the shared calendar-day seasonal cycle, the area-weighted anomaly R² is
+**`r round(p$anomaly_r2_area_weighted, 2)`**. These describe temporal correspondence;
+they do not measure unbiased forest-wide drought or independent validation.
+PRISM uses station observations. The short historical record cannot establish
+spatial representativeness of the full long-term trend.
 
-file_days <- gsub("-", "", dates)
-
-folder_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil/")
-file_names <- paste0("PRISM_tmax_stable_4kmD2_", file_days, "_bil.bil")
-file_list <- paste0("Data/", "PRISM/", folder_names, file_names)
-
-folder_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil/")
-file_names2 <- paste0("PRISM_ppt_stable_4kmD2_", file_days, "_bil.bil")
-file_list2 <- paste0("Data/", "PRISM/", folder_names2, file_names2)
-
-tmax <- read_stars(file_list, along = list(time = dates)) |>
-  setNames("Tmax_C")
-ppt <- read_stars(file_list2, along = list(time = dates)) |>
-  setNames("Precip_mm")
-TP.st <- c(tmax, ppt)
-TP.st
-proc.time() - ts
+```{r summary}
+knitr::kable(data.frame(Statistic=c("Raw R2", "Anomaly R2", "Bias (mm)", "RMSE (mm)"),
+  AreaWeightedMean=c(weighted.mean(s$RawR2,s$AreaWeight), weighted.mean(s$AnomalyR2,s$AreaWeight),
+    weighted.mean(s$MeanBiasMm,s$AreaWeight), weighted.mean(s$RMSEmm,s$AreaWeight))), digits=3)
 ```
 
-```{r}
-X <- filter(tmax, 
-            time == ymd("2018-01-01"))
-plot(X)
-```
-
-## Crop the space-time {stars} objects to the ANF boundary
-
-Read the boundary file as a vector polygon and transform the crs to that of the {stars} object. Then crop the {stars} object to the boundary.
-```{r}
-ANF_Boundary.sf <- st_read(dsn = "S_USA.NFSLandUnit") |>
-  filter(NFSLANDU_2 == "Apalachicola National Forest") |>
-  st_transform(crs = st_crs(TP.st)) 
-
-# TP.st <- TP.st[ANF_Boundary.sf] # same as st_crop()
-TP.st <- TP.st |>
-  st_crop(ANF_Boundary.sf)
-
-X <- filter(TP.st["Tmax_C"], time == ymd("2010-01-10"))
-X <- round(X, digits = 0)
-
-plot(st_geometry(ANF_Boundary.sf))
-plot(X, text_values = TRUE, add = TRUE)
-plot(st_geometry(ANF_Boundary.sf), add = TRUE, col = "transparent")
-```
-
-Check with points.
-```{r}
-ypoints <- 49.9375 - 468:481 * .0416667
-xpoints <- -125.021 + 958:979 * .0416667
-xy <- expand.grid(xpoints, ypoints)
-
-points.sf <- st_as_sf(x = xy,                         
-                      coords = c("Var1", "Var2"),
-                      crs = st_crs(TP.st))
-plot(points.sf, add = TRUE, col = "red")
-```
-
-The cells are defined by the lower-left (I think) corner but the crop function uses the middle of the cell to determine whether to include the cell.
-
-Check temperature variations over 30 days.
-```{r}
-X <- filter(TP.st, time >= ymd("2017-06-01"), time <= ymd("2017-06-30"))
-
-ggplot() +  
-  geom_stars(data = X["Tmax_C"], alpha = .8, downsample = c(0, 0, 0)) + 
-  facet_wrap(~ time) +
-  scale_fill_distiller(palette = "RdBu") +
-  coord_equal() +
-  theme_map() +
-  theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(2, "cm"))
-
-ggplot() +  
-  geom_stars(data = X["Precip_mm"], alpha = .8, downsample = c(0, 0, 0)) + 
-  facet_wrap(~ time) +
-  scale_fill_distiller(palette = "YlGn", direction = 1) +
-  coord_equal() +
-  theme_map() +
-  theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(2, "cm"))
-```
-
-Note the warmest area tends to be in the northeast part of the forest near the airport.
-
-## Compute KBDI at each cell
-
-Start by converting temperatures in C to F and precipitation in mm to inches
-```{r}
-TP.st <- 
-  TP.st |>
-  mutate(MaxTemp = Tmax_C * 1.8 + 32,
-         MaxTemp = replace_na(MaxTemp, mean(MaxTemp)),
-         Rainfall24 = Precip_mm * .03937,
-         Rainfall24 = replace_na(Rainfall24, 0))
-```
-
-Compute daily net rainfall at each grid point.
-```{r}
-source("netRainfall.R")
-
-NetR.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
-for(i in 1:dim(TP.st)[1]){
-  for(j in 1:dim(TP.st)[2]){
-    NetR.a[i, j, ] <- netRainfall(Rainfall24 = TP.st$Rainfall24[i, j, ])
-  }
-}
-TP.st$NetR <- NetR.a
-```
-
-Compute daily drought index at each grid point. About 20 seconds.
-```{r}
-source("droughtIndex.R")
-
-Ql.a <- array(NA, dim = dim(TP.st)) # initialize the 3-D array with NAs
-DI.a <- array(NA, dim = dim(TP.st))
-for(i in 1:dim(TP.st)[1]){
-  for(j in 1:dim(TP.st)[2]){
-    DI <- droughtIndex(Q = 400, # start value
-                       R = 60, # avg annual rainfall in inches
-                       MaxTemp = TP.st$MaxTemp[i, j, ], 
-                       NetR = TP.st$NetR[i, j, ])
-Ql.a[i, j, ] <- DI$Ql
-DI.a[i, j, ] <- DI$DroughtIndex
-  }
-}
-
-TP.st$Ql <- Ql.a
-TP.st$Qlm <- TP.st$Ql * .254 # tenth of an inch to mm
-TP.st$DroughtIndex <- DI.a
-```
-
-Check with maps.
-```{r}
-X <- filter(TP.st, time >= ymd("2010-04-01"), time <= ymd("2010-04-08"))
-
-p1 <- ggplot() +  
-  geom_stars(data = X["MaxTemp"], alpha = .8) + 
-  facet_wrap(~ time, ncol = 1) +
-  scale_fill_gradient(low = "#1F96DE", high = "#DE671F") +
-  coord_equal() +
-  theme_map() +
-  theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(.5, "cm"))
-
-p2 <- ggplot() +  
-  geom_stars(data = X["Rainfall24"], alpha = .8) + 
-  facet_wrap(~ time, ncol = 1) +
-  scale_fill_distiller(palette = "Greens", direction = 1) +
-  coord_equal() +
-  theme_map() +
-  theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(.5, "cm"))
-
-p3 <- ggplot() +  
-  geom_stars(data = X["Qlm"], alpha = .8) + 
-  facet_wrap(~ time, ncol = 1) +
-  scale_fill_gradient(low = "#1FDE6E", high = "#DE1F8F") +
-  coord_equal() +
-  theme_map() +
-  theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(.5, "cm"))
-
-library(patchwork)
-p1 + p2 + p3
-```
-
-## Compute KBDI using the TLH airport data
-
-```{r}
-TLH.df <- read.csv(file = 'Data/TLH_Daily1940-2020.csv',
-                   stringsAsFactors = FALSE,
-                   header = TRUE) |>
-  mutate(Date = as.Date(DATE)) |>
-  mutate(Year = year(Date), 
-         month = month(Date, label = TRUE, abbr = TRUE),
-         doy = yday(Date),
-         MaxTemp = TMAX,
-         MinTemp = TMIN,
-         Rainfall24 = PRCP,
-         Rainfall24 = replace_na(Rainfall24, 0),
-         Rainfall24mm = Rainfall24 * 25.4) |>
-  filter(Year >= t0 & Year <= t1) # to match the PRISM years
-
-TLH.df$NetR <- netRainfall(Rainfall24 = TLH.df$Rainfall24)
-DI <- droughtIndex(Q = 400, R = 60, MaxTemp = TLH.df$MaxTemp, NetR = TLH.df$NetR)
-TLH.df$Ql <- DI$Ql
-TLH.df$Qlm <- TLH.df$Ql * .254  # tenth of an inch to mm
-TLH.df$DroughtIndex <- DI$DroughtIndex
-```
-
-## Map correlations between gridded Qlm and TLH_Qlm
-
-Loop over all grid locations computing the correlation between the Qlm computed using TLH data and the Qlm's computed using PRISM data.
-```{r}
-R.a <- array(NA, dim = dim(TP.st)[1:2])
-for(i in 1:dim(TP.st)[1]){
-  for(j in 1:dim(TP.st)[2]){
-    Qlm <- TP.st$Qlm[i, j, ]
-    cc <- cor(Qlm, TLH.df$Qlm)
-    R.a[i, j] <- cc * cc
-  }
-}
-
-R.st <- st_as_stars(R.a) |>
-  setNames("R^2")
-attr(R.st, "dimensions")$y <- attr(TP.st, "dimensions")$y # replace dimensions
-attr(R.st, "dimensions")$x <- attr(TP.st, "dimensions")$x
-
-ggplot() +  
-  geom_stars(data = R.st["R^2"], alpha = .8) + 
-  scale_fill_distiller(limits = c(0, 1), palette = "Blues", direction = 1) +
-  coord_equal() +
-  theme_map() +
-  theme(legend.position = "bottom") +
-  theme(legend.key.width = unit(2, "cm"))
-```
-
-```{r}
-library(tmap)
-
-tm_shape(R.st) +
-  tm_raster(palette = "Blues") +
-tm_shape(ANF_Boundary.sf) +
-  tm_borders(col = "black")
-```
-
-
-```{r}
-library(USAboundaries)
-FL_Counties.sf <- us_counties(states = "FL",
-                              resolution = "high") %>%
-  st_transform(crs = st_crs(ANF_Boundary.sf)) %>%
-  st_crop(st_bbox(st_buffer(ANF_Boundary.sf, dist = .25)) )
-
-ggplot() +
-  geom_sf(data = FL_Counties.sf, fill = "transparent", 
-          col = "gray80") +
-  geom_stars(data = R.st) +
-  scale_fill_distiller(palette = "Blues",
-                       direction = 1,
-                       na.value = "transparent") +
-  geom_sf(data = ANF_Boundary.sf, fill = "transparent") +
-  theme_bw() +
-  labs(x = "", y = "", fill = "% Variance\nExplained")
-```
-
-## Convert space-time object to vector simple feature and merge correlations
-
-See https://r-spatial.github.io/stars/articles/stars5.html#switching-between-vector-and-raster-in-stars-objects-1
-```{r}
-R.sf <-
-  R.st |>
-  round(digits = 1) |>
-  st_as_sf(merge = TRUE)
-plot(R.sf)
-
-ggplot() +
-  geom_sf(data = FL_Counties.sf, fill = "transparent", 
-          col = "gray80") +
-  geom_sf(data = R.sf, 
-          color = 'transparent',
-          mapping = aes(fill = as.character(`R^2`))) +
-  scale_fill_brewer(palette = "Blues",
-                    labels=c('[.6, .7)', '[.7, .8)',
-                             '[.8, .9)', '[.9, 1]')) +
-  geom_sf(data = ANF_Boundary.sf, fill = "transparent") +
-  theme_bw() +
-  labs(x = "", y = "", fill = "% Variance\nExplained")
-
-```
-
-
-
+The gridded observations have **not** been extended beyond 2018. A compact
+extracted cache and a source inventory are saved in `Data/raw/`; the complete
+continental archive is retained in `Data/PRISM/`. To rebuild the extraction,
+run `Rscript scripts/prism-check.R --reextract`. The cache can reproduce this
+check without rereading the continental archive. The historical notebook is
+preserved in `legacy/Gridded_KBDI.Rmd`.

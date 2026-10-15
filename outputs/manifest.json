@@ -1,0 +1,25 @@
+{
+  "run_utc": "2026-10-15 04:41:13 UTC",
+  "fire_service": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_FireOccurrenceCurrentEdition_01/MapServer/0",
+  "fire_coverage": [1992, 2024],
+  "weather_url": "https://www.ncei.noaa.gov/pub/Data/ghcn/daily/all/USW00093805.dly",
+  "weather_last_day": "2026-10-12",
+  "boundary": "Original NFSLandUnit study footprint; not refreshed",
+  "initial_kbdi": 400,
+  "annual_rain_inches": 60,
+  "missing_policy": "No imputation; 365 complete days required since initialization or latest gap",
+  "retrieval": {
+    "retrieved_utc": "2026-10-15 UTC",
+    "imported_from": "pred-wildfires verified source snapshots"
+  },
+  "raw_md5": {
+    "Data/raw/anf-boundary.gpkg": "546db43b70644d67b0f482fc15d5df6d",
+    "Data/raw/fire-service.json": "287c29399932c1c9cceb824470705f89",
+    "Data/raw/fires-bbox.json": "e45de3df48f78bdcaec65cf38fa6c8d7",
+    "Data/raw/prism-anf-extracted.rds": "501d5f7a5d2c687fd086f4bd3c22dfaf",
+    "Data/raw/prism-source-inventory.csv": "86bf7ccf4a49aa5c2a208bb56d3f10f6",
+    "Data/raw/retrieval.json": "c72bcea9be5677365a7615c7455deaa5",
+    "Data/raw/soi.data": "486042cb1e288f0ebd022f4931f71330",
+    "Data/raw/USW00093805.dly": "da7aca94a37e33a7d635cb319e8931fa"
+  }
+}

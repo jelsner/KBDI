@@ -1,22 +1,17 @@
-# Computes the Keetch-Byram Drought Index (KDBI) from net 24-hr rainfall in inches and daily high temperature in F. 
-# No missing values are allowed
+# KBDI: hundredths of an inch, temperatures in F, annual mean rain R in inches.
+# Subtract effective rain before evaluating today's drying increment.
 droughtIndex <- function(Q, R, MaxTemp, NetR) {
-#  Q <- 269  # starting value
-#  R <- 59.23 # annual rainfall amount at location of interest
-  
-  Ql <- numeric()
-  DeltaQl <- numeric()
-  for (i in 1:length(NetR)) {
-    DeltaQ <-
-      (800 - Q) * (.968 * exp(.0486 * MaxTemp[i]) - 8.3) / (1 + 10.88 * exp(-.0441 * R)) * .001
-    Q <-
-      ifelse(NetR[i] == 0,  Q + DeltaQ,  (Q + DeltaQ) - NetR[i] * 100)
-    Q <- ifelse(Q < 0, 0, Q)
-    Ql <- c(Ql, Q)
-    DeltaQl <- c(DeltaQl, DeltaQ)
-    DroughtIndex <- floor(Ql / 100)
+  if (length(Q) != 1L || !is.finite(Q) || Q < 0 || Q > 800 ||
+      length(R) != 1L || !is.finite(R) || R <= 0 ||
+      length(MaxTemp) != length(NetR) || any(!is.finite(MaxTemp)) ||
+      any(!is.finite(NetR)) || any(NetR < 0)) stop("Invalid KBDI inputs.")
+  values <- numeric(length(NetR))
+  for (i in seq_along(NetR)) {
+    Q <- max(0, Q - 100 * NetR[i])
+    drying <- (800 - Q) * max(0, .968 * exp(.0486 * MaxTemp[i]) - 8.3) /
+      (1 + 10.88 * exp(-.0441 * R)) * .001
+    Q <- min(800, Q + drying)
+    values[i] <- Q
   }
-  output <- list(Ql = Ql,
-                 DroughtIndex = DroughtIndex)
-  return(output)
+  list(Ql = values, DroughtIndex = pmin(7L, floor(values / 100)))
 }

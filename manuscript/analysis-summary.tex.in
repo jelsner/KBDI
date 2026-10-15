@@ -1,0 +1,57 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\title{Long-term drought change near Apalachicola National Forest\\\large Updated evidence and proposed paper emphasis}
+\author{}
+\date{{{analysis_date}}}
+\begin{document}
+\maketitle
+\noindent\textbf{Working revision note.} This standalone draft summarizes updated analyses. The existing Overleaf manuscript was inaccessible; its text and bibliography have not been revised. Full diagnostics, figures, and a section-by-section reorganization plan accompany this file in the repository.
+
+\begin{abstract}
+Long-term changes in drought and seasonal wildfire predictability are related but distinct questions. We updated daily airport weather observations, corrected the Keetch--Byram Drought Index (KBDI) implementation, and analyzed complete monthly and annual records with serial-dependence-aware uncertainty. Mean annual moisture deficit increased {{annual_slope}} mm per decade (95\% interval {{annual_low}} to {{annual_high}}) across {{annual_n}} eligible years spanning {{annual_first}}--{{annual_last}}. Days above KBDI 650 increased {{high_slope}} per decade ({{high_low}} to {{high_high}}). May showed the clearest monthly increase after adjustment for 12 monthly tests; April's trend remained uncertain. A historical gridded comparison supported correspondence between airport and forest drought anomalies. Natural-fire count hindcasts improved in point estimate but had a paired skill interval spanning no improvement. These results favor a paper centered on long-term station-derived drought exposure, with wildfire prediction as an application.
+\end{abstract}
+
+\section{Recommended central question}
+Has long-term drought exposure changed near ANF, and how is the change distributed through the year? Place the wildfire forecast after these results. Use station-derived drought rather than claiming a forest-wide long-term soil-moisture trend: the airport series is unhomogenized and KBDI is a weather-based index.
+
+\section{Updated methods}
+NOAA GHCN-Daily station USW00093805 supplies precipitation and maximum/minimum temperature. Native tenths of SI units are converted explicitly, and observations with nonblank quality flags are rejected. KBDI uses 0.2 inches of interception per wet spell, subtracts net rain before the drying increment, and is bounded to 0--800. Mean annual rain is fixed at 60 inches. Missing required inputs restart KBDI at 400; 365 complete days are excluded after each restart. Annual and monthly analyses require complete eligible periods. Effective record endpoints therefore differ by outcome.
+
+Trend intervals use lag-3 Newey--West covariance on annual observations and a t reference. Monthly tests are adjusted across 12 months with Benjamini--Hochberg; annual comparisons are adjusted across five outcomes. Sensitivity checks vary rainfall climatology, initial KBDI, spin-up duration, start year, covariance lag, and the original versus corrected implementation. Contemporary Southern Oscillation Index adjustment is descriptive rather than causal attribution.
+
+\section{Main results}
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Outcome & Change per decade & 95\% interval \\
+\midrule
+Annual mean deficit (mm) & {{annual_slope}} & {{annual_low}} to {{annual_high}} \\
+Days above KBDI 650 & {{high_slope}} & {{high_low}} to {{high_high}} \\
+May mean deficit (mm) & {{may_slope}} & {{may_low}} to {{may_high}} \\
+April mean deficit (mm) & {{april_slope}} & {{april_low}} to {{april_high}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+May's adjusted monthly p-value is {{may_p}}. All 27 KBDI sensitivity settings give positive May slopes with unadjusted intervals above zero; this does not constitute a joint confidence statement. ENSO-adjusted May slopes remain positive, but their adjusted monthly p-value does not meet 0.05. The high-deficit-day trend is uncertain when the record begins in 1980. The original and corrected algorithms give similar annual slopes on identical eligible observations, so the annual trend is not created by the implementation correction.
+
+The historical PRISM comparison uses 170 intersecting cells from the existing 2009--2018 archive. Its area-weighted daily anomaly $R^2$ is {{prism_r2}} after removal of the shared mean calendar-day cycle. PRISM uses station observations, so this is correspondence evidence, not independent validation or support for a forest-wide 80-year trend. The gridded record has not been extended beyond 2018.
+
+\section{Wildfire application}
+The seventh-edition FPA FOD archive covers 1992--2024. Negative binomial models use April 30 moisture deficit to predict May--July counts within the fixed original ANF boundary. Expanding-window hindcasts train only on earlier eligible seasons, with at least 15 training years. Natural-fire mean absolute error changes from {{natural_base}} to {{natural_drought}} fires per season relative to climatology. The paired moving-block bootstrap interval for improvement is {{natural_skill_low}} to {{natural_skill_high}} fires per season; only 15 evaluation years are available. Forecast skill should therefore be an application, not the strongest claim. Publication delays are not reconstructed, and predictions beyond the fire archive are retrospective reconstructions rather than real-time issued forecasts.
+
+\section{Proposed paper structure and figures}
+Introduce local drought exposure; describe data and corrected methods; lead results with annual change; show all-month seasonal structure; summarize robustness; then present the wildfire application. Discuss mechanisms separately from associations. Lead figures should show study/data scope, annual mean deficit and high-deficit days, and monthly slopes with uncertainty. Move the daily drought calendar, PRISM map, ENSO models, predictor comparisons, and parameter-draw displays to supplementary material.
+
+\section{Limits and next editorial step}
+Reconcile the new structure with the original Overleaf source and bibliography when access is available. Assess station history, complete-case selection, and sensitivity to a fixed rain climatology before submission. The retained Bayesian count script has not been run because the brms/Stan toolchain is unavailable; no validated burned-area forecast is claimed.
+
+\section*{Data sources}
+\begin{itemize}
+\item \href{https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt}{NOAA GHCN-Daily documentation and station data}.
+\item \href{https://psl.noaa.gov/data/correlation/soi.data}{NOAA PSL Southern Oscillation Index}.
+\item \href{https://prism.oregonstate.edu/}{PRISM Climate Group}: original cached 2009--2018 daily grids.
+\item \href{https://doi.org/10.2737/RDS-2013-0009.7}{Short (2026), FPA FOD, seventh edition}.
+\end{itemize}
+\end{document}

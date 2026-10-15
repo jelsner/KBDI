@@ -1,0 +1,11 @@
+{
+  "run_utc": "2026-10-15 04:41:31 UTC",
+  "first_year": 1944,
+  "last_complete_year": 2025,
+  "station": "USW00093805",
+  "soi_url": "https://psl.noaa.gov/data/correlation/soi.data",
+  "soi_md5": "486042cb1e288f0ebd022f4931f71330",
+  "annual_hac_lag": 3,
+  "monthly_multiplicity": "BH adjustment within each variable and endpoint across 12 months",
+  "sensitivity": "27 combinations: annual rain 55/60/65 in; initial Q 0/400/800; spin-up 180/365/730 days"
+}

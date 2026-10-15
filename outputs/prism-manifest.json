@@ -1,0 +1,9 @@
+{
+  "period": ["2009-01-01", "2018-12-31"],
+  "source": "Local original PRISM stable 4kmD2 2009–2018 archive",
+  "extracted_cache_md5": "501d5f7a5d2c687fd086f4bd3c22dfaf",
+  "cells": 170,
+  "raw_r2_area_weighted": 0.7702,
+  "anomaly_r2_area_weighted": 0.7152,
+  "status": "Recomputed from historical cached grids; PRISM observations have not been extended beyond 2018"
+}

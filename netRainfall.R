@@ -1,36 +1,13 @@
-# The script estimates net rainfall from 24-hr (daily) totals in inches. 
-# No missing values are allowed.
+# Inches of rain reaching soil, after 0.2 inches interception per wet spell.
 netRainfall <- function(Rainfall24) {
-  PR <- lag(Rainfall24)
-  PR[1] <- 0
-  
-  CumR <- 0
-  NetR <- numeric()
-  
-  for(i in 1:length(Rainfall24)) {
-    R24 <- Rainfall24[i]
-    
-    if ( R24 == 0) {
-      NetR[i] <- 0
-      CumR <- 0
-    } 
-    else if( R24 > 0 & R24 <= .2) {
-      CumR <- CumR + R24
-      if (PR[i] > .2 | CumR > .2) NetR[i] <- R24
-      else if (CumR > .2) NetR[i] <- CumR - .2
-      else NetR[i] <- 0
-    }
-    
-    else if ( R24 > .2) {
-      if (CumR <= .2) {
-        NetR[i] <- CumR + R24 - .2
-        CumR <- CumR + R24
-      }
-      else {
-        NetR[i] <- R24
-        CumR <- CumR + R24
-      }
-    }
+  if (!is.numeric(Rainfall24) || any(!is.finite(Rainfall24)) || any(Rainfall24 < 0))
+    stop("Rainfall must be finite, nonnegative inches.")
+  result <- numeric(length(Rainfall24))
+  cumulative <- 0
+  for (i in seq_along(Rainfall24)) {
+    if (Rainfall24[i] == 0) cumulative <- 0
+    result[i] <- max(0, cumulative + Rainfall24[i] - .2) - max(0, cumulative - .2)
+    cumulative <- cumulative + Rainfall24[i]
   }
-  return(NetR)
+  result
 }
